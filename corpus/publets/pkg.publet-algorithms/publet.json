@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "publet-algorithms 0.2.0 is released as publet-algorithms-v0.2.0 from commit e97457ef710d8f93651fc8df5ecfaa1538a454e6.",
+      "content": "publet-algorithms 0.2.1 is released as publet-algorithms-v0.2.1 from commit e46cc0c4ba80ed2b913d421a95f82d91359d66a2.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "publet-algorithms",
-            "0.2.0",
+            "0.2.1",
             "",
             "",
-            "publet-algorithms-v0.2.0",
-            "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
+            "publet-algorithms-v0.2.1",
+            "e46cc0c4ba80ed2b913d421a95f82d91359d66a2"
           ]
         ]
       },
-      "scope": "the published release publet-algorithms-v0.2.0 of publet-algorithms",
+      "scope": "the published release publet-algorithms-v0.2.1 of publet-algorithms",
       "sources": [
         {
           "ref": "publet-algorithms",
-          "revision": "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
+          "revision": "e46cc0c4ba80ed2b913d421a95f82d91359d66a2"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "publet-algorithms 0.2.0 was released on 2026-10-09 from commit e97457ef710d8f93651fc8df5ecfaa1538a454e6 with these changes.",
+      "content": "publet-algorithms 0.2.1 was released on 2026-10-11 from commit e46cc0c4ba80ed2b913d421a95f82d91359d66a2 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,69 +57,25 @@
         ],
         "rows": [
           [
-            "changed",
-            "version::satisfies reads ^X.Y as Cargo does: below 1.0 the minor part is fixed, so ^0.1 no longer admits 0.3.2. Version and Bump are removed; release arithmetic belongs to the semver crate."
-          ],
-          [
             "fixed",
-            "The crate ships what distribution needs: the Apache-2.0 licence text, crates.io metadata, an include list, and documentation with examples run as doctests, including the crates considered instead and why."
-          ],
-          [
-            "fixed",
-            "The package ships SUPPLY-CHAIN.md: every dependency, whether it runs code at build time, and how its code is vouched for (an imported audit, a trusted publisher, or an exemption with the evidence beside it)."
-          ],
-          [
-            "fixed",
-            "Every public function's documentation has an example run as a test, the crate root has an overview, a cookbook and why this crate exists, and docs.rs renders how every item is tested, how each dependency is vouched for, the security policy and the changelog."
-          ],
-          [
-            "internal",
-            "Test vectors from independent sources, property tests, and two independent implementations as test oracles (ciborium for CBOR, ct-merkle for RFC 6962). Tests only; nothing users run changed."
-          ],
-          [
-            "security",
-            "Merkle log proof checking looped forever on a proof claiming more than 2^63 entries, and a consistency proof between sizes above 2^63 shifted a u64 by 64 bits, panicking where overflow is checked; either let a peer stop anyone checking its proofs. Both are fixed. Found by fuzzing."
-          ],
-          [
-            "fixed",
-            "The crate declared Rust 1.98, the toolchain publet is developed with, though it builds on 1.85, the first release with the 2024 edition. It now declares 1.85, and CI builds it there. docs.rs links the rendered source to definitions."
-          ],
-          [
-            "internal",
-            "Each change to the public API of publet-core and publet-algorithms is checked against the crate's last release by cargo-semver-checks, and the crate docs gain a Versioning section saying so."
-          ],
-          [
-            "internal",
-            "tree::Node's docs say why it is exhaustive."
-          ],
-          [
-            "internal",
-            "The log's absurd-size regression tests also build and run on 32-bit targets."
-          ],
-          [
-            "changed",
-            "log::verify_inclusion and log::verify_consistency take sizes and indexes as u64, and membership::Proof carries them as u64, on every target. They come with proofs from peers, whose logs and sets may be larger than a 32-bit or wasm32 machine's usize; a verifier there can now check them. The functions that build proofs keep usize, as they index leaves in memory."
-          ],
-          [
-            "internal",
-            "The crates' include patterns are anchored with /, so a file of the same name deeper in a crate can never be packaged by accident; each package's contents are unchanged."
+            "SUPPLY-CHAIN.md lists every dependency built for any target. It omitted libc, which is built only on some targets and was already vetted, and libc's exemption now records its evidence."
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release publet-algorithms-v0.2.0 of publet-algorithms",
+      "scope": "the published release publet-algorithms-v0.2.1 of publet-algorithms",
       "sources": [
         {
           "ref": "publet-algorithms",
-          "revision": "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
+          "revision": "e46cc0c4ba80ed2b913d421a95f82d91359d66a2"
         }
       ]
     },
     "security": {
       "class": "archival",
-      "content": "publet-algorithms 0.2.0 passed these security checks before release on 2026-10-09.",
+      "content": "publet-algorithms 0.2.1 passed these security checks before release on 2026-10-11.",
       "data": {
         "columns": [
           {
@@ -156,9 +112,9 @@
           [
             "check",
             "supply-chain reports current",
-            "./tools/supply-chain-report.py --check && echo 'SUPPLY-CHAIN.md current for every published crate'",
-            "",
-            "SUPPLY-CHAIN.md current for every published crate"
+            ".venv/bin/pubkit supply-chain --check publet-core publet-algorithms",
+            "pubkit 0.5.0",
+            "SUPPLY-CHAIN.md current for publet-core, publet-algorithms"
           ],
           [
             "fact",
@@ -179,16 +135,16 @@
       "depends": [
         "#identity"
       ],
-      "scope": "the published release publet-algorithms-v0.2.0 of publet-algorithms",
+      "scope": "the published release publet-algorithms-v0.2.1 of publet-algorithms",
       "sources": [
         {
           "ref": "publet-algorithms",
-          "revision": "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
+          "revision": "e46cc0c4ba80ed2b913d421a95f82d91359d66a2"
         }
       ]
     }
   },
-  "created": "2026-10-09T00:00:00Z",
+  "created": "2026-10-11T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
