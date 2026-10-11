@@ -64,7 +64,8 @@
       },
       {
         "name": "supply-chain reports current",
-        "run": "./tools/supply-chain-report.py --check && echo 'SUPPLY-CHAIN.md current for every published crate'"
+        "run": ".venv/bin/pubkit supply-chain --check publet-core publet-algorithms",
+        "version": ".venv/bin/pubkit --version"
       }
     ],
     "facts": [

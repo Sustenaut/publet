@@ -11,7 +11,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO_SCOPE := --workspace --all-features
 
 .PHONY: bootstrap matrix coverage coverage-check conformance verify-suite verify-optional \
-        guard-deps guard-floats guard-eval guard-rules publish-check msrv fuzz-smoke vectors vectors-check doc-coverage doc-coverage-check supply-chain supply-chain-check vet deny check clean \
+        guard-deps guard-floats guard-eval guard-rules publish-check msrv fuzz-smoke vectors vectors-check doc-coverage doc-coverage-check vet deny check clean \
         release-check release-pr
 
 bootstrap: ## Prepare a bare machine (idempotent)
@@ -53,6 +53,8 @@ release-pr: ## Cut a release: publish the package publet and open a release PR
 # The crates released on their own: what each would publish, packaged and
 # compiled exactly as crates.io would receive it.
 PUBLISHED := publet-core publet-algorithms
+# pubkit.mk writes and checks SUPPLY-CHAIN.md for these.
+SUPPLY_CHAIN_CRATES = $(PUBLISHED)
 
 # The verify builds get a target directory of their own. Sharing target/
 # leaves dep-info naming the packaged copies' sources, after which cargo
@@ -92,12 +94,6 @@ doc-coverage: ## Regenerate each published crate's TESTING.md
 
 doc-coverage-check: ## Fail if a public function has no example, a test covers no real item, or TESTING.md is stale
 	./tools/doc-coverage.py --check
-
-supply-chain: ## Regenerate each published crate's SUPPLY-CHAIN.md from supply-chain/
-	./tools/supply-chain-report.py
-
-supply-chain-check: ## Fail if a committed SUPPLY-CHAIN.md is stale
-	./tools/supply-chain-report.py --check
 
 vet: ## Every dependency is audited, trusted, or exempt with its evidence
 	cargo vet --locked
