@@ -312,6 +312,7 @@ criteria = "safe-to-deploy"
 [[exemptions.libc]]
 version = "0.2.189"
 criteria = "safe-to-deploy"
+notes = "No full audit in the imported sets as of 2026-10-11; Mozilla's safe-to-deploy deltas reach 0.2.176. The published crates build it only on targets where cpufeatures needs it (aarch64 Linux, for sha2); the workspace's networking and build tools build it everywhere."
 
 [[exemptions.linux-raw-sys]]
 version = "0.12.1"

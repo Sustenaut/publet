@@ -26,10 +26,10 @@ jobs:
   ci:
     uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.3.1
     with:
-      gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check supply-chain-check doc-coverage-check
+      gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check doc-coverage-check
       test-args: --workspace --all-features
       apt-packages: jq
-      functional: functional guard-eval conformance coverage-check vectors-check
+      functional: functional guard-eval conformance coverage-check vectors-check supply-chain-check
       msrv: true
       fuzz: true
       cross-targets: '["i686-unknown-linux-gnu", "s390x-unknown-linux-gnu"]'
@@ -50,7 +50,7 @@ jobs:
   # nothing; the release was signed when the package publet was published.
   release:
     needs: [ci, audit]
-    uses: schryer/pubrel/.github/workflows/release.yml@v0.4.3
-    with: { pubrel-version: v0.4.3, semver-checks-version: 0.51.0 }
+    uses: schryer/pubrel/.github/workflows/release.yml@v0.5.0
+    with: { pubrel-version: v0.5.0, semver-checks-version: 0.51.0 }
     permissions:
       contents: write
