@@ -13,7 +13,7 @@ repository = "https://github.com/schryer/publet"
 publet-core = { path = "crates/publet-core", version = "0.1.3" }
 # Generic algorithms, publet-agnostic: depends on no crate in this
 # workspace (tools/check-deps.py). Versioned on its own track.
-publet-algorithms = { path = "crates/publet-algorithms", version = "0.2.0" }
+publet-algorithms = { path = "crates/publet-algorithms", version = "0.2.1" }
 publet-graph = { path = "crates/publet-graph", version = "0.2.0" }
 publet-lint = { path = "crates/publet-lint", version = "0.2.0" }
 publet-eval = { path = "crates/publet-eval", version = "0.2.0" }
