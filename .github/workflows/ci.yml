@@ -32,23 +32,12 @@ jobs:
       functional: guard-eval conformance coverage-check
       cross-test-args: --workspace --all-features
 
-  # cargo deny and cargo vet. ci's own audit job now runs the same; this
-  # one stays while the branch ruleset requires a check named `audit`.
-  audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - run: cargo install --locked cargo-deny --version 0.20.2
-      - run: make deny
-      - run: cargo install --locked cargo-vet --version 0.10.2
-      - run: make vet
-
   # The shared release workflow: on a pull request, a code change records
   # what it changes and a release is the bump those changes require,
   # published; on main, a published version is tagged and released. CI signs
   # nothing; the release was signed when the package publet was published.
   release:
-    needs: [ci, audit]
+    needs: ci
     uses: schryer/pubrel/.github/workflows/release.yml@v0.5.1
     with: { pubrel-version: v0.5.1, semver-checks-version: 0.51.0 }
     permissions:
