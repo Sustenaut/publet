@@ -10,31 +10,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  # pubkit's shared Rust CI, with publet's own gates and checks named:
+  # pubkit's shared Rust CI. It runs every check the Rust crate standard
+  # requires (`make required` lists them): fmt, clippy, docs, doc-coverage
+  # and packaging; the tests on Linux, macOS, Windows, i686 and s390x (R8
+  # requires bit-identical results everywhere); the Gherkin suite, the test
+  # vectors and the supply-chain report; the oldest promised Rust; fuzzing
+  # of the decoders that read untrusted input; and cargo deny and vet.
+  # publet adds its own:
   #
-  # - gates: the no-float, dependency-direction and rule guards beside fmt,
-  #   clippy and docs -- cheap, so they fail fast before the matrix.
-  # - test: R8 requires bit-identical results everywhere, so determinism is
-  #   verified across Linux, macOS and Windows, not on one machine.
-  # - functional: the Gherkin suite, then the evaluation digest (which needs
-  #   a built pub-eval), the conformance scenarios, and the coverage report,
-  #   which must be committed up to date.
-  # - msrv: the published crates build on the oldest Rust they promise.
-  # - fuzz: the decoders that read untrusted input, after replaying every
-  #   input that once found a bug (fuzz/regressions/).
-  # - cross: R8's bit-identical results on a 32-bit and a big-endian machine.
+  # - gates: the no-float, dependency-direction, rule and MSRV guards --
+  #   cheap, so they fail fast before the matrix.
+  # - functional: the evaluation digest (which needs a built pub-eval), the
+  #   conformance scenarios, and the coverage report, which must be
+  #   committed up to date.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.3.1
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.6.0
     with:
-      gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check doc-coverage-check
+      gates: guard-floats guard-deps guard-rules guard-msrv
       test-args: --workspace --all-features
       apt-packages: jq
-      functional: functional guard-eval conformance coverage-check vectors-check supply-chain-check
-      msrv: true
-      fuzz: true
-      cross-targets: '["i686-unknown-linux-gnu", "s390x-unknown-linux-gnu"]'
+      functional: guard-eval conformance coverage-check
       cross-test-args: --workspace --all-features
 
+  # cargo deny and cargo vet. ci's own audit job now runs the same; this
+  # one stays while the branch ruleset requires a check named `audit`.
   audit:
     runs-on: ubuntu-latest
     steps:
