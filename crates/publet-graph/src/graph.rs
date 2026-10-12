@@ -7,11 +7,24 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use publet_core::{Cid, Object, Verified, cbor::Value};
+use publet_core::{Cid, Object, SigAlg, Verified, cbor::Value};
 
 use crate::GraphError;
 use crate::document::{Anchor, Document};
 use crate::view::{Annotation, Class, ProseClaim, Relation, RelationKind};
+
+/// The purpose both keys sign a rotating key object for (Section 10.5).
+///
+/// Section 10.5 says only that the new key object is "signed by both
+/// keys"; a signature always covers a stated purpose (Section 4.4), and this
+/// is the one a rotation is signed for, so a signature made for another
+/// purpose cannot be taken for consent to a rotation.
+pub const ROTATION_PURPOSE: &str = "rotation";
+
+/// The most rotations followed from one key back to an earlier one. A chain
+/// is bounded so that a crafted cycle or a very long chain cannot make a
+/// query unbounded.
+pub const MAX_ROTATIONS: usize = 64;
 
 /// Which `supersedes` edges a lineage query should follow (R15, Section 6.1).
 ///
@@ -176,6 +189,9 @@ impl Graph {
                             // the delegator's lineages with its authority.
                             || (kind == RelationKind::Supersedes
                                 && self.delegates_lineage(target.author(), r.author()))
+                            // Section 10.5: a key rotated from the author
+                            // continues it.
+                            || self.continues_key(target.author(), r.author())
                     })
                 })
             })
@@ -330,9 +346,11 @@ impl Graph {
     /// Whether the `supersedes` relation `relation` is felicitous: a
     /// revision rather than a proposal to replace (Section 6).
     ///
-    /// It is when its author signed the object it supersedes, or holds an
+    /// It is when its author signed the object it supersedes, holds an
     /// immediate `lineage` delegation from that key (Section 10.6:
-    /// delegation "transfers the capacity to continue -- to supersede").
+    /// delegation "transfers the capacity to continue -- to supersede"), or
+    /// is a key rotated from it (Section 10.5: rotation "transfers
+    /// continuity"; see [`Graph::continues_key`]).
     /// The delegation must itself be authored by the delegating key and
     /// not retracted. An `on-dormancy` delegation is not counted: whether
     /// the stated silence has elapsed is a fact about time this graph does
@@ -349,7 +367,74 @@ impl Graph {
             return false;
         };
         let original = target.author();
-        rel.author() == original || self.delegates_lineage(original, rel.author())
+        rel.author() == original
+            || self.delegates_lineage(original, rel.author())
+            || self.continues_key(original, rel.author())
+    }
+
+    /// The key `successor` rotates from: the `rotates` field of its key
+    /// object, counted only when that key object is signed, for
+    /// [`ROTATION_PURPOSE`], by both the key it names and itself (Section
+    /// 10.5). Each signature is a `sig` object in this graph, authored by
+    /// the signing key, that verifies against the key's own public key.
+    #[must_use]
+    pub fn rotated_from(&self, successor: &Cid) -> Option<Cid> {
+        let object = self.objects.get(&successor.to_string())?;
+        if object.kind() != "key" {
+            return None;
+        }
+        let previous: Cid = object.body().get("rotates")?.as_text()?.parse().ok()?;
+        (self.signed_by(&previous, successor, ROTATION_PURPOSE)
+            && self.signed_by(successor, successor, ROTATION_PURPOSE))
+        .then_some(previous)
+    }
+
+    /// Whether `successor` is `original`, or reaches it through at most
+    /// [`MAX_ROTATIONS`] rotations, each one counted by
+    /// [`Graph::rotated_from`].
+    #[must_use]
+    pub fn continues_key(&self, original: &Cid, successor: &Cid) -> bool {
+        let mut key = successor.clone();
+        for _ in 0..=MAX_ROTATIONS {
+            if &key == original {
+                return true;
+            }
+            match self.rotated_from(&key) {
+                Some(previous) => key = previous,
+                None => return false,
+            }
+        }
+        false
+    }
+
+    /// Whether a `sig` object in this graph, authored by the key `key`,
+    /// signs the object `target` for `purpose` with a signature that
+    /// verifies against the public key `key`'s own object states.
+    fn signed_by(&self, key: &Cid, target: &Cid, purpose: &str) -> bool {
+        let Some(key_object) = self.objects.get(&key.to_string()) else {
+            return false;
+        };
+        let text =
+            |o: &Object, k: &str| o.body().get(k).and_then(Value::as_text).map(str::to_owned);
+        if key_object.kind() != "key" || text(key_object, "alg").as_deref() != Some("ed25519") {
+            return false;
+        }
+        let Some(Value::Bytes(public)) = key_object.body().get("pubkey") else {
+            return false;
+        };
+        let Some(target_object) = self.objects.get(&target.to_string()) else {
+            return false;
+        };
+        let target_text = target.to_string();
+        self.objects.values().any(|o| {
+            o.kind() == "sig"
+                && o.author() == key
+                && text(o, "target").as_deref() == Some(target_text.as_str())
+                && matches!(o.body().get("value"), Some(Value::Bytes(value))
+                    if text(o, "purpose").is_some_and(|found| publet_core::verify(
+                        SigAlg::Ed25519, public, value, &found, purpose, target_object.bytes(),
+                    ).is_ok()))
+        })
     }
 
     /// Whether `from` has delegated the `lineage` aspect to `to`,
