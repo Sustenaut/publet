@@ -1,4 +1,8 @@
 {
   "kind": "rust",
-  "bin": "publet"
+  "bin": "publet",
+  "published": [
+    "publet-core",
+    "publet-algorithms"
+  ]
 }
