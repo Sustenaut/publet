@@ -177,6 +177,38 @@ def map_json(corpora):
     return corpora.ok(corpora.child, "corpus", "map", "--format=json")
 
 
+@when(parsers.parse('the parent\'s key is rotated to one labelled "{label}"'))
+def rotated(corpora, label: str):
+    out = corpora.ok(corpora.parent, "sign", "--rotate", "--principal=human", f"--label={label}")
+    lines = dict(line.split(None, 1) for line in out.stdout.splitlines() if line.strip()
+                 and line.split()[0] in ("key", "rotates", "signed", "retired"))
+    corpora.new_key = lines["key"].strip()
+    corpora.rotation_sigs = [l.split()[1] for l in out.stdout.splitlines() if l.startswith("signed")]
+    corpora.retired = lines["retired"].strip()
+
+
+@when(parsers.parse('the parent\'s "{slug}" becomes version "{version}" and I dry-run the parent'),
+      target_fixture="result")
+def parent_dry(corpora, slug: str, version: str):
+    corpora.source(corpora.parent, slug, tool(version, slug))
+    return corpora.ok(corpora.parent, "build", "--dry-run")
+
+
+@when("I publish the parent", target_fixture="result")
+def publish_parent(corpora):
+    return corpora.published(corpora.parent)
+
+
+@when("the parent's secret key is replaced by another key's")
+def wrong_secret(corpora):
+    (corpora.parent / ".publet" / "signing.key").write_text("11" * 32 + "\n")
+
+
+@when("I rotate the parent's key", target_fixture="result")
+def rotate_parent(corpora):
+    return corpora.pub(corpora.parent, "sign", "--rotate", "--principal=human")
+
+
 # --- thens -------------------------------------------------------------------
 
 
@@ -237,3 +269,24 @@ def map_external(result, url: str):
 @when("I check the child's publet for rendering", target_fixture="result")
 def render_check(corpora):
     return corpora.pub(corpora.child, "render", "doc", "--check")
+
+
+@then(parsers.parse('the publet "{slug}" is reported "{status}"'))
+def publet_status(result, slug: str, status: str):
+    assert any(line.split()[:2] == [status, slug] for line in result.stdout.splitlines()), \
+        result.stdout
+
+
+@then("the parent's objects include its new key and the two rotation signatures")
+def rotation_exported(corpora):
+    for cid in [corpora.new_key, *corpora.rotation_sigs]:
+        assert (corpora.parent / "objects" / (cid.replace(":", "_") + ".cbor")).exists(), cid
+    assert len(corpora.rotation_sigs) == 2
+
+
+@then("the parent's old secret is kept under .publet/retired")
+def retired_kept(corpora):
+    kept = Path(corpora.retired)
+    assert kept.parent == corpora.parent / ".publet" / "retired", kept
+    assert kept.exists() and (corpora.parent / ".publet" / "signing.key").exists()
+    assert kept.read_text() != (corpora.parent / ".publet" / "signing.key").read_text()

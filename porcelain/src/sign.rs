@@ -14,6 +14,12 @@
 //! on cites as `author`). `--purpose`/`--target` signs an object already in
 //! this workspace's store.
 //!
+//! `--rotate` replaces this workspace's key the way Section 10.5 says: a
+//! new `key` object with `rotates` naming the current key, signed by
+//! **both** keys for the rotation purpose, which transfers continuity. The
+//! old secret is kept, not deleted, under `.publet/retired/`, and `author`
+//! then names the new key.
+//!
 //! # `author: <self>` on a key object
 //!
 //! Section 10.1's pseudocode writes `author: <self>` for a key object, but
@@ -46,6 +52,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let ws = Workspace::open(&here)?;
 
     let mut do_generate = false;
+    let mut do_rotate = false;
     let mut principal = None;
     let mut label = None;
     let mut purpose = None;
@@ -55,6 +62,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     for arg in args {
         if arg == "--generate-key" {
             do_generate = true;
+        } else if arg == "--rotate" {
+            do_rotate = true;
         } else if let Some(v) = arg.strip_prefix("--principal=") {
             principal = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--label=") {
@@ -70,8 +79,14 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         }
     }
 
+    if do_generate && do_rotate {
+        return Err("--generate-key and --rotate are different commands; give one".to_owned());
+    }
     if do_generate {
         return generate(&ws, &here, principal, label.as_deref(), &created);
+    }
+    if do_rotate {
+        return rotate(&ws, &here, principal, label.as_deref(), &created);
     }
 
     let purpose = purpose
@@ -109,25 +124,9 @@ fn generate(
         ));
     }
 
-    let mut seed = [0u8; 32];
-    getrandom::getrandom(&mut seed)
-        .map_err(|e| format!("could not read system randomness: {e}"))?;
-    let pubkey = publet_core::verifying_key(SigAlg::Ed25519, &seed).map_err(|e| e.to_string())?;
-
-    // Non-circular resolution of Section 10.1's `author: <self>` -- see the
-    // module doc comment.
-    let self_author = Cid::of(&pubkey, HashAlg::Sha2_256);
-
-    let mut builder = Object::builder("key", &self_author.to_string())
-        .created(created)
-        .field("alg", Value::Text("ed25519".to_owned()))
-        .field("pubkey", Value::Bytes(pubkey))
-        .field("principal", Value::Text(principal));
-    if let Some(label) = label {
-        builder = builder.field("label", Value::Text(label.to_owned()));
-    }
-    let bytes = builder.build().map_err(|e| e.to_string())?;
-    let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+    // The key object's own author is the non-circular resolution of
+    // Section 10.1's `author: <self>` -- see the module doc comment.
+    let (seed, cid, bytes) = new_key(&principal, label, None, created)?;
 
     let store = ws.store()?;
     store.put(&cid, &bytes).map_err(|e| e.to_string())?;
@@ -151,6 +150,152 @@ fn generate(
     println!("published as an object, never leaves this machine, and has no");
     println!("recovery mechanism (Section 10.5): losing it means this identity");
     println!("publishes nothing further, not that it can be restored.");
+    Ok(())
+}
+
+/// A new key object for a fresh secret, rotating from `rotates` if given:
+/// (seed, key object CID, key object bytes).
+fn new_key(
+    principal: &str,
+    label: Option<&str>,
+    rotates: Option<&Cid>,
+    created: &str,
+) -> Result<([u8; 32], Cid, Vec<u8>), String> {
+    let mut seed = [0u8; 32];
+    getrandom::getrandom(&mut seed)
+        .map_err(|e| format!("could not read system randomness: {e}"))?;
+    let pubkey = publet_core::verifying_key(SigAlg::Ed25519, &seed).map_err(|e| e.to_string())?;
+    let self_author = Cid::of(&pubkey, HashAlg::Sha2_256);
+    let mut builder = Object::builder("key", &self_author.to_string())
+        .created(created)
+        .field("alg", Value::Text("ed25519".to_owned()))
+        .field("pubkey", Value::Bytes(pubkey))
+        .field("principal", Value::Text(principal.to_owned()));
+    if let Some(label) = label {
+        builder = builder.field("label", Value::Text(label.to_owned()));
+    }
+    if let Some(previous) = rotates {
+        builder = builder.field("rotates", Value::Text(previous.to_string()));
+    }
+    let bytes = builder.build().map_err(|e| e.to_string())?;
+    Ok((seed, Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+}
+
+/// A `sig` object (Section 4.4) by the key `author` with `seed`.
+fn sig_with(
+    seed: &[u8; 32],
+    author: &str,
+    created: &str,
+    purpose: &str,
+    target: &Cid,
+    target_bytes: &[u8],
+) -> Result<(Cid, Vec<u8>), String> {
+    let value = publet_core::sign(SigAlg::Ed25519, seed, purpose, target_bytes)
+        .map_err(|e| e.to_string())?;
+    let bytes = Object::builder("sig", author)
+        .created(created)
+        .field("target", Value::Text(target.to_string()))
+        .field("alg", Value::Text("ed25519".to_owned()))
+        .field("value", Value::Bytes(value))
+        .field("purpose", Value::Text(purpose.to_owned()))
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok((Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+}
+
+/// Section 10.5 rotation: a new key whose object names the current one in
+/// `rotates`, signed by both keys for [`publet_graph::ROTATION_PURPOSE`].
+fn rotate(
+    ws: &Workspace,
+    here: &std::path::Path,
+    principal: Option<String>,
+    label: Option<&str>,
+    created: &str,
+) -> Result<(), String> {
+    let principal = principal.ok_or(format!(
+        "--principal is required: one of {}",
+        PRINCIPALS.join(", ")
+    ))?;
+    if !PRINCIPALS.contains(&principal.as_str()) {
+        return Err(format!("unknown principal: {principal}"));
+    }
+    let path = key_path(here);
+    let old_seed = read_key_file(&path).map_err(|e| format!("nothing to rotate: {e}"))?;
+    let old = ws
+        .get("author")
+        .ok_or("no author configured; run `pub sign --generate-key` first")?;
+    let old_cid: Cid = old
+        .parse()
+        .map_err(|_| format!("`author` is not an identifier: {old}"))?;
+    let store = ws.store()?;
+    // The secret must be the one the current key object states, or the old
+    // key's signature would be made by a key nobody can check it against.
+    let old_object = store
+        .get(&old_cid)
+        .map_err(|e| e.to_string())?
+        .and_then(|b| Object::parse(&b).ok())
+        .ok_or(format!(
+            "the current key {old} is not in this workspace's store"
+        ))?;
+    let stated = match old_object.peek().body().get("pubkey") {
+        Some(Value::Bytes(b)) => b.clone(),
+        _ => return Err(format!("{old} states no public key")),
+    };
+    let held = publet_core::verifying_key(SigAlg::Ed25519, &old_seed).map_err(|e| e.to_string())?;
+    if stated != held {
+        return Err(format!(
+            "{} is not the secret of {old}, the key `author` names; nothing was changed",
+            path.display()
+        ));
+    }
+
+    let (new_seed, new_cid, new_bytes) = new_key(&principal, label, Some(&old_cid), created)?;
+    let purpose = publet_graph::ROTATION_PURPOSE;
+    let (by_new, by_new_bytes) = sig_with(
+        &new_seed,
+        &new_cid.to_string(),
+        created,
+        purpose,
+        &new_cid,
+        &new_bytes,
+    )?;
+    let (by_old, by_old_bytes) = sig_with(&old_seed, &old, created, purpose, &new_cid, &new_bytes)?;
+    for (cid, bytes) in [
+        (&new_cid, &new_bytes),
+        (&by_new, &by_new_bytes),
+        (&by_old, &by_old_bytes),
+    ] {
+        store.put(cid, bytes).map_err(|e| e.to_string())?;
+    }
+
+    // Keep the old secret: it signed everything before this, and Section
+    // 10.5 has nothing that needs it destroyed.
+    let retired = here.join(DIR).join("retired");
+    std::fs::create_dir_all(&retired).map_err(|e| e.to_string())?;
+    let tail = old.rsplit(':').next().unwrap_or("key");
+    let kept = retired.join(format!("{KEY_FILE}.{tail}"));
+    if kept.exists() {
+        return Err(format!(
+            "{} already exists; nothing was changed",
+            kept.display()
+        ));
+    }
+    std::fs::rename(&path, &kept).map_err(|e| e.to_string())?;
+    write_key_file(&path, &new_seed)?;
+    ws.set("author", &new_cid.to_string())?;
+
+    println!("key      {new_cid}");
+    println!("rotates  {old}");
+    println!("signed   {by_old} (by {old})");
+    println!("signed   {by_new} (by {new_cid})");
+    println!("retired  {}", kept.display());
+    println!();
+    println!("`author` now names the new key. The old key's secret is kept under");
+    println!(
+        "{}, and everything it signed stays signed by it.",
+        retired.display()
+    );
+    println!("A corpus exports the new key and both signatures when it next publishes.");
     Ok(())
 }
 
@@ -210,17 +355,7 @@ pub(crate) fn signature(
     target_bytes: &[u8],
 ) -> Result<(Cid, Vec<u8>), String> {
     let seed = read_key_file(&key_path(here))?;
-    let value = publet_core::sign(SigAlg::Ed25519, &seed, purpose, target_bytes)
-        .map_err(|e| e.to_string())?;
-    let bytes = Object::builder("sig", author)
-        .created(created)
-        .field("target", Value::Text(target.to_string()))
-        .field("alg", Value::Text("ed25519".to_owned()))
-        .field("value", Value::Bytes(value))
-        .field("purpose", Value::Text(purpose.to_owned()))
-        .build()
-        .map_err(|e| e.to_string())?;
-    Ok((Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+    sig_with(&seed, author, created, purpose, target, target_bytes)
 }
 
 fn sign_target(

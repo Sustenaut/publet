@@ -24,7 +24,7 @@ pub use data::{Cell, Column, Data, Source, View, sources};
 pub use divergence::{Divergence, TermConflict, TermPartition, compare, partition};
 pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
-pub use graph::{Graph, Lineage, LineageView};
+pub use graph::{Graph, Lineage, LineageView, MAX_ROTATIONS, ROTATION_PURPOSE};
 pub use lint::{Finding, check, check_in};
 pub use view::{Annotation, Class, Key, Principal, ProseClaim, Relation, RelationKind};
 

@@ -48,6 +48,20 @@ Feature: Project corpora build on parent corpora they are pinned to
     And I upgrade the child and dry-run it
     Then the superseding publet is reported "draft"
 
+  Scenario: After a key rotation, the corpus still revises its own publets
+    When the parent's key is rotated to one labelled "Parent release key"
+    And the parent's "tool.x" becomes version "1.1" and I dry-run the parent
+    Then the publet "tool.x" is reported "draft"
+    When I publish the parent
+    Then the parent's objects include its new key and the two rotation signatures
+    And the parent's old secret is kept under .publet/retired
+
+  Scenario: Rotating needs the secret of the key it rotates
+    When the parent's secret key is replaced by another key's
+    And I rotate the parent's key
+    Then it fails
+    And stderr mentions "is not the secret of"
+
   Scenario: The network map spans both corpora and the external source
     When I publish the child
     And I map the child's corpus as JSON

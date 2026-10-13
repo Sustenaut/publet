@@ -985,3 +985,158 @@ fn a_lineage_delegate_extends_the_authoritative_lineage() {
         vec![next]
     );
 }
+
+/// A key object for `seed`, rotating from `rotates` if given, with its
+/// identifier and public key.
+fn key(seed: u8, rotates: Option<&Cid>) -> (Cid, Vec<u8>, [u8; 32]) {
+    let secret = [seed; 32];
+    let public = publet_core::verifying_key(publet_core::SigAlg::Ed25519, &secret).unwrap();
+    let mut fields = vec![
+        ("alg", Value::Text("ed25519".into())),
+        ("pubkey", Value::Bytes(public.clone())),
+        ("principal", Value::Text("human".into())),
+        ("label", Value::Text("a release key".into())),
+    ];
+    if let Some(previous) = rotates {
+        fields.push(("rotates", Value::Text(previous.to_string())));
+    }
+    let self_author = Cid::of(&public, HashAlg::Sha2_256).to_string();
+    let (cid, bytes) = build("key", &self_author, "2026-10-12T00:00:00Z", &fields);
+    (cid, bytes, secret)
+}
+
+/// A `sig` object by `key` (with `secret`) over `target`'s bytes.
+fn sig(
+    key: &Cid,
+    secret: &[u8; 32],
+    purpose: &str,
+    target: &Cid,
+    target_bytes: &[u8],
+) -> (Cid, Vec<u8>) {
+    let value =
+        publet_core::sign(publet_core::SigAlg::Ed25519, secret, purpose, target_bytes).unwrap();
+    build(
+        "sig",
+        &key.to_string(),
+        "2026-10-12T00:00:00Z",
+        &[
+            ("target", Value::Text(target.to_string())),
+            ("alg", Value::Text("ed25519".into())),
+            ("value", Value::Bytes(value)),
+            ("purpose", Value::Text(purpose.into())),
+        ],
+    )
+}
+
+/// Section 10.5: a new key object with `rotates` set, signed by both keys
+/// for the rotation purpose, transfers continuity, so the new key's
+/// `supersedes` of the old key's object is a revision. A rotation signed by
+/// one key only, or for another purpose, transfers nothing.
+// covers: Graph::rotated_from, Graph::continues_key, Graph::supersedes_is_felicitous
+#[test]
+fn a_rotation_signed_by_both_keys_continues_the_old_key() {
+    let (old_key, old_bytes, old_secret) = key(1, None);
+    let (new_key, new_bytes, new_secret) = key(2, Some(&old_key));
+    let mut g = Graph::new();
+    add(&mut g, &old_key, &old_bytes).unwrap();
+    add(&mut g, &new_key, &new_bytes).unwrap();
+
+    let (v1, v1_bytes) = claim(
+        &old_key.to_string(),
+        "2026-10-01T00:00:00Z",
+        "definitional",
+        "x",
+        &[],
+    );
+    add(&mut g, &v1, &v1_bytes).unwrap();
+    let (v2, v2_bytes) = claim(
+        &new_key.to_string(),
+        "2026-10-13T00:00:00Z",
+        "definitional",
+        "x, v2",
+        &[],
+    );
+    add(&mut g, &v2, &v2_bytes).unwrap();
+    let (rel, rel_bytes) = relation(
+        &new_key.to_string(),
+        "2026-10-13T00:00:00Z",
+        "supersedes",
+        &v2,
+        &v1,
+    );
+    add(&mut g, &rel, &rel_bytes).unwrap();
+
+    assert_eq!(g.rotated_from(&new_key), None, "no signatures yet");
+    assert!(
+        !g.supersedes_is_felicitous(&rel),
+        "an unsigned rotation proposes"
+    );
+
+    // Signed by the new key only: not both keys.
+    let (s_new, s_new_bytes) = sig(&new_key, &new_secret, "rotation", &new_key, &new_bytes);
+    add(&mut g, &s_new, &s_new_bytes).unwrap();
+    assert_eq!(
+        g.rotated_from(&new_key),
+        None,
+        "one signature is not consent"
+    );
+
+    // The old key signing for another purpose does not count either.
+    let (s_other, s_other_bytes) = sig(&old_key, &old_secret, "authored", &new_key, &new_bytes);
+    add(&mut g, &s_other, &s_other_bytes).unwrap();
+    assert_eq!(
+        g.rotated_from(&new_key),
+        None,
+        "a signature for another purpose"
+    );
+
+    let (s_old, s_old_bytes) = sig(&old_key, &old_secret, "rotation", &new_key, &new_bytes);
+    add(&mut g, &s_old, &s_old_bytes).unwrap();
+    assert_eq!(g.rotated_from(&new_key), Some(old_key.clone()));
+    assert!(g.continues_key(&old_key, &new_key));
+    assert!(
+        !g.continues_key(&new_key, &old_key),
+        "continuity runs forward only"
+    );
+    assert!(g.supersedes_is_felicitous(&rel), "the rotated key revises");
+    assert_eq!(
+        g.lineage(&v1, Lineage::Authoritative).heads,
+        vec![v2.clone()],
+        "the new key's version heads the authoritative lineage"
+    );
+}
+
+/// A chain of rotations is followed, and a signature that does not verify
+/// is not counted.
+// covers: Graph::continues_key, Graph::rotated_from
+#[test]
+fn rotations_chain_and_forged_signatures_do_not_count() {
+    let (k1, b1, s1) = key(1, None);
+    let (k2, b2, s2) = key(2, Some(&k1));
+    let (k3, b3, s3) = key(3, Some(&k2));
+    let mut g = Graph::new();
+    for (c, b) in [(&k1, &b1), (&k2, &b2), (&k3, &b3)] {
+        add(&mut g, c, b).unwrap();
+    }
+    for (signer, secret, target, bytes) in [
+        (&k1, &s1, &k2, &b2),
+        (&k2, &s2, &k2, &b2),
+        (&k2, &s2, &k3, &b3),
+        (&k3, &s3, &k3, &b3),
+    ] {
+        let (c, b) = sig(signer, secret, "rotation", target, bytes);
+        add(&mut g, &c, &b).unwrap();
+    }
+    assert!(g.continues_key(&k1, &k3), "two rotations");
+
+    // A key claiming to rotate from k1, with a signature by k1's identifier
+    // made with another secret, does not continue k1.
+    let (k4, b4, s4) = key(4, Some(&k1));
+    add(&mut g, &k4, &b4).unwrap();
+    let (c, b) = sig(&k4, &s4, "rotation", &k4, &b4);
+    add(&mut g, &c, &b).unwrap();
+    let (c, b) = sig(&k1, &[9; 32], "rotation", &k4, &b4);
+    add(&mut g, &c, &b).unwrap();
+    assert_eq!(g.rotated_from(&k4), None, "a forged signature");
+    assert!(!g.continues_key(&k1, &k4));
+}

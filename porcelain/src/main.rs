@@ -57,7 +57,7 @@ fn usage() -> ExitCode {
     eprintln!("  myst SLUG|CID        write a MyST project for a document");
     eprintln!("  relate               author a relation between two objects");
     eprintln!("  annotate             say something about an object without touching it");
-    eprintln!("  sign                 generate a signing key, or sign a stored object");
+    eprintln!("  sign                 generate a signing key, rotate it, or sign a stored object");
     eprintln!("  policy               author a policy object and set it as the workspace's");
     eprintln!("  propose CID...       submit objects, recording what they were composed against");
     eprintln!("  witness DOMAIN       record the log root you observed");
