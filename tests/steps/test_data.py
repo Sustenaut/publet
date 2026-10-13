@@ -21,6 +21,7 @@ scenarios("../features/conformance/quantities.feature")
 scenarios("../features/conformance/blobs.feature")
 scenarios("../features/porcelain/doc.feature")
 scenarios("../features/porcelain/revise.feature")
+scenarios("../features/porcelain/site.feature")
 
 CONTENT = "Planned P0 spend by item, Oct 2026 to Mar 2027."
 SCOPE = "Sustenaut P0 plan as approved for the first phase"
@@ -576,3 +577,130 @@ def another_system(runner, ctx, name: str, version: str):
 @when("I compose a budget claim with energy per tray under that system", target_fixture="result")
 def compose_under_other(runner, ctx):
     return _compose_budget(runner, ctx, _energy(ctx, ESTIMATE), f"--depends={ctx['q']['other']}")
+
+
+# --- pub site ------------------------------------------------------------------
+
+
+def _page(runner, *parts: str) -> str:
+    path = runner.cwd.joinpath("site", *parts, "index.html")
+    assert path.is_file(), f"no page at {path}"
+    return path.read_text()
+
+
+@when("I compose a budget claim with energy per tray not yet known", target_fixture="result")
+def compose_unknown(runner, ctx):
+    return _compose_budget(runner, ctx, _energy(ctx, None), f"--depends={ctx['q']['ucum']}")
+
+
+@when(parsers.parse('I define another dimension named "{symbol}"'))
+def define_again(runner, ctx, symbol: str):
+    ctx["q"]["tray2"] = _defined(runner, "tray2", f"{symbol}: one 30 by 60 cm growing tray.",
+                                 {"sort": "dimension", "symbol": symbol}, ctx["q"]["ucum"])
+
+
+@when("I compose a claim whose content holds markup", target_fixture="result")
+def compose_markup(runner, ctx):
+    result = runner.run("pub", "compose", "--class=normative", "--scope=unconditional",
+                        "--content=Trays <script>alert(1)</script> & lids are counted apart.")
+    assert result.code == 0, result.stderr
+    ctx["claim"] = result.stdout.split()[0]
+    return result
+
+
+@when("I write the site", target_fixture="result")
+def write_site(runner):
+    return runner.run("pub", "site", "--out=site", "--title=Publication 0",
+                      "--base=https://pub.example")
+
+
+@when("I export the workspace's objects to a directory")
+def export_objects(runner):
+    objects = runner.cwd / "objects"
+    objects.mkdir()
+    for cid in sorted(_held(runner)):
+        out = runner.run("pub-cat", "--store=.publet/objects.redb", cid)
+        assert out.code == 0, out.stderr
+        (objects / (cid.replace(":", "_") + ".cbor")).write_bytes(out.out)
+
+
+@when("I write the site from that directory", target_fixture="result")
+def write_site_from_dir(runner):
+    (runner.cwd / ".publet").rename(runner.cwd / "moved-away")
+    return runner.run("pub", "site", "--dir=objects", "--out=site")
+
+
+@given("the site directory already holds a file")
+def site_not_empty(runner):
+    (runner.cwd / "site").mkdir()
+    (runner.cwd / "site" / "old.html").write_text("an earlier page")
+
+
+@then("the claim has a page showing its content and scope")
+def claim_page(runner, ctx):
+    page = _page(runner, "o", ctx["claim"])
+    assert CONTENT in page, page
+    assert SCOPE in page, page
+
+
+@then("the claim's bytes are served at its identifier, unchanged")
+def claim_bytes(runner, ctx):
+    served = (runner.cwd / "site" / "pub" / "v1" / "object" / ctx["claim"]).read_bytes()
+    stored = runner.run("pub-cat", "--store=.publet/objects.redb", ctx["claim"])
+    assert stored.code == 0, stored.stderr
+    assert served == stored.out
+
+
+@then("the index links the claim's page")
+def index_links(runner, ctx):
+    index = (runner.cwd / "site" / "index.html").read_text()
+    assert f'href="o/{ctx["claim"]}/"' in index, index
+
+
+@then("the claim's page shows low, likely and high in that order")
+def quantity_order(runner, ctx):
+    page = _page(runner, "o", ctx["claim"])
+    cells = page.split("<tbody>", 1)[1]
+    positions = [cells.find(f'class="param">{k}<') for k in ("low", "likely", "high")]
+    assert -1 not in positions and positions == sorted(positions), cells
+    for value in ESTIMATE.values():
+        assert value in cells, cells
+
+
+@then("the claim's page links the column's kind and measure")
+def links_kind_measure(runner, ctx):
+    page = _page(runner, "o", ctx["claim"])
+    for name in ("kind", "measure"):
+        assert f'href="../../o/{ctx["q"][name]}/"' in page, (name, page)
+
+
+@then(parsers.parse('the claim\'s page says "{fragment}"'))
+def page_says(runner, ctx, fragment: str):
+    assert fragment in _page(runner, "o", ctx["claim"])
+
+
+@then(parsers.parse('the name "{name}" has a page linking the tray dimension\'s page'))
+def name_page(runner, ctx, name: str):
+    page = _page(runner, "def", name)
+    assert f'href="../../o/{ctx["q"]["tray"]}/"' in page or ctx["q"]["tray"] in page, page
+
+
+@then(parsers.parse('the index lists the name "{name}" at "{href}"'))
+def index_lists_name(runner, name: str, href: str):
+    index = (runner.cwd / "site" / "index.html").read_text()
+    assert f'href="{href}"' in index, index
+
+
+@then(parsers.parse('the name "{name}" has a page listing both definitions'))
+def name_lists_both(runner, ctx, name: str):
+    page = _page(runner, "def", name)
+    for key in ("tray", "tray2"):
+        assert ctx["q"][key] in page, (key, page)
+    assert "2 definitions go by this name" in page, page
+
+
+@then("the claim's page shows the markup escaped")
+def markup_escaped(runner, ctx):
+    page = _page(runner, "o", ctx["claim"])
+    assert "<script>" not in page, page
+    assert "&lt;script&gt;alert(1)&lt;/script&gt; &amp; lids" in page, page
