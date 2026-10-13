@@ -21,7 +21,7 @@ scenarios("../features/conformance/quantities.feature")
 scenarios("../features/conformance/blobs.feature")
 scenarios("../features/porcelain/doc.feature")
 scenarios("../features/porcelain/revise.feature")
-scenarios("../features/porcelain/site.feature")
+scenarios("../features/porcelain/bundle.feature")
 
 CONTENT = "Planned P0 spend by item, Oct 2026 to Mar 2027."
 SCOPE = "Sustenaut P0 plan as approved for the first phase"
@@ -579,13 +579,17 @@ def compose_under_other(runner, ctx):
     return _compose_budget(runner, ctx, _energy(ctx, ESTIMATE), f"--depends={ctx['q']['other']}")
 
 
-# --- pub site ------------------------------------------------------------------
+# --- pub bundle ----------------------------------------------------------------
 
 
-def _page(runner, *parts: str) -> str:
-    path = runner.cwd.joinpath("site", *parts, "index.html")
-    assert path.is_file(), f"no page at {path}"
-    return path.read_text()
+def _bundle(runner, *parts: str) -> dict:
+    path = runner.cwd.joinpath("bundles", *parts)
+    assert path.is_file(), f"no bundle at {path}"
+    return json.loads(path.read_text())
+
+
+def _claim_bundle(runner, ctx) -> dict:
+    return _bundle(runner, "o", f"{ctx['claim']}.json")
 
 
 @when("I compose a budget claim with energy per tray not yet known", target_fixture="result")
@@ -599,18 +603,9 @@ def define_again(runner, ctx, symbol: str):
                                  {"sort": "dimension", "symbol": symbol}, ctx["q"]["ucum"])
 
 
-@when("I compose a claim whose content holds markup", target_fixture="result")
-def compose_markup(runner, ctx):
-    result = runner.run("pub", "compose", "--class=normative", "--scope=unconditional",
-                        "--content=Trays <script>alert(1)</script> & lids are counted apart.")
-    assert result.code == 0, result.stderr
-    ctx["claim"] = result.stdout.split()[0]
-    return result
-
-
-@when("I write the site", target_fixture="result")
-def write_site(runner):
-    return runner.run("pub", "site", "--out=site", "--title=Publication 0",
+@when("I write the bundles", target_fixture="result")
+def write_bundles(runner):
+    return runner.run("pub", "bundle", "--out=bundles", "--title=Publication 0",
                       "--base=https://pub.example")
 
 
@@ -624,83 +619,92 @@ def export_objects(runner):
         (objects / (cid.replace(":", "_") + ".cbor")).write_bytes(out.out)
 
 
-@when("I write the site from that directory", target_fixture="result")
-def write_site_from_dir(runner):
+@when("I write the bundles from that directory", target_fixture="result")
+def write_bundles_from_dir(runner):
     (runner.cwd / ".publet").rename(runner.cwd / "moved-away")
-    return runner.run("pub", "site", "--dir=objects", "--out=site")
+    return runner.run("pub", "bundle", "--dir=objects", "--out=bundles",
+                      "--base=https://pub.example")
 
 
-@given("the site directory already holds a file")
-def site_not_empty(runner):
-    (runner.cwd / "site").mkdir()
-    (runner.cwd / "site" / "old.html").write_text("an earlier page")
+@given("the bundle directory already holds a file")
+def bundles_not_empty(runner):
+    (runner.cwd / "bundles").mkdir()
+    (runner.cwd / "bundles" / "old.json").write_text("{}")
 
 
-@then("the claim has a page showing its content and scope")
-def claim_page(runner, ctx):
-    page = _page(runner, "o", ctx["claim"])
-    assert CONTENT in page, page
-    assert SCOPE in page, page
+@then("the claim's bundle holds its content and scope")
+def claim_bundle(runner, ctx):
+    b = _claim_bundle(runner, ctx)
+    assert b["bundle"] == 1, b
+    body = b["object"]["body"]
+    assert body["content"] == CONTENT, body
+    assert body["scope"]["domain"] == SCOPE, body
 
 
 @then("the claim's bytes are served at its identifier, unchanged")
 def claim_bytes(runner, ctx):
-    served = (runner.cwd / "site" / "pub" / "v1" / "object" / ctx["claim"]).read_bytes()
+    served = (runner.cwd / "bundles" / "pub" / "v1" / "object" / ctx["claim"]).read_bytes()
     stored = runner.run("pub-cat", "--store=.publet/objects.redb", ctx["claim"])
     assert stored.code == 0, stored.stderr
     assert served == stored.out
+    assert _claim_bundle(runner, ctx)["bytes"]["path"] == f"pub/v1/object/{ctx['claim']}"
 
 
-@then("the index links the claim's page")
-def index_links(runner, ctx):
-    index = (runner.cwd / "site" / "index.html").read_text()
-    assert f'href="o/{ctx["claim"]}/"' in index, index
+@then("the index lists the claim with its bundle's path")
+def index_lists(runner, ctx):
+    index = _bundle(runner, "index.json")
+    entry = next(o for o in index["objects"] if o["cid"] == ctx["claim"])
+    assert entry["path"] == f"o/{ctx['claim']}.json", entry
+    assert entry["class"] == "normative", entry
 
 
-@then("the claim's page shows low, likely and high in that order")
-def quantity_order(runner, ctx):
-    page = _page(runner, "o", ctx["claim"])
-    cells = page.split("<tbody>", 1)[1]
-    positions = [cells.find(f'class="param">{k}<') for k in ("low", "likely", "high")]
-    assert -1 not in positions and positions == sorted(positions), cells
-    for value in ESTIMATE.values():
-        assert value in cells, cells
+@then("the claim's bundle says it rests on the tray dimension as its unit, the kind and the measure")
+def rests_on(runner, ctx):
+    how = {e["cid"]: e["how"] for e in _claim_bundle(runner, ctx)["rests_on"]}
+    q = ctx["q"]
+    assert how.get(q["tray"]) == "unit", how
+    assert how.get(q["kind"]) == "kind", how
+    assert how.get(q["measure"]) == "measure", how
 
 
-@then("the claim's page links the column's kind and measure")
-def links_kind_measure(runner, ctx):
-    page = _page(runner, "o", ctx["claim"])
-    for name in ("kind", "measure"):
-        assert f'href="../../o/{ctx["q"][name]}/"' in page, (name, page)
+@then("the claim's bundle gives the measure's parameters as low, likely and high")
+def parameters(runner, ctx):
+    b = _claim_bundle(runner, ctx)
+    assert b["parameters"][ctx["q"]["measure"]] == ["low", "likely", "high"], b["parameters"]
 
 
-@then(parsers.parse('the claim\'s page says "{fragment}"'))
-def page_says(runner, ctx, fragment: str):
-    assert fragment in _page(runner, "o", ctx["claim"])
+@then("the claim's bundle summarizes every object it rests on")
+def related(runner, ctx):
+    b = _claim_bundle(runner, ctx)
+    for edge in b["rests_on"]:
+        assert b["related"][edge["cid"]]["held"] is True, edge
+    assert b["related"][ctx["q"]["tray"]]["label"] == "{tray}", b["related"]
 
 
-@then(parsers.parse('the name "{name}" has a page linking the tray dimension\'s page'))
-def name_page(runner, ctx, name: str):
-    page = _page(runner, "def", name)
-    assert f'href="../../o/{ctx["q"]["tray"]}/"' in page or ctx["q"]["tray"] in page, page
+@then("the tray dimension's bundle says the claim uses it as a unit")
+def used_by(runner, ctx):
+    b = _bundle(runner, "o", f"{ctx['q']['tray']}.json")
+    assert {"cid": ctx["claim"], "how": "unit of"} in b["used_by"], b["used_by"]
 
 
-@then(parsers.parse('the index lists the name "{name}" at "{href}"'))
-def index_lists_name(runner, name: str, href: str):
-    index = (runner.cwd / "site" / "index.html").read_text()
-    assert f'href="{href}"' in index, index
+@then("the claim's bundle holds a null cell")
+def null_cell(runner, ctx):
+    rows = _claim_bundle(runner, ctx)["object"]["body"]["data"]["rows"]
+    assert rows[0][1] is None, rows
 
 
-@then(parsers.parse('the name "{name}" has a page listing both definitions'))
+@then(parsers.parse('the name "{name}" has a bundle naming the tray dimension'))
+def name_bundle(runner, ctx, name: str):
+    b = _bundle(runner, "def", f"{name}.json")
+    assert b["definitions"] == [ctx["q"]["tray"]], b
+
+
+@then(parsers.parse('the name "{name}" has the address "{address}"'))
+def name_address(runner, name: str, address: str):
+    assert _bundle(runner, "def", f"{name}.json")["address"] == address
+
+
+@then(parsers.parse('the name "{name}" has a bundle naming both definitions'))
 def name_lists_both(runner, ctx, name: str):
-    page = _page(runner, "def", name)
-    for key in ("tray", "tray2"):
-        assert ctx["q"][key] in page, (key, page)
-    assert "2 definitions go by this name" in page, page
-
-
-@then("the claim's page shows the markup escaped")
-def markup_escaped(runner, ctx):
-    page = _page(runner, "o", ctx["claim"])
-    assert "<script>" not in page, page
-    assert "&lt;script&gt;alert(1)&lt;/script&gt; &amp; lids" in page, page
+    b = _bundle(runner, "def", f"{name}.json")
+    assert sorted(b["definitions"]) == sorted([ctx["q"]["tray"], ctx["q"]["tray2"]]), b

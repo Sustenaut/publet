@@ -154,7 +154,7 @@ pub build [DIR] [--sign]    # compile named publet sources (in a corpus: unsigne
 pub render SLUG [--check]   # run the render pipeline a publet names, once it checks out
 pub publish SLUG... | --all # sign, export, and record drafts; pin their accepted renderings
 pub myst SLUG --out=DIR --template=PATH   # a MyST project for a document
-pub site --out=DIR [--dir=DIR] [--base=URL] # a static website: a page per object and per defined name
+pub bundle --out=DIR [--dir=DIR] [--base=URL] # reading data for a theme: a JSON bundle per object and per defined name
 pub corpus init [--parent=ALIAS=PATH]     # make this directory a corpus
 pub corpus status | upgrade [ALIAS]       # is a parent newer than the pin; re-pin
 pub corpus map [--format=mermaid|dot|json] # the publet network across corpora
