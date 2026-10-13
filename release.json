@@ -66,6 +66,11 @@
         "name": "supply-chain reports current",
         "run": ".venv/bin/pubkit supply-chain --check publet-core publet-algorithms",
         "version": ".venv/bin/pubkit --version"
+      },
+      {
+        "name": "quality audit current",
+        "run": ".venv/bin/pubkit audit --check",
+        "version": ".venv/bin/pubkit --version"
       }
     ],
     "facts": [
