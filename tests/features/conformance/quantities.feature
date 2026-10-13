@@ -78,3 +78,31 @@ Feature: A number names its unit, its kind, how sure it is, and how it was compu
     When I compose an empirical claim with both a method and a derivation
     Then it fails
     And stderr mentions "never both"
+
+  @must-5.9.2 @must-5.9.3
+  Scenario: A unit that does not measure the column's kind is refused
+    When I compose a budget claim with trays per batch in the kind of energy per tray
+    Then it fails
+    And stderr mentions "but `electrical energy per tray` is"
+
+  @must-5.9.2
+  Scenario: A unit naming a symbol nothing declares is refused
+    When I compose a budget claim whose energy column is in "kW.h/{trays}"
+    Then it fails
+    And stderr mentions "{trays}"
+
+  @must-5.9.4
+  Scenario: A quantity whose keys are not the measure's parameters is refused
+    When I compose a budget claim with energy per tray as the quantity
+      """
+      {"low": "0.8", "high": "1.4"}
+      """
+    Then it fails
+    And stderr mentions "exactly its measure's parameters"
+
+  @must-5.9.2
+  Scenario: Units in a system this build does not implement are left unchecked, not passed
+    Given a definition of the system "SI" version "9"
+    When I compose a budget claim with energy per tray under that system
+    Then it succeeds
+    And stderr mentions "unchecked"

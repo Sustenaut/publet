@@ -461,7 +461,7 @@ def compose_definitional_defining(runner, ctx, docstring: str):
 @when("I compose a budget claim with energy per tray as three-point estimates",
       target_fixture="result")
 def compose_estimates(runner, ctx):
-    return _compose_budget(runner, ctx, _energy(ctx, ESTIMATE))
+    return _compose_budget(runner, ctx, _energy(ctx, ESTIMATE), f"--depends={ctx['q']['ucum']}")
 
 
 @when(parsers.parse('I compose a budget claim with a measured column holding "{value}"'),
@@ -534,3 +534,45 @@ def compose_derived(runner, ctx):
 def compose_both(runner, ctx):
     return _empirical(runner, ctx, f"--derivation={ctx['q']['multiply']}",
                       f"--method={ctx['q']['method']}")
+
+
+def _energy_in(ctx, unit: str, cell=ESTIMATE, kind=None) -> dict:
+    data = _energy(ctx, cell)
+    data["columns"][1]["unit"] = unit
+    if kind is not None:
+        data["columns"][1]["kind"] = kind
+    return data
+
+
+@when("I compose a budget claim with trays per batch in the kind of energy per tray",
+      target_fixture="result")
+def compose_wrong_kind(runner, ctx):
+    q = ctx["q"]
+    q["batch"] = _defined(runner, "batch", "batch: trays sown together.",
+                          {"sort": "dimension", "symbol": "{batch}"}, q["ucum"])
+    data = _energy_in(ctx, "{tray}/{batch}")
+    data["columns"][1]["unit_defs"]["{batch}"] = q["batch"]
+    return _compose_budget(runner, ctx, data, f"--depends={q['ucum']}")
+
+
+@when(parsers.parse('I compose a budget claim whose energy column is in "{unit}"'),
+      target_fixture="result")
+def compose_undeclared(runner, ctx, unit: str):
+    return _compose_budget(runner, ctx, _energy_in(ctx, unit), f"--depends={ctx['q']['ucum']}")
+
+
+@when("I compose a budget claim with energy per tray as the quantity", target_fixture="result")
+def compose_quantity(runner, ctx, docstring: str):
+    return _compose_budget(runner, ctx, _energy(ctx, json.loads(docstring)),
+                           f"--depends={ctx['q']['ucum']}")
+
+
+@given(parsers.parse('a definition of the system "{name}" version "{version}"'))
+def another_system(runner, ctx, name: str, version: str):
+    ctx["q"]["other"] = _defined(runner, "other", f"{name}: a system of units, version {version}.",
+                                 {"sort": "system", "name": name, "version": version})
+
+
+@when("I compose a budget claim with energy per tray under that system", target_fixture="result")
+def compose_under_other(runner, ctx):
+    return _compose_budget(runner, ctx, _energy(ctx, ESTIMATE), f"--depends={ctx['q']['other']}")
