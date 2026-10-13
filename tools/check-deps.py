@@ -21,6 +21,9 @@ ALLOWED = {
     "publet-algorithms": set(),
     "publet-domain": {"publet-core", "publet-algorithms", "publet-graph"},
     "publet-lint": set(),
+    # The adapter to pubunit: reads the graph, and nothing reads it but
+    # the porcelain and the plumbing.
+    "publet-quantity": {"publet-core", "publet-graph"},
     "publet-store": {"publet-core", "publet-domain", "publet-algorithms", "publet-graph"},
     "publet-settle": {"publet-core"},
     "publet-net": {"publet-core", "publet-domain", "publet-algorithms",

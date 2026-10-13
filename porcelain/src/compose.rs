@@ -233,6 +233,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 
     let created = flags.created.as_deref().unwrap_or(DEFAULT_CREATED);
     let (cid, bytes, claim) = build_claim(&author, created, body)?;
+    check_quantities(&store, &cid, &bytes)?;
     store.put(&cid, &bytes).map_err(|e| e.to_string())?;
 
     println!("{cid}");
@@ -243,6 +244,44 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         eprintln!("This is an empirical claim. It cannot reach `accepted` on");
         eprintln!("endorsement alone: it needs a method others can execute and");
         eprintln!("independent reproductions of it (Section 11.4.1).");
+    }
+    Ok(())
+}
+
+/// Section 5.9: check a claim's units, kinds and quantity cells against
+/// the claims they cite, as held here. What the section requires refusing
+/// is refused; a unit left unchecked -- undefined, or in a system this
+/// build does not implement -- is said so.
+///
+/// # Errors
+///
+/// Returns a message naming each problem that refuses the claim.
+pub(crate) fn check_quantities(store: &Store, cid: &Cid, bytes: &[u8]) -> Result<(), String> {
+    let mut objects = vec![(cid.clone(), bytes.to_vec())];
+    for cid_text in store.cids().map_err(|e| e.to_string())? {
+        if let Ok(held) = cid_text.parse::<Cid>()
+            && let Ok(Some(held_bytes)) = store.get(&held)
+        {
+            objects.push((held, held_bytes));
+        }
+    }
+    let graph = publet_graph::load::from_objects(objects)
+        .map_err(|e| format!("this claim was refused, so it was not stored: {e}"))?;
+    let Some(claim) = graph.prose_claim(cid) else {
+        return Ok(());
+    };
+    let (refusing, noted): (Vec<_>, Vec<_>) = publet_quantity::check(&graph, claim)
+        .into_iter()
+        .partition(publet_quantity::Problem::rejects);
+    if !refusing.is_empty() {
+        let reasons: Vec<String> = refusing.iter().map(ToString::to_string).collect();
+        return Err(format!(
+            "this claim was refused, so it was not stored: {}",
+            reasons.join("; ")
+        ));
+    }
+    for problem in noted {
+        eprintln!("{problem}");
     }
     Ok(())
 }
