@@ -19,6 +19,10 @@
     {
       "category": "added",
       "change": "pub bundle writes the reading data a theme turns into pages, from a workspace or a directory of objects: a JSON bundle per object at o/<CID>.json (the object decoded, what it rests on and why, its dependency closure, what cites it and how, its critiques, its lineage, its measures' parameters, and a summary of every object it mentions), one per name a definition goes by at def/<name>.json (a name two definitions share lists both), an index, and each object's canonical bytes at pub/v1/object/<CID>"
+    },
+    {
+      "category": "internal",
+      "change": "pubunit 0.1.0 comes from crates.io instead of its git tag; cargo deny allows no git source again, and cargo vet trusts pubunit's publisher"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

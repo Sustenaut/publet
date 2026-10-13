@@ -1369,7 +1369,8 @@ dependencies = [
 [[package]]
 name = "pubunit"
 version = "0.1.0"
-source = "git+https://github.com/schryer/pubunit?tag=v0.1.0#b2437bc1924eb4a1437bcec3de9a58a7e9fde4ef"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaa1b9e69f3b59f9aea0202c99d94df01830ecd39f4aee63838584fcef3e9db3"
 dependencies = [
  "num-bigint",
  "num-integer",
