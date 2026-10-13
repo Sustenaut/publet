@@ -22,6 +22,12 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 [imports.zcash]
 url = "https://raw.githubusercontent.com/zcash/rust-ecosystem/main/supply-chain/audits.toml"
 
+[policy.publet-algorithms]
+audit-as-crates-io = false
+
+[policy.publet-core]
+audit-as-crates-io = false
+
 [[exemptions.autocfg]]
 version = "1.5.1"
 criteria = "safe-to-run"
