@@ -24,7 +24,7 @@ jobs:
   #   conformance scenarios, and the coverage report, which must be
   #   committed up to date.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.6.0
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.8.0
     with:
       gates: guard-floats guard-deps guard-rules guard-msrv
       test-args: --workspace --all-features
@@ -38,7 +38,7 @@ jobs:
   # nothing; the release was signed when the package publet was published.
   release:
     needs: ci
-    uses: schryer/pubrel/.github/workflows/release.yml@v0.5.1
-    with: { pubrel-version: v0.5.1, semver-checks-version: 0.51.0 }
+    uses: schryer/pubrel/.github/workflows/release.yml@v0.5.2
+    with: { pubrel-version: v0.5.2, semver-checks-version: 0.51.0 }
     permissions:
       contents: write
