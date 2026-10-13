@@ -24,7 +24,7 @@ jobs:
   #   conformance scenarios, and the coverage report, which must be
   #   committed up to date.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.9.0
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.9.1
     with:
       gates: guard-floats guard-deps guard-rules guard-msrv
       test-args: --workspace --all-features
