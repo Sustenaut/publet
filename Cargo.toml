@@ -23,9 +23,8 @@ publet-net = { path = "crates/publet-net", version = "0.2.1" }
 publet-settle = { path = "crates/publet-settle", version = "0.2.1" }
 thiserror = "2"
 publet-quantity = { path = "crates/publet-quantity", version = "0.2.1" }
-# Units, kinds and exact conversion (Section 5.9), at a pinned release. A
-# git tag until pubunit is on crates.io; then `pubunit = "=0.1.0"`.
-pubunit = { git = "https://github.com/schryer/pubunit", tag = "v0.1.0", version = "0.1.0" }
+# Units, kinds and exact conversion (Section 5.9), at a pinned release.
+pubunit = "=0.1.0"
 serde_json = "1"
 
 # Applied to every crate via `[lints] workspace = true`. Handbook chapter 2:

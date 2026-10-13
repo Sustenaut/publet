@@ -36,6 +36,13 @@ user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
 
+[[publisher.pubunit]]
+version = "0.1.0"
+when = "2026-10-13"
+user-id = 443263
+user-login = "schryer"
+user-name = "Schryer"
+
 [[publisher.syn]]
 version = "2.0.119"
 when = "2026-07-15"
