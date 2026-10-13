@@ -17,6 +17,7 @@ from support.objects import author_key, cbor_map, cid_of, head, obj, text, write
 
 scenarios("../features/conformance/data.feature")
 scenarios("../features/conformance/sources.feature")
+scenarios("../features/conformance/quantities.feature")
 scenarios("../features/conformance/blobs.feature")
 scenarios("../features/porcelain/doc.feature")
 scenarios("../features/porcelain/revise.feature")
@@ -372,3 +373,164 @@ def new_version_shows(runner, result, ctx, fragment: str):
 def new_version_hides(runner, result, ctx, fragment: str):
     shown = _read(runner, _new_version(result, ctx))
     assert fragment not in shown, shown
+
+
+# --- quantities (Section 5.9) -----------------------------------------------
+
+UCUM = {"sort": "system", "name": "UCUM", "version": "2.2"}
+TRAY = {"sort": "dimension", "symbol": "{tray}"}
+THREE_POINT = {
+    "sort": "measure", "name": "three-point estimate", "describes": "uncertainty",
+    "parameters": [
+        {"name": "low", "type": "quantity", "meaning": "the least it plausibly is"},
+        {"name": "likely", "type": "quantity", "meaning": "the most likely value"},
+        {"name": "high", "type": "quantity", "meaning": "the most it plausibly is"},
+    ],
+}
+
+
+def _define(runner, name: str, content: str, defines, *depends: str, cls="definitional"):
+    args = ["compose", f"--class={cls}", f"--content={content}",
+            "--scope=unconditional",
+            f"--defines={_write(runner, name + '.json', defines)}"]
+    args += [f"--depends={d}" for d in depends]
+    return runner.run("pub", *args)
+
+
+def _defined(runner, name: str, content: str, defines, *depends: str) -> str:
+    out = _define(runner, name, content, defines, *depends)
+    assert out.code == 0, out.stderr
+    return out.stdout.split()[0]
+
+
+@given("a workspace with the quantity definitions of publication 0", target_fixture="ctx")
+def workspace_with_quantities(runner):
+    assert runner.run("pub", "init").code == 0
+    q = {}
+    q["ucum"] = _defined(runner, "ucum", "UCUM: the Unified Code for Units of Measure, version 2.2.", UCUM)
+    q["tray"] = _defined(runner, "tray", "tray: one 25 by 50 cm growing tray.", TRAY, q["ucum"])
+    q["kind"] = _defined(runner, "kind",
+                         "electrical energy per tray: electricity one tray uses from sowing to harvest.",
+                         {"sort": "kind", "name": "electrical energy per tray",
+                          "dimension": {"m": 2, "s": -2, "g": 1, "{tray}": -1},
+                          "units": ["W.h/{tray}", "kW.h/{tray}"]},
+                         q["ucum"], q["tray"])
+    q["measure"] = _defined(runner, "measure",
+                            "three-point estimate: a value as its least, likeliest and greatest plausible size.",
+                            THREE_POINT)
+    out = runner.run("pub", "compose", "--class=procedural", "--scope=unconditional",
+                     "--content=Multiply the two inputs' bounds pairwise and keep the least and greatest products, rounding half to even to two places.")
+    assert out.code == 0, out.stderr
+    q["multiply"] = out.stdout.split()[0]
+    out = runner.run("pub", "compose", "--class=procedural", "--scope=unconditional",
+                     "--content=Log a tray's electricity with a plug meter from sowing to harvest.")
+    assert out.code == 0, out.stderr
+    q["method"] = out.stdout.split()[0]
+    return {"q": q}
+
+
+def _energy(ctx, cell) -> dict:
+    q = ctx["q"]
+    return {"columns": [{"name": "setup"},
+                        {"name": "energy", "unit": "kW.h/{tray}",
+                         "unit_defs": {"{tray}": q["tray"]},
+                         "kind": q["kind"], "measure": q["measure"]}],
+            "rows": [["LED, 12 h/day", cell]]}
+
+
+ESTIMATE = {"low": "0.8", "likely": "1.1", "high": "1.4"}
+
+
+@then(parsers.parse('reading the tray dimension shows "{fragment}"'))
+def reading_tray(runner, ctx, fragment: str):
+    shown = _read(runner, ctx["q"]["tray"])
+    assert fragment in shown, shown
+
+
+@when("I compose a normative claim defining", target_fixture="result")
+def compose_normative_defining(runner, ctx, docstring: str):
+    return _define(runner, "bad", "tray: a growing tray.", json.loads(docstring),
+                   cls="normative")
+
+
+@when("I compose a definitional claim defining", target_fixture="result")
+def compose_definitional_defining(runner, ctx, docstring: str):
+    return _define(runner, "bad", "x: something.", json.loads(docstring), ctx["q"]["ucum"])
+
+
+@when("I compose a budget claim with energy per tray as three-point estimates",
+      target_fixture="result")
+def compose_estimates(runner, ctx):
+    return _compose_budget(runner, ctx, _energy(ctx, ESTIMATE))
+
+
+@when(parsers.parse('I compose a budget claim with a measured column holding "{value}"'),
+      target_fixture="result")
+def compose_plain_in_measured(runner, ctx, value: str):
+    return _compose_budget(runner, ctx, _energy(ctx, value))
+
+
+@then("the claim presupposes the tray dimension, the kind and the measure")
+def presupposes_quantities(runner, ctx):
+    shown = _read(runner, ctx["claim"]).split("presupposes:", 1)
+    assert len(shown) == 2, shown
+    for name in ("tray", "kind", "measure"):
+        assert ctx["q"][name] in shown[1], (name, shown[1])
+
+
+@given("a store holding a claim whose column cites a unit claim not in depends",
+       target_fixture="store")
+def store_unit_unlisted(tmp_path):
+    ka = author_key("K_a")
+    tray = obj("claim.prose", ka, "2026-09-12T09:00:00Z", [
+        ("class", text("definitional")),
+        ("lang", text("en")),
+        ("content", text("tray: one growing tray.")),
+        ("scope", cbor_map([("domain", text("unconditional")),
+                            ("conditions", head(4, 0))])),
+        ("depends", head(4, 0)),
+        ("defines", cbor_map([("sort", text("dimension")), ("symbol", text("{tray}"))])),
+    ])
+    data = cbor_map([
+        ("columns", head(4, 1) + cbor_map([
+            ("name", text("trays")),
+            ("unit", text("{tray}")),
+            ("unit_defs", cbor_map([("{tray}", text(cid_of(tray)))])),
+        ])),
+        ("rows", head(4, 0)),
+    ])
+    budget = obj("claim.prose", ka, "2026-09-12T10:00:00Z", [
+        ("class", text("normative")),
+        ("lang", text("en")),
+        ("content", text(CONTENT)),
+        ("scope", cbor_map([("domain", text("unconditional")),
+                            ("conditions", head(4, 0))])),
+        ("depends", head(4, 0)),
+        ("data", data),
+    ])
+    write_store(tmp_path, [tray, budget])
+    return {"dir": tmp_path}
+
+
+def _empirical(runner, ctx, *evidence: str):
+    q = ctx["q"]
+    data = {"columns": [{"name": "setup"},
+                        {"name": "climate cost", "unit": "kW.h/{tray}",
+                         "unit_defs": {"{tray}": q["tray"]}, "measure": q["measure"]}],
+            "rows": [["LED, 12 h/day", ESTIMATE]]}
+    return runner.run(
+        "pub", "compose", "--class=empirical", "--scope=home growing, Estonia",
+        "--content=One tray under a 12 h/day LED uses this much electricity.",
+        f"--data={_write(runner, 'derived.json', data)}", *evidence)
+
+
+@when("I compose an empirical claim derived by the multiplication", target_fixture="result")
+def compose_derived(runner, ctx):
+    return _empirical(runner, ctx, f"--derivation={ctx['q']['multiply']}")
+
+
+@when("I compose an empirical claim with both a method and a derivation",
+      target_fixture="result")
+def compose_both(runner, ctx):
+    return _empirical(runner, ctx, f"--derivation={ctx['q']['multiply']}",
+                      f"--method={ctx['q']['method']}")

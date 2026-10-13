@@ -86,10 +86,42 @@ pub enum GraphError {
 
     /// An empirical claim named no method.
     #[error(
-        "an `empirical` claim must carry an evidence entry with role `method`; \
-         a measurement without a reproducible method is a report of an experience"
+        "an `empirical` claim must carry an evidence entry with role `method`, \
+         or, if its values are computed, one with role `derivation`; a \
+         measurement without a reproducible method is a report of an experience"
     )]
     EmpiricalWithoutMethod,
+
+    /// An empirical claim named both a method and a derivation, or more
+    /// than one of either (Section 5.5).
+    #[error(
+        "an `empirical` claim names exactly one `method` or exactly one \
+         `derivation`, never both or several; one identifier must say how it \
+         is repeated"
+    )]
+    AmbiguousMethod,
+
+    /// A body field reserved to one class appeared on another (Section 5.9).
+    #[error("`{field}` belongs on a `{class}` claim only")]
+    FieldOnWrongClass {
+        /// The field: `defines` or `computes`.
+        field: &'static str,
+        /// The one class that may carry it.
+        class: &'static str,
+    },
+
+    /// A column or calculation cited a claim the citing claim does not
+    /// list in `depends` (Section 5.9).
+    #[error(
+        "{field} cites {claim}, so it must also be listed in `depends`; a unit, \
+         kind or measure is presupposed by every value that uses it"
+    )]
+    QuantityNotInDepends {
+        /// Where it was cited: `data.columns.kind`, `computes`, and so on.
+        field: &'static str,
+        /// The claim cited.
+        claim: String,
+    },
 
     /// The relation kind is not one the specification defines.
     #[error("unknown relation kind `{found}`")]

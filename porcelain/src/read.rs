@@ -349,6 +349,16 @@ fn print_data(data: &Value) {
                 Some(unit) => println!("  {name} ({unit})"),
                 None => println!("  {name}"),
             }
+            if let Some(Value::Map(defs)) = column.get("unit_defs") {
+                for (symbol, cid) in defs {
+                    println!("    {symbol:<8} {}", cid.as_text().unwrap_or(""));
+                }
+            }
+            for field in ["kind", "measure"] {
+                if let Some(cid) = column.get(field).and_then(Value::as_text) {
+                    println!("    {field:<8} {cid}");
+                }
+            }
         }
     } else if let Some(Value::Text(blob)) = data.get("ref") {
         let media = data.get("media").and_then(Value::as_text).unwrap_or("");
