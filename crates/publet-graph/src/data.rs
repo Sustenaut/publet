@@ -17,19 +17,39 @@ use publet_core::{Cid, cbor::Value};
 use crate::GraphError;
 
 /// One column of a table: its name and, where its values count something,
-/// the unit they count in.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// the unit they count in, what they measure, and how sure they are.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Column {
     /// The column's name, non-empty and unique within its table.
     pub name: String,
     /// The unit every value in the column is in, if it has one.
     pub unit: Option<String>,
+    /// The claims declaring the symbols in `unit` its system lacks, by
+    /// symbol (Section 5.9.2).
+    pub unit_defs: BTreeMap<String, Cid>,
+    /// The quantity kind the values measure (Section 5.9.3).
+    pub kind: Option<Cid>,
+    /// The statistical measure its quantity cells follow (Section 5.9.4).
+    pub measure: Option<Cid>,
+}
+
+impl Column {
+    /// Every claim the column cites: its unit definitions, kind, and
+    /// measure. Each must also be in the claim's `depends`.
+    pub fn cited(&self) -> impl Iterator<Item = (&'static str, &Cid)> {
+        self.unit_defs
+            .values()
+            .map(|c| ("data.columns.unit_defs", c))
+            .chain(self.kind.iter().map(|c| ("data.columns.kind", c)))
+            .chain(self.measure.iter().map(|c| ("data.columns.measure", c)))
+    }
 }
 
 /// One cell of a table.
 ///
 /// There is no float variant, for the reason Section 4.1 gives: a
 /// non-integer quantity is a decimal string, and its unit is the column's.
+/// A [`Cell::Quantity`] holds the parameters of its column's measure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Cell {
@@ -41,6 +61,9 @@ pub enum Cell {
     Nint(u64),
     /// No value.
     Null,
+    /// A value with how sure its author is of it: a map from the column's
+    /// measure's parameter names to text or integers (Section 5.9.4).
+    Quantity(BTreeMap<String, Cell>),
 }
 
 /// A claim's `data` field (Section 5.8).
@@ -121,9 +144,33 @@ fn table(map: &BTreeMap<String, Value>) -> Result<Data, GraphError> {
             Some(Value::Text(u)) => Some(u.clone()),
             Some(_) => return Err(bad("data.columns.unit", "a text string")),
         };
+        let unit_defs = match raw.get("unit_defs") {
+            None => BTreeMap::new(),
+            Some(Value::Map(defs)) if unit.is_some() => defs
+                .iter()
+                .map(|(symbol, cid)| {
+                    cid.as_text()
+                        .and_then(|t| t.parse::<Cid>().ok())
+                        .map(|cid| (symbol.clone(), cid))
+                        .ok_or(bad(
+                            "data.columns.unit_defs",
+                            "a map from symbol to the CID of its defining claim",
+                        ))
+                })
+                .collect::<Result<_, _>>()?,
+            Some(_) => {
+                return Err(bad(
+                    "data.columns.unit_defs",
+                    "a map from symbol to CID, on a column with a `unit`",
+                ));
+            }
+        };
         columns.push(Column {
             name: name.to_owned(),
             unit,
+            unit_defs,
+            kind: optional_cid(raw.get("kind"), "data.columns.kind")?,
+            measure: optional_cid(raw.get("measure"), "data.columns.measure")?,
         });
     }
     if columns.is_empty() {
@@ -146,24 +193,68 @@ fn table(map: &BTreeMap<String, Value>) -> Result<Data, GraphError> {
                 "rows exactly as wide as the columns (Section 5.8)",
             ));
         }
-        rows.push(cells.iter().map(cell).collect::<Result<_, _>>()?);
+        rows.push(
+            cells
+                .iter()
+                .zip(&columns)
+                .map(|(c, column)| cell(c, column.measure.is_some()))
+                .collect::<Result<_, _>>()?,
+        );
     }
     Ok(Data::Table { columns, rows })
 }
 
-fn cell(value: &Value) -> Result<Cell, GraphError> {
-    Ok(match value {
-        Value::Text(t) => Cell::Text(t.clone()),
-        Value::Uint(n) => Cell::Uint(*n),
-        Value::Nint(n) => Cell::Nint(*n),
-        Value::Null => Cell::Null,
-        _ => {
+/// A cell. In a column with a measure, every cell is a quantity or null
+/// (Section 5.9.4); elsewhere, none is a quantity.
+fn cell(value: &Value, measured: bool) -> Result<Cell, GraphError> {
+    Ok(match (value, measured) {
+        (Value::Null, _) => Cell::Null,
+        (Value::Map(params), true) => Cell::Quantity(
+            params
+                .iter()
+                .map(|(name, v)| {
+                    let v = match v {
+                        Value::Text(t) => Cell::Text(t.clone()),
+                        Value::Uint(n) => Cell::Uint(*n),
+                        _ => {
+                            return Err(bad(
+                                "data.rows",
+                                "quantity parameters of text or unsigned integers",
+                            ));
+                        }
+                    };
+                    Ok((name.clone(), v))
+                })
+                .collect::<Result<_, _>>()?,
+        ),
+        (_, true) => {
             return Err(bad(
                 "data.rows",
-                "cells of text, integers, or null; a non-integer is a decimal string",
+                "quantities or null in a column with a `measure` (Section 5.9.4)",
+            ));
+        }
+        (Value::Text(t), false) => Cell::Text(t.clone()),
+        (Value::Uint(n), false) => Cell::Uint(*n),
+        (Value::Nint(n), false) => Cell::Nint(*n),
+        (_, false) => {
+            return Err(bad(
+                "data.rows",
+                "cells of text, integers, or null; a non-integer is a decimal string, \
+                 and a quantity needs a column with a `measure`",
             ));
         }
     })
+}
+
+fn optional_cid(value: Option<&Value>, field: &'static str) -> Result<Option<Cid>, GraphError> {
+    match value {
+        None => Ok(None),
+        Some(v) => v
+            .as_text()
+            .and_then(|t| t.parse::<Cid>().ok())
+            .map(Some)
+            .ok_or(bad(field, "the CID of a definitional claim")),
+    }
 }
 
 fn file(map: &BTreeMap<String, Value>) -> Result<Data, GraphError> {

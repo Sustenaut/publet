@@ -17,6 +17,7 @@ mod error;
 mod graph;
 mod lint;
 pub mod personhood;
+mod quantity;
 mod view;
 
 pub use assumption::{Assumption, Basis, Triage};
@@ -26,6 +27,7 @@ pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
 pub use graph::{Graph, Lineage, LineageView, MAX_ROTATIONS, ROTATION_PURPOSE};
 pub use lint::{Finding, check, check_in};
+pub use quantity::{Computes, Definition, Describes, Parameter, ParameterType};
 pub use view::{Annotation, Class, Key, Principal, ProseClaim, Relation, RelationKind};
 
 pub mod load;

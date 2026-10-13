@@ -1068,6 +1068,11 @@ pub(crate) fn cell_text(cell: &publet_graph::Cell) -> String {
         publet_graph::Cell::Text(t) => t.clone(),
         publet_graph::Cell::Uint(n) => n.to_string(),
         publet_graph::Cell::Nint(n) => format!("-{}", u128::from(*n) + 1),
+        publet_graph::Cell::Quantity(params) => params
+            .iter()
+            .map(|(name, value)| format!("{name} {}", cell_text(value)))
+            .collect::<Vec<_>>()
+            .join(", "),
         _ => String::new(),
     }
 }

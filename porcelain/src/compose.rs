@@ -60,6 +60,9 @@ pub(crate) struct ClaimFlags {
     pub(crate) lang: Option<String>,
     pub(crate) depends: Vec<String>,
     pub(crate) method: Option<String>,
+    pub(crate) derivation: Option<String>,
+    pub(crate) defines: Option<PathBuf>,
+    pub(crate) computes: Option<PathBuf>,
     pub(crate) cites: Vec<String>,
     pub(crate) cite_notes: Vec<String>,
     pub(crate) sources: Vec<SourceArg>,
@@ -88,6 +91,12 @@ impl ClaimFlags {
             self.lang = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--method=") {
             self.method = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--derivation=") {
+            self.derivation = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--defines=") {
+            self.defines = Some(PathBuf::from(v));
+        } else if let Some(v) = arg.strip_prefix("--computes=") {
+            self.computes = Some(PathBuf::from(v));
         } else if let Some(v) = arg.strip_prefix("--depends=") {
             self.depends.push(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--cite=") {
@@ -169,11 +178,12 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     // Section 5.5: an empirical claim must name a method others can
     // execute. Supplying a placeholder would assert a reproducibility the
     // author never offered, so the command refuses instead.
-    if parsed_class == Class::Empirical && flags.method.is_none() {
+    if parsed_class == Class::Empirical && flags.method.is_none() && flags.derivation.is_none() {
         return Err("--method is required for an empirical claim: the CID of a \
              `procedural` claim describing how the observation may be \
              repeated. A measurement without one is a report of an \
-             experience (Section 5.5)"
+             experience (Section 5.5). Values computed from other claims \
+             name their calculation with --derivation instead"
             .to_owned());
     }
 
@@ -189,7 +199,22 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     else {
         return Err("evidence is not a list".to_owned());
     };
+    if let Some(derivation) = &flags.derivation {
+        evidence.insert(0, claim_evidence("derivation", derivation));
+    }
     evidence.extend(source_entries);
+    let data = flags
+        .data
+        .as_ref()
+        .map(|path| crate::payload::data_from_file(&store, path))
+        .transpose()?;
+    let quantity_fields = quantity_fields(&flags)?;
+    // Section 5.9: what a column or calculation cites, it presupposes, as
+    // with a source claim.
+    add_missing(
+        &mut depends,
+        &quantity_citations(data.as_ref(), &quantity_fields),
+    );
 
     let mut body = BTreeMap::new();
     body.insert("class".to_owned(), Value::Text(class_id.clone()));
@@ -201,12 +226,10 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     body.insert("scope".to_owned(), scope_value(&scope));
     body.insert("depends".to_owned(), text_array(&depends));
     body.insert("evidence".to_owned(), Value::Array(evidence));
-    if let Some(path) = &flags.data {
-        body.insert(
-            "data".to_owned(),
-            crate::payload::data_from_file(&store, path)?,
-        );
+    if let Some(data) = data {
+        body.insert("data".to_owned(), data);
     }
+    body.extend(quantity_fields);
 
     let created = flags.created.as_deref().unwrap_or(DEFAULT_CREATED);
     let (cid, bytes, claim) = build_claim(&author, created, body)?;
@@ -222,6 +245,60 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         eprintln!("independent reproductions of it (Section 11.4.1).");
     }
     Ok(())
+}
+
+/// `defines` and `computes` from `--defines` and `--computes` files.
+fn quantity_fields(flags: &ClaimFlags) -> Result<BTreeMap<String, Value>, String> {
+    let mut out = BTreeMap::new();
+    for (field, path) in [("defines", &flags.defines), ("computes", &flags.computes)] {
+        if let Some(path) = path {
+            let json = crate::payload::read_json(path)?;
+            let value = crate::payload::to_value(&json, field)
+                .map_err(|e| format!("{}: {e}", path.display()))?;
+            out.insert(field.to_owned(), value);
+        }
+    }
+    Ok(out)
+}
+
+/// The claims a table's columns and a calculation cite: unit definitions,
+/// kinds, and measures (Section 5.9).
+fn quantity_citations(data: Option<&Value>, fields: &BTreeMap<String, Value>) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut push = |v: Option<&Value>| {
+        if let Some(t) = v.and_then(Value::as_text) {
+            out.push(t.to_owned());
+        }
+    };
+    if let Some(Value::Array(columns)) = data.and_then(|d| d.get("columns")) {
+        for column in columns {
+            if let Some(Value::Map(defs)) = column.get("unit_defs") {
+                for v in defs.values() {
+                    push(Some(v));
+                }
+            }
+            push(column.get("kind"));
+            push(column.get("measure"));
+        }
+    }
+    if let Some(computes) = fields.get("computes") {
+        for side in ["inputs", "outputs"] {
+            if let Some(Value::Array(entries)) = computes.get(side) {
+                for e in entries {
+                    push(e.get("kind"));
+                }
+            }
+        }
+    }
+    out
+}
+
+fn claim_evidence(role: &str, reference: &str) -> Value {
+    let mut entry = std::collections::BTreeMap::new();
+    entry.insert("kind".to_owned(), Value::Text("claim".into()));
+    entry.insert("role".to_owned(), Value::Text(role.to_owned()));
+    entry.insert("ref".to_owned(), Value::Text(reference.to_owned()));
+    Value::Map(entry)
 }
 
 /// Build a prose claim from a body and read it back through the graph's

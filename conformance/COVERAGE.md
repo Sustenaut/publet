@@ -6,8 +6,8 @@ that showed only what passes would say nothing about what is
 untested.
 
 - specification: `spec/index.md`
-- sections with normative language: 53
-- sections with at least one scenario: 50 (94%)
+- sections with normative language: 58
+- sections with at least one scenario: 55 (94%)
 
 ## Covered
 
@@ -50,9 +50,14 @@ untested.
 | 5.1 | 4 | conformance/immutability.feature, porcelain/compose.feature |
 | 5.2 | 2 | conformance/assessment.feature, conformance/class_rules.feature, conformance/usage.feature |
 | 5.4 | 2 | conformance/evidence_required.feature |
-| 5.5 | 4 | conformance/evidence_required.feature, conformance/sources.feature |
+| 5.5 | 5 | conformance/evidence_required.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/sources.feature |
 | 5.7 | 2 | conformance/atomicity.feature |
-| 5.8 | 3 | conformance/data.feature |
+| 5.8 | 4 | conformance/data.feature |
+| 5.9.1 | 3 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
+| 5.9.2 | 5 | conformance/quantities.feature, conformance/quantities.feature |
+| 5.9.3 | 2 | conformance/quantities.feature |
+| 5.9.4 | 3 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
+| 5.9.5 | 3 | conformance/quantities.feature |
 | 6 | 7 | conformance/acyclicity.feature |
 | 6.1 | 1 | plumbing/lineage.feature |
 | 7.1 | 2 | conformance/counts.feature |

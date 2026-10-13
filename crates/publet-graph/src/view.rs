@@ -8,7 +8,8 @@
 use publet_core::{Cid, Object, cbor::Value};
 
 use crate::GraphError;
-use crate::data::{Data, Source};
+use crate::data::{Column, Data, Source};
+use crate::quantity::{Computes, Definition};
 
 /// A claim class (Section 5.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -119,6 +120,8 @@ pub struct ProseClaim {
     depends: Vec<Cid>,
     data: Option<Data>,
     sources: Vec<Source>,
+    defines: Option<Definition>,
+    computes: Option<Computes>,
 }
 
 impl ProseClaim {
@@ -168,8 +171,14 @@ impl ProseClaim {
         // Section 5.5: a measurement without a reproducible method is a
         // report of an experience. Requiring the method object makes its
         // absence visible rather than assumed.
-        if class == Class::Empirical && !names_a_method(body.get("evidence")) {
-            return Err(GraphError::EmpiricalWithoutMethod);
+        if class == Class::Empirical {
+            // Section 5.5: exactly one identifier says how the claim is
+            // repeated -- a method, or for computed values a derivation.
+            match how_repeated(body.get("evidence")) {
+                (0, 0) => return Err(GraphError::EmpiricalWithoutMethod),
+                (1, 0) | (0, 1) => {}
+                _ => return Err(GraphError::AmbiguousMethod),
+            }
         }
 
         let data = body.get("data").map(Data::from_value).transpose()?;
@@ -186,6 +195,28 @@ impl ProseClaim {
             }
         }
 
+        // Section 5.9: units, kinds and measures are presupposed by every
+        // value that uses them, so they sit in the dependency closure.
+        let defines = reserved(body.get("defines"), "defines", class, Class::Definitional)?
+            .map(Definition::from_value)
+            .transpose()?;
+        let computes = reserved(body.get("computes"), "computes", class, Class::Procedural)?
+            .map(Computes::from_value)
+            .transpose()?;
+        let mut cited: Vec<(&'static str, &Cid)> = Vec::new();
+        if let Some(Data::Table { columns, .. }) = &data {
+            cited.extend(columns.iter().flat_map(Column::cited));
+        }
+        if let Some(c) = &computes {
+            cited.extend(c.kinds().map(|k| ("computes", k)));
+        }
+        if let Some((field, claim)) = cited.into_iter().find(|(_, c)| !depends.contains(c)) {
+            return Err(GraphError::QuantityNotInDepends {
+                field,
+                claim: claim.to_string(),
+            });
+        }
+
         Ok(Self {
             cid,
             class,
@@ -194,6 +225,8 @@ impl ProseClaim {
             depends,
             data,
             sources,
+            defines,
+            computes,
         })
     }
 
@@ -207,6 +240,19 @@ impl ProseClaim {
     #[must_use]
     pub fn sources(&self) -> &[Source] {
         &self.sources
+    }
+
+    /// What a `definitional` claim defines, in checkable form (Section
+    /// 5.9.1).
+    #[must_use]
+    pub fn defines(&self) -> Option<&Definition> {
+        self.defines.as_ref()
+    }
+
+    /// What a calculation takes and gives (Section 5.9.5).
+    #[must_use]
+    pub fn computes(&self) -> Option<&Computes> {
+        self.computes.as_ref()
     }
 
     /// This claim's identifier.
@@ -259,6 +305,11 @@ impl ProseClaim {
         if self.class != Class::Definitional {
             return None;
         }
+        // Section 5.9.1: a definition carrying `defines` goes by its own
+        // symbol or name.
+        if let Some(d) = &self.defines {
+            return Some(d.term().trim().to_lowercase());
+        }
         if let Some(ext) = object.ext()
             && let Some(Value::Text(t)) = ext.get("term")
         {
@@ -275,14 +326,35 @@ impl ProseClaim {
     }
 }
 
-/// Whether an evidence list carries an entry with `role: "method"`.
-fn names_a_method(evidence: Option<&Value>) -> bool {
+/// How many evidence entries have `role: "method"`, and how many
+/// `role: "derivation"`.
+fn how_repeated(evidence: Option<&Value>) -> (usize, usize) {
     let Some(Value::Array(entries)) = evidence else {
-        return false;
+        return (0, 0);
     };
-    entries
-        .iter()
-        .any(|entry| entry.get("role").and_then(Value::as_text) == Some("method"))
+    let count = |role: &str| {
+        entries
+            .iter()
+            .filter(|entry| entry.get("role").and_then(Value::as_text) == Some(role))
+            .count()
+    };
+    (count("method"), count("derivation"))
+}
+
+/// A field only `owner` claims may carry, if present.
+fn reserved<'a>(
+    value: Option<&'a Value>,
+    field: &'static str,
+    class: Class,
+    owner: Class,
+) -> Result<Option<&'a Value>, GraphError> {
+    match value {
+        Some(_) if class != owner => Err(GraphError::FieldOnWrongClass {
+            field,
+            class: owner.id(),
+        }),
+        v => Ok(v),
+    }
 }
 
 fn text(value: Option<&Value>, field: &'static str) -> Result<String, GraphError> {

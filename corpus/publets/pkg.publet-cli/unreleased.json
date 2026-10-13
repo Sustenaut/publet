@@ -3,6 +3,14 @@
     {
       "category": "internal",
       "change": "Update other crates the supply-chain audits cover"
+    },
+    {
+      "category": "added",
+      "change": "Quantities (spec Section 5.9): a definitional claim may carry defines, stating a units system, base dimension, unit, quantity kind or statistical measure; a column may cite unit_defs, kind and measure, each also in depends; a measured column holds quantity cells; a procedural claim may carry computes; and an empirical claim's values may be computed, naming their calculation with role derivation instead of a method"
+    },
+    {
+      "category": "added",
+      "change": "pub compose takes --defines, --computes and --derivation, adds what a table's columns cite to depends, and pub read lists each column's unit definitions, kind and measure"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

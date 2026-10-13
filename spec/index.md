@@ -483,7 +483,9 @@ is making the same kind of speech act in each case.
       evidence:        [ <evidence>, ... ], // per class
       reproducibility: <repro>,             // per class
       medium:          <medium>,            // for non-text content
-      data:            <data>               // OPTIONAL, Section 5.8
+      data:            <data>,              // OPTIONAL, Section 5.8
+      defines:         <definition>,        // OPTIONAL, `definitional` only, Section 5.9.1
+      computes:        <computation>        // OPTIONAL, `procedural` only, Section 5.9.5
     } }
 ```
 
@@ -569,7 +571,11 @@ its dependency closure is unavailable.
 
 For `empirical` claims, `evidence` MUST be non-empty and MUST include
 exactly one entry with `role: "method"` referencing a `procedural` claim
-describing how the observation may be repeated.
+describing how the observation may be repeated. A claim whose values are
+all computed from other claims' values MAY instead include exactly one
+entry with `role: "derivation"` referencing the `procedural` claim that
+describes the calculation (Section 5.9.5): repeating the calculation on the
+same inputs is how such a claim is repeated. It MUST NOT carry both.
 
 `external` references lie outside the protocol's integrity guarantees and
 MUST be displayed as unverified.
@@ -684,19 +690,26 @@ transactions, a calibration series -- states what the values are in
 shapes:
 
 ```
-  data: { columns: [ { name: <string>, unit: <string> }, ... ],
+  data: { columns: [ <column>, ... ],
           rows:    [ [ <cell>, ... ], ... ] }          // a table
       | { media: <media type>, ref: <CID of blob>,
           size:  <unsigned integer> }                  // a file
+
+  column: { name:      <string>,                       // REQUIRED
+            unit:      <string>,                       // Section 5.9.2
+            unit_defs: { <symbol>: <CID>, ... },       // Section 5.9.2
+            kind:      <CID>,                          // Section 5.9.3
+            measure:   <CID> }                         // Section 5.9.4
 ```
 
-A table's cells are text, integers, or null. Non-integer quantities are
-decimal strings (Section 4.1), and the unit belongs to the column, so that
-a value is never separated from what it counts. `unit` MAY be omitted for a
-column whose values have none, such as names. Column names MUST be
-non-empty and unique within a table, every row MUST carry exactly as many
-cells as there are columns, and an implementation MUST reject a claim
-whose `data` violates either. A file is a blob (Section 4.7), and `media`
+A table's cells are text, integers, null, or, in a column that names a
+`measure`, quantities (Section 5.9.4). Non-integer quantities are decimal
+strings (Section 4.1), and the unit belongs to the column, so that a value
+is never separated from what it counts. `unit` MAY be omitted for a column
+whose values have none, such as names. Column names MUST be non-empty and
+unique within a table, every row MUST carry exactly as many cells as there
+are columns, and an implementation MUST reject a claim whose `data`
+violates either. A file is a blob (Section 4.7), and `media`
 and `size` are the citing claim's statement of what it is.
 
 `data` carries values and nothing about how to show them: no ordering
@@ -728,6 +741,198 @@ A new version of a data claim is a new object plus `supersedes`, as with
 any claim (R1). An author SHOULD publish one only when the values or their
 sources change: re-rendering the same values is not a revision, and a
 lineage that grows on every build obscures the revisions that matter.
+
+### 5.9 Quantities
+
+A number in a table means nothing without four things: the unit it is in,
+what it measures, how sure its author is of it, and, if it was computed,
+how. Each is published once and cited, rather than restated in every
+claim that uses it, so that each can be disputed, refined, and found to
+diverge on its own lineage:
+
+| What | Published as | Cited from |
+|---|---|---|
+| a system of units, a base dimension, a unit | `definitional` claim with `defines` | a column's `unit_defs`, and `depends` |
+| a quantity kind | `definitional` claim with `defines` | a column's `kind`, and `depends` |
+| a statistical measure | `definitional` claim with `defines` | a column's `measure`, and `depends` |
+| a calculation | `procedural` claim, optionally with `computes` | evidence with `role: "derivation"` |
+| a measurement method | `procedural` claim | evidence with `role: "method"` (Section 5.5) |
+
+Nothing here is a new object type. A unit is a definition like any other
+(Section 9.1): two parties may define `{tray}` differently, and Section 9.2
+detects it.
+
+#### 5.9.1 Definitions
+
+A `definitional` claim MAY carry `defines`, which states in a form an
+implementation can check what its `content` states for a reader. `sort`
+says what is defined:
+
+```
+  defines: { sort: "system", name: <string>, version: <string> }
+         | { sort: "dimension", symbol: <symbol> }
+         | { sort: "unit", symbol: <symbol>,
+             value: <decimal string>, unit: <unit> }
+         | { sort: "kind", name: <string>,
+             dimension: { <base>: <integer>, ... },
+             units: [ <unit>, ... ] }
+         | { sort: "measure", name: <string>,
+             describes: "exact" | "variation" | "uncertainty",
+             parameters: [ { name: <string>, type: <type>,
+                             meaning: <string> }, ... ] }
+  // any sort, OPTIONAL:
+           matches: [ { relation: "exact" | "close", ref: <URI> }, ... ]
+```
+
+- **`system`** names a system of units and the version of it meant, such
+  as UCUM 2.2. A claim whose columns use the system's units lists the
+  system claim in `depends`, so which system was meant is never an unstated
+  assumption.
+- **`dimension`** adds a base dimension the system lacks: a counted thing
+  (`{tray}`), a currency (`[EUR]`), a substance equivalent (`{CO2e}`). One
+  of its `symbol` is the unit of it. A currency is a dimension of its own,
+  never a multiple of another: an exchange rate is an `empirical` claim
+  with a date, not a unit.
+- **`unit`** adds a unit equal to `value` times `unit`, where `unit` is
+  written in the system's syntax and may use symbols declared by the claims
+  in this claim's `depends`.
+- **`kind`** declares what a quantity is, beyond its dimension: energy and
+  torque share one dimension, as do a kilogram of CO2 equivalent and a
+  kilogram of basil, and only a declaration says which a column measures.
+  `dimension` gives an integer exponent for each base, named by the
+  system's base units and the `symbol` of declared dimensions. `units` lists
+  the units that may measure it; absent, any unit of the dimension may.
+- **`measure`** names a way of stating a value and how sure one is of it
+  (Section 5.9.4). `describes` says whether its parameters state a value as
+  exact, the **variation** in what was measured, or the **uncertainty** in
+  what is known: the two are easily confused and combine differently.
+- **`matches`** links the definition to the same or a close concept
+  elsewhere, such as a UCUM code, a QUDT quantity kind, or an ISO 4217
+  currency code, so that this vocabulary extends theirs rather than
+  replacing it.
+
+A `<symbol>` is a brace annotation (`{tray}`) or a bracketed atom
+(`[EUR]`), so that it never collides with a standard unit's spelling. A
+`dimension` or `unit` claim using a symbol another claim declares, and a
+`kind` claim whose `dimension` names a declared base, MUST list the
+declaring claim in `depends`; each MUST also list the `system` claim whose
+syntax it is written in. An implementation MUST reject a claim carrying
+`defines` whose class is not `definitional`, whose `sort` is not one of the
+five, or whose fields do not have the shapes above.
+
+The name a definition goes by is in the definition itself: `symbol` or
+`name` is `term(D)` for Section 9.2. A node that serves definitions under
+human-readable names (for example `https://pub.<host>/def/<name>`) derives
+that mapping from the definitions it holds; the definition's CID remains
+its identity, so one definition reached through two hosts is one
+definition.
+
+#### 5.9.2 Units
+
+A column's `unit` is **defined** when the claim lists exactly one `system`
+claim in `depends`, and every symbol in `unit` that the system does not
+define is a key of the column's `unit_defs`, mapped to the CID of the
+`dimension` or `unit` claim declaring it. Each CID in `unit_defs` MUST
+also appear in `depends`, as a `source` claim must (Section 5.5), so that
+the unit sits in the claim's dependency closure and Section 9.2 sees two
+parties meaning different trays. An implementation MUST reject a claim in
+which it does not, or which lists more than one `system` claim in
+`depends`.
+
+An implementation that recognizes the system named, at the version named,
+MUST reject a claim in which a defined unit is not well formed in the
+system, names a symbol neither the system nor its `unit_defs` declares,
+maps a symbol to a claim declaring a different one, or does not measure the
+column's `kind` (Section 5.9.3). One that does not recognize it MUST NOT
+present the unit as checked.
+
+A unit that is not defined -- a free string, as before this section --
+remains valid. A client MUST NOT present it as checked, and SHOULD show it
+as undefined beside the value.
+
+A conversion between units is computed by the client from the definitions
+and shown as computed (Section 8). A converted value is never a new claim.
+
+#### 5.9.3 Kinds
+
+A column's `kind` is the CID of a `kind` claim, and MUST also appear in
+`depends`. The kind is declared, never inferred: matching a unit's
+dimension back to a kind is ambiguous, so an implementation MUST NOT
+assign a column a kind its author did not name. A unit **measures** a kind
+when it has the kind's dimension and, if the kind lists `units`, is one of
+them. A conversion holds a value to its column's kind: kilowatt-hours
+convert to joules, never to newton-metres.
+
+#### 5.9.4 Quantity Cells
+
+A column's `measure` is the CID of a `measure` claim, and MUST also appear
+in `depends`. Every cell in such a column is null or a **quantity**: a map
+from parameter names to values, whose keys are exactly the measure's
+parameter names. An implementation MUST reject a cell with a missing or an
+extra key, as it rejects a row with a missing or an extra cell (Section
+5.8), and a quantity cell in a column that names no measure. Each value
+has its parameter's `type`:
+
+| `type` | Value |
+|---|---|
+| `quantity` | a decimal string in the column's unit |
+| `fraction` | a decimal string from 0 to 1, such as a confidence level |
+| `count` | an unsigned integer, such as a sample size |
+| `blob` | the CID of a blob (Section 4.7), such as raw samples too many for a table |
+
+```
+  columns: [ { name: "setup" },
+             { name: "energy", unit: "kW.h/{tray}",
+               unit_defs: { "{tray}": <CID>}, kind: <CID>,
+               measure: <CID of "three-point estimate"> } ]
+  rows:    [ [ "LED, 12 h/day",
+               { low: "0.8", likely: "1.1", high: "1.4" } ] ]
+```
+
+A decimal string in a column without a `measure` keeps its meaning: one
+value, with no uncertainty stated. A client MUST NOT present it as more
+precise than that.
+
+The set of measures is open. Anyone may publish another, such as a
+percentile set or a lognormal. A client renders the measures it
+recognizes and shows the parameters of the rest, as Section 8 has it show
+the data of a renderer it lacks. Combining quantities -- adding two
+ranges, multiplying three-point estimates -- is a calculation, and belongs
+to a method (Section 5.9.5), never to the measure.
+
+#### 5.9.5 Calculations
+
+A value computed from other claims' values names the calculation as a
+`procedural` claim, cited with `role: "derivation"` (Section 5.5), and
+lists the claims whose values it used as `source` entries, which places
+them in `depends`. The chain from a result back to its inputs is then the
+dependency closure. The code that performs a calculation is linked to it
+by an `implements` relation from the code's content identifier (Section
+6.2), and several implementations may stand side by side. Code is never
+carried in a claim.
+
+A calculation's `procedural` claim MAY carry `computes`, stating what it
+takes and gives:
+
+```
+  computes: { inputs:   [ { name: <string>, kind: <CID> }, ... ],
+              outputs:  [ { name: <string>, kind: <CID> }, ... ],
+              rounding: <string>,
+              seed:     <unsigned integer> }
+```
+
+Each `kind` MUST also appear in the claim's `depends`. Because evaluation
+is bit-identical (R8), a calculation MUST state its rounding where its
+result is not exact, and a simulation MUST state its seed, so that every
+run gives the same digits. Uncertainty propagation -- interval arithmetic
+for ranges, a seeded Monte Carlo for three-point estimates -- is part of
+the calculation. Implementations SHOULD warn where a derived claim's
+column named as one of its calculation's outputs names a different kind.
+
+Recomputing a value is settling it: anyone runs an implementation on the
+inputs and files a `settled` annotation, `consistent` or `inconsistent`
+(Section 7.2). A reader can then dispute the inputs, the calculation, or
+the code's fidelity to the calculation, each separately.
 
 ---
 
@@ -2587,6 +2792,12 @@ is the cited side of (Section 8).
 **Data** — the optional `data` field of a prose claim: a table of typed
 columns and rows, or a file carried as a blob. The claim's `content` says
 what the values are; `data` carries them (Section 5.8).
+
+**Quantity** — a table cell stating a value with how sure its author is of
+it, as a map of parameters a **measure** names, such as `low`, `likely` and
+`high`. Its column's unit is defined by citing `definitional` claims for the
+units system and any symbols it lacks, and what it measures by citing a
+**quantity kind** (Section 5.9).
 
 **Blob** — a byte string named by the CID of its bytes. Unsigned and not
 an object; what it is, and how large, is stated by the object citing it,
