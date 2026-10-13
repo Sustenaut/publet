@@ -3,8 +3,8 @@
   "corpus": {
     "domain": "pub:sha2-256:rybbfx3egcx7r6oq3owtfn2za646fo723b55gqahpkynyltgzlqa",
     "generation": {
-      "cid": "pub:sha2-256:sgrrnh3xmh5zrjadjfylqost6uxezbuvg7gg4czfzquzjymafluq",
-      "index": 10
+      "cid": "pub:sha2-256:tq2b2zt74elf3zchtbynihhsutawabal2f35ztoejycj5mlribiq",
+      "index": 11
     },
     "imports": {
       "base:env.myst-classicthesis": "pub:sha2-256:n3th3i4biov6naimk3crznlozoqjjh6xplkriic43phj5awtooia",
@@ -36,10 +36,10 @@
     {"slug": "pkg.publet-algorithms#identity", "kind": "claim", "source": "publets/pkg.publet-algorithms", "cid": "pub:sha2-256:3fmgaufi6qglnqcbboujiqrnj2fqjmzutp6jkhoxnkeyk6byqxlq", "genesis": "pub:sha2-256:iecpcotli4qktkdxhzofqpua27cxmupdfc3batttojcr2fmqs5sq", "deps": []},
     {"slug": "pkg.publet-algorithms#release", "kind": "claim", "source": "publets/pkg.publet-algorithms", "cid": "pub:sha2-256:452veuc3ttg5jn3umar3tbno23vgygpjfeiukcwgevubyk3kim3a", "genesis": "pub:sha2-256:r5zh26ywaw6tlq65npzwkab6f7a27wc5usi37hor2fhhwss63ltq", "deps": ["pkg.publet-algorithms#identity"]},
     {"slug": "pkg.publet-algorithms#security", "kind": "claim", "source": "publets/pkg.publet-algorithms", "cid": "pub:sha2-256:cch7n3py5cql6iml2wdfx4jt2azqdsbxp75c355xk53y7yuklloa", "genesis": "pub:sha2-256:4ddwb3to5wg2otooepqlschcvrwatgkhkgzgbukxesyax2lit6aa", "deps": ["pkg.publet-algorithms#identity"]},
-    {"slug": "pkg.publet-cli", "kind": "doc", "tag": "PKG-PUBCLI-10-2026", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:vkkcegr6vwsap42kb34obxjpolulkser5di5zsenrzubqwupemga", "genesis": "pub:sha2-256:p3njoj6ah2grighjlddv7grnsh4voxalhscqqv7z7ds7gukvyika", "deps": ["pkg.publet-cli#identity", "pkg.publet-cli#release", "pkg.publet-cli#security"]},
-    {"slug": "pkg.publet-cli#identity", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:rbmwxy4zfiev2fsfbm742uz3jnzxczn2yojf32geu2hcbypipzpq", "genesis": "pub:sha2-256:grequkzffpt3ycvwikle2ywgielhni35wap2xyjyvcpqeclwg26a", "deps": []},
-    {"slug": "pkg.publet-cli#release", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:semsjfm5mu3us7bpe3425f3sitwb7eg6ciredldw2vptm4xxiyuq", "genesis": "pub:sha2-256:c5jjfbytdnkiqy2w2zpl6yxme43surb6kwr7henet4mvszzap7iq", "deps": ["pkg.publet-cli#identity"]},
-    {"slug": "pkg.publet-cli#security", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:i4ygxxspm3wqszpozcxulppar5lazbmmuzipfrwedpe4gx2oyr4q", "genesis": "pub:sha2-256:i4ygxxspm3wqszpozcxulppar5lazbmmuzipfrwedpe4gx2oyr4q", "deps": ["pkg.publet-cli#identity"]},
+    {"slug": "pkg.publet-cli", "kind": "doc", "tag": "PKG-PUBCLI-10-2026", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:bymce3mp6awcl5qzlyqqwldz5h2urkyjt37q64rgdscbre5wchda", "genesis": "pub:sha2-256:p3njoj6ah2grighjlddv7grnsh4voxalhscqqv7z7ds7gukvyika", "deps": ["pkg.publet-cli#identity", "pkg.publet-cli#release", "pkg.publet-cli#security"]},
+    {"slug": "pkg.publet-cli#identity", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:rin7pcp3a3qh2xk6gd7rbdolwlp2cqojljw47oh6xgqegyquxrvq", "genesis": "pub:sha2-256:grequkzffpt3ycvwikle2ywgielhni35wap2xyjyvcpqeclwg26a", "deps": []},
+    {"slug": "pkg.publet-cli#release", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:l3lwjvee3svhmkrla5crpndvorz5mioifpxcf77ojemjwz2lhrja", "genesis": "pub:sha2-256:c5jjfbytdnkiqy2w2zpl6yxme43surb6kwr7henet4mvszzap7iq", "deps": ["pkg.publet-cli#identity"]},
+    {"slug": "pkg.publet-cli#security", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:66cjctip7h7aglxw73f36pxepdqufkgilpeiuvnsyruqusosownq", "genesis": "pub:sha2-256:i4ygxxspm3wqszpozcxulppar5lazbmmuzipfrwedpe4gx2oyr4q", "deps": ["pkg.publet-cli#identity"]},
     {"slug": "pkg.publet-core", "kind": "doc", "tag": "PKG-PUBCOR-10-2026", "source": "publets/pkg.publet-core", "cid": "pub:sha2-256:whp3mjwp4c36jvnchpuadgfvhk576xdhmeeikdvfrf5vbwjnhvra", "genesis": "pub:sha2-256:olfkwzh6avfuarn4bvefh3b4o3tlczk6qn5sygqot7a6utgapszq", "deps": ["pkg.publet-core#identity", "pkg.publet-core#release", "pkg.publet-core#security"]},
     {"slug": "pkg.publet-core#identity", "kind": "claim", "source": "publets/pkg.publet-core", "cid": "pub:sha2-256:56udm63xwx2q54ficluzy6dirqa4bdd34wrz7s7awdfkqhdatmqa", "genesis": "pub:sha2-256:qscnwiats4fl3fiunu4m5lawrsixui4hicccaffw5wralw4ynq3q", "deps": []},
     {"slug": "pkg.publet-core#release", "kind": "claim", "source": "publets/pkg.publet-core", "cid": "pub:sha2-256:7suszdzxt3twcjanzp43rm5tyq7gs5et4p6mpffqngu5rseov63a", "genesis": "pub:sha2-256:h3q5copviakzchheplk2rgnsrgdawgj2pw6ssw2sqbd3yvg6qpva", "deps": ["pkg.publet-core#identity"]},
