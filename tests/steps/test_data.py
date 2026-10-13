@@ -21,6 +21,7 @@ scenarios("../features/conformance/quantities.feature")
 scenarios("../features/conformance/blobs.feature")
 scenarios("../features/porcelain/doc.feature")
 scenarios("../features/porcelain/revise.feature")
+scenarios("../features/porcelain/bundle.feature")
 
 CONTENT = "Planned P0 spend by item, Oct 2026 to Mar 2027."
 SCOPE = "Sustenaut P0 plan as approved for the first phase"
@@ -576,3 +577,134 @@ def another_system(runner, ctx, name: str, version: str):
 @when("I compose a budget claim with energy per tray under that system", target_fixture="result")
 def compose_under_other(runner, ctx):
     return _compose_budget(runner, ctx, _energy(ctx, ESTIMATE), f"--depends={ctx['q']['other']}")
+
+
+# --- pub bundle ----------------------------------------------------------------
+
+
+def _bundle(runner, *parts: str) -> dict:
+    path = runner.cwd.joinpath("bundles", *parts)
+    assert path.is_file(), f"no bundle at {path}"
+    return json.loads(path.read_text())
+
+
+def _claim_bundle(runner, ctx) -> dict:
+    return _bundle(runner, "o", f"{ctx['claim']}.json")
+
+
+@when("I compose a budget claim with energy per tray not yet known", target_fixture="result")
+def compose_unknown(runner, ctx):
+    return _compose_budget(runner, ctx, _energy(ctx, None), f"--depends={ctx['q']['ucum']}")
+
+
+@when(parsers.parse('I define another dimension named "{symbol}"'))
+def define_again(runner, ctx, symbol: str):
+    ctx["q"]["tray2"] = _defined(runner, "tray2", f"{symbol}: one 30 by 60 cm growing tray.",
+                                 {"sort": "dimension", "symbol": symbol}, ctx["q"]["ucum"])
+
+
+@when("I write the bundles", target_fixture="result")
+def write_bundles(runner):
+    return runner.run("pub", "bundle", "--out=bundles", "--title=Publication 0",
+                      "--base=https://pub.example")
+
+
+@when("I export the workspace's objects to a directory")
+def export_objects(runner):
+    objects = runner.cwd / "objects"
+    objects.mkdir()
+    for cid in sorted(_held(runner)):
+        out = runner.run("pub-cat", "--store=.publet/objects.redb", cid)
+        assert out.code == 0, out.stderr
+        (objects / (cid.replace(":", "_") + ".cbor")).write_bytes(out.out)
+
+
+@when("I write the bundles from that directory", target_fixture="result")
+def write_bundles_from_dir(runner):
+    (runner.cwd / ".publet").rename(runner.cwd / "moved-away")
+    return runner.run("pub", "bundle", "--dir=objects", "--out=bundles",
+                      "--base=https://pub.example")
+
+
+@given("the bundle directory already holds a file")
+def bundles_not_empty(runner):
+    (runner.cwd / "bundles").mkdir()
+    (runner.cwd / "bundles" / "old.json").write_text("{}")
+
+
+@then("the claim's bundle holds its content and scope")
+def claim_bundle(runner, ctx):
+    b = _claim_bundle(runner, ctx)
+    assert b["bundle"] == 1, b
+    body = b["object"]["body"]
+    assert body["content"] == CONTENT, body
+    assert body["scope"]["domain"] == SCOPE, body
+
+
+@then("the claim's bytes are served at its identifier, unchanged")
+def claim_bytes(runner, ctx):
+    served = (runner.cwd / "bundles" / "pub" / "v1" / "object" / ctx["claim"]).read_bytes()
+    stored = runner.run("pub-cat", "--store=.publet/objects.redb", ctx["claim"])
+    assert stored.code == 0, stored.stderr
+    assert served == stored.out
+    assert _claim_bundle(runner, ctx)["bytes"]["path"] == f"pub/v1/object/{ctx['claim']}"
+
+
+@then("the index lists the claim with its bundle's path")
+def index_lists(runner, ctx):
+    index = _bundle(runner, "index.json")
+    entry = next(o for o in index["objects"] if o["cid"] == ctx["claim"])
+    assert entry["path"] == f"o/{ctx['claim']}.json", entry
+    assert entry["class"] == "normative", entry
+
+
+@then("the claim's bundle says it rests on the tray dimension as its unit, the kind and the measure")
+def rests_on(runner, ctx):
+    how = {e["cid"]: e["how"] for e in _claim_bundle(runner, ctx)["rests_on"]}
+    q = ctx["q"]
+    assert how.get(q["tray"]) == "unit", how
+    assert how.get(q["kind"]) == "kind", how
+    assert how.get(q["measure"]) == "measure", how
+
+
+@then("the claim's bundle gives the measure's parameters as low, likely and high")
+def parameters(runner, ctx):
+    b = _claim_bundle(runner, ctx)
+    assert b["parameters"][ctx["q"]["measure"]] == ["low", "likely", "high"], b["parameters"]
+
+
+@then("the claim's bundle summarizes every object it rests on")
+def related(runner, ctx):
+    b = _claim_bundle(runner, ctx)
+    for edge in b["rests_on"]:
+        assert b["related"][edge["cid"]]["held"] is True, edge
+    assert b["related"][ctx["q"]["tray"]]["label"] == "{tray}", b["related"]
+
+
+@then("the tray dimension's bundle says the claim uses it as a unit")
+def used_by(runner, ctx):
+    b = _bundle(runner, "o", f"{ctx['q']['tray']}.json")
+    assert {"cid": ctx["claim"], "how": "unit of"} in b["used_by"], b["used_by"]
+
+
+@then("the claim's bundle holds a null cell")
+def null_cell(runner, ctx):
+    rows = _claim_bundle(runner, ctx)["object"]["body"]["data"]["rows"]
+    assert rows[0][1] is None, rows
+
+
+@then(parsers.parse('the name "{name}" has a bundle naming the tray dimension'))
+def name_bundle(runner, ctx, name: str):
+    b = _bundle(runner, "def", f"{name}.json")
+    assert b["definitions"] == [ctx["q"]["tray"]], b
+
+
+@then(parsers.parse('the name "{name}" has the address "{address}"'))
+def name_address(runner, name: str, address: str):
+    assert _bundle(runner, "def", f"{name}.json")["address"] == address
+
+
+@then(parsers.parse('the name "{name}" has a bundle naming both definitions'))
+def name_lists_both(runner, ctx, name: str):
+    b = _bundle(runner, "def", f"{name}.json")
+    assert sorted(b["definitions"]) == sorted([ctx["q"]["tray"], ctx["q"]["tray2"]]), b

@@ -16,6 +16,7 @@
 
 mod annotate;
 mod build;
+mod bundle;
 mod compose;
 mod corpus;
 mod document;
@@ -55,6 +56,7 @@ fn usage() -> ExitCode {
     eprintln!("  delegate --to=KEY    authorize another key to continue this key's lineages");
     eprintln!("  env build|status|path SLUG   provision the pinned toolchain a pipeline runs in");
     eprintln!("  myst SLUG|CID        write a MyST project for a document");
+    eprintln!("  bundle --out=DIR     write the reading data a theme turns into pages");
     eprintln!("  relate               author a relation between two objects");
     eprintln!("  annotate             say something about an object without touching it");
     eprintln!("  sign                 generate a signing key, rotate it, or sign a stored object");
@@ -91,6 +93,7 @@ async fn main() -> ExitCode {
         "env" => env::run(&rest),
         "delegate" => corpus::delegate(&rest),
         "myst" => render::run_myst(&rest),
+        "bundle" => bundle::run(&rest),
         "--version" | "version" => {
             print_version();
             return ExitCode::SUCCESS;

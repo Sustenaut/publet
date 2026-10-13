@@ -217,7 +217,7 @@ fn print_json(
 /// `-1 - n`, as CBOR stores it -- and a byte string, which JSON has no
 /// form for, becomes `{"$bytes": HEX}`, so it can never be mistaken for
 /// text. There are no floats to convert: the profile has none (Section 4.1).
-fn to_json(value: &Value) -> serde_json::Value {
+pub(crate) fn to_json(value: &Value) -> serde_json::Value {
     match value {
         Value::Uint(n) => (*n).into(),
         Value::Nint(n) => i64::try_from(*n)
