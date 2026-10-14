@@ -60,8 +60,8 @@ pub enum Definition {
         /// The parameters, in order. A quantity cell has exactly these keys.
         parameters: Vec<Parameter>,
     },
-    /// A concept at a PDC code: a quantity, which narrows a kind, or a
-    /// relation between quantities.
+    /// A concept at a PDC code: a subject, a quantity, which narrows a
+    /// kind, or a relation between quantities.
     Concept {
         /// The PDC code it is defined at. This is its `term(D)`.
         pdc: String,
@@ -74,10 +74,13 @@ pub enum Definition {
     },
 }
 
-/// The two forms of concept (Section 5.9.1).
+/// The three forms of concept (Section 5.9.1).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ConceptForm {
+    /// A class of things or topics, such as a UDC class: neither a
+    /// quantity nor a relation.
+    Subject,
     /// An idea a group of measurements measure.
     Quantity {
         /// The kind definition it narrows.
@@ -354,7 +357,8 @@ impl Definition {
                         kind: cid(kind, "defines.kind", "the CID of a kind definition")?,
                     },
                     (None, Some(r)) => ConceptForm::Relation(relation(r)?),
-                    _ => {
+                    (None, None) => ConceptForm::Subject,
+                    (Some(_), Some(_)) => {
                         return Err(bad(
                             "defines",
                             "a concept with a `kind` or a `relation`, not both",
@@ -983,6 +987,26 @@ mod tests {
             )]))
             .is_err()
         );
+    }
+
+    #[test]
+    fn a_subject_concept_names_neither_a_kind_nor_a_relation() {
+        let d = Definition::from_value(&map(vec![
+            ("sort", text("concept")),
+            ("pdc", text("631")),
+            ("name", text("Agriculture")),
+        ]))
+        .unwrap();
+        assert_eq!(d.term(), "631");
+        assert!(d.cited().is_empty());
+        assert!(matches!(
+            d,
+            Definition::Concept {
+                form: ConceptForm::Subject,
+                boundary: None,
+                ..
+            }
+        ));
     }
 
     fn relation(slots: Vec<Value>, form: Value) -> Result<Definition, GraphError> {

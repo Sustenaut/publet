@@ -26,7 +26,7 @@
     },
     {
       "category": "added",
-      "change": "Concepts (spec Section 5.9.1): a definitional claim may define a concept at a required PDC code, which is its term: a quantity concept naming the kind it narrows and a boundary of includes and excludes lines, or a relation concept relating slots, each a role bound to a quantity concept or a kind, as a product solvable for any slot or as explicit; the kinds and concepts it binds must be in depends (pub compose adds the kinds)"
+      "change": "Concepts (spec Section 5.9.1): a definitional claim may define a concept at a required PDC code, which is its term: a subject concept such as a UDC class, a quantity concept naming the kind it narrows and a boundary of includes and excludes lines, or a relation concept relating slots, each a role bound to a quantity concept or a kind, as a product solvable for any slot or as explicit; the kinds and concepts it binds must be in depends (pub compose adds the kinds)"
     },
     {
       "category": "added",

@@ -798,6 +798,8 @@ says what is defined:
                                                 decimal string>, ... } } }
                              | "explicit" },
              boundary: { ... } }             // OPTIONAL here
+         | { sort: "concept", pdc: <PDC code string>, name: <string>,
+             boundary: { ... } }             // OPTIONAL here
   // any sort, OPTIONAL:
            matches: [ { relation: "exact" | "close", ref: <URI> }, ... ]
 ```
@@ -824,13 +826,19 @@ says what is defined:
   (Section 5.9.4). `describes` says whether its parameters state a value as
   exact, the **variation** in what was measured, or the **uncertainty** in
   what is known: the two are easily confused and combine differently.
-- **`concept`** comes in two forms. Both REQUIRE `pdc`: the concept's
+- **`concept`** comes in three forms. All REQUIRE `pdc`: the concept's
   code in the Extended Publet Decimal Classification (PDC), an extension of
   the UDC Summary [UDC] in which every UDC Summary class keeps its code and
   a narrower PDC class is written as the UDC code it extends, a separator
   UDC notation never uses, and a number. A concept's broader concept is the
-  one at the code its own code extends. A concept carries `kind` or
-  `relation`, never both.
+  one at the code its own code extends. A concept carries `kind`,
+  `relation`, or neither, never both.
+
+  A **subject concept** carries neither: a class of things or topics, such
+  as a UDC class (agriculture; plant cultivation under artificial light),
+  that values and other concepts are about rather than a quantity. Its
+  `boundary` is OPTIONAL. Every UDC Summary class is a subject concept at
+  its own code.
 
   A **quantity concept** (`kind`) names what a group of measurements
   measure, which a kind alone does not say: LED shelf electricity per
@@ -2953,7 +2961,8 @@ units system and any symbols it lacks, and what it measures by citing a
 **quantity kind** (Section 5.9).
 
 **Concept** — a `definitional` claim at a **PDC code**, which is the term
-it goes by. A **quantity concept** names what a group of measurements
+it goes by. A **subject concept** is a class of things or topics, such as
+a UDC class. A **quantity concept** names what a group of measurements
 measure: the kind it narrows and its boundary, as lines it includes and
 excludes; extracts are placed under it by `classifies`, and calculations
 pool through it. A **relation concept** relates quantity **slots**, each a
