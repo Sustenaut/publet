@@ -84,6 +84,13 @@ Feature: A number names its unit, its kind, how sure it is, and how it was compu
     And stderr mentions "defines.kind cites"
 
   @must-5.9.1
+  Scenario: Reframing a concept's boundary is a new version of it
+    Given a concept at PDC code "631" narrowing the kind
+    When I revise the concept to include "Fans and pumps on the shelf"
+    Then it succeeds
+    And the new version includes "Fans and pumps on the shelf" and presupposes the kind
+
+  @must-5.9.1
   Scenario: A relation concept binds slots by role to a concept or a kind
     Given a concept at PDC code "631.544" narrowing the kind
     When I compose a relation concept relating "631.544" to the kind

@@ -568,6 +568,27 @@ def store_concept_kind_unlisted(tmp_path):
     return {"dir": tmp_path}
 
 
+@when(parsers.parse('I revise the concept to include "{line}"'), target_fixture="result")
+def revise_concept(runner, ctx, line: str):
+    reframed = _concept("631", ctx["q"]["kind"])
+    reframed["boundary"]["includes"].append(line)
+    out = runner.run("pub", "revise", ctx["concept"],
+                     f"--defines={_write(runner, 'reframed.json', reframed)}")
+    if out.code == 0:
+        ctx["revised"] = out.stdout.split()[0]
+    return out
+
+
+@then(parsers.parse('the new version includes "{line}" and presupposes the kind'))
+def revised_concept(runner, ctx, line: str):
+    shown = _read(runner, ctx["revised"])
+    assert ctx["revised"] != ctx["concept"], shown
+    body = json.loads(runner.run("pub", "read", "--json", ctx["revised"]).stdout)
+    defines = body["object"]["body"]["defines"]
+    assert line in defines["boundary"]["includes"], defines
+    assert ctx["q"]["kind"] in shown.split("presupposes:", 1)[1], shown
+
+
 @given(parsers.parse('a concept at PDC code "{pdc}" narrowing the kind'))
 def given_concept(runner, ctx, pdc: str):
     out = compose_concept(runner, ctx, pdc)

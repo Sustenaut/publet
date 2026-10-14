@@ -287,7 +287,7 @@ pub(crate) fn check_quantities(store: &Store, cid: &Cid, bytes: &[u8]) -> Result
 }
 
 /// `defines` and `computes` from `--defines` and `--computes` files.
-fn quantity_fields(flags: &ClaimFlags) -> Result<BTreeMap<String, Value>, String> {
+pub(crate) fn quantity_fields(flags: &ClaimFlags) -> Result<BTreeMap<String, Value>, String> {
     let mut out = BTreeMap::new();
     for (field, path) in [("defines", &flags.defines), ("computes", &flags.computes)] {
         if let Some(path) = path {
@@ -303,7 +303,10 @@ fn quantity_fields(flags: &ClaimFlags) -> Result<BTreeMap<String, Value>, String
 /// The claims a table's columns, a calculation and a concept cite: unit
 /// definitions, kinds, measures, and the claims stating an optional
 /// input's default (Section 5.9).
-fn quantity_citations(data: Option<&Value>, fields: &BTreeMap<String, Value>) -> Vec<String> {
+pub(crate) fn quantity_citations(
+    data: Option<&Value>,
+    fields: &BTreeMap<String, Value>,
+) -> Vec<String> {
     let mut out = Vec::new();
     let mut push = |v: Option<&Value>| {
         if let Some(t) = v.and_then(Value::as_text) {
