@@ -18,7 +18,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use publet_core::{Cid, cbor::Value};
-use publet_graph::{Cell, Column, Data, Definition, Graph, ParameterType, ProseClaim};
+use publet_graph::{
+    Binding, Cell, Column, ConceptForm, Data, Definition, Graph, ParameterType, ProseClaim,
+};
 use pubunit::{Registry, Term};
 use serde_json::json;
 
@@ -112,6 +114,27 @@ pub enum Problem {
         /// The column.
         column: String,
     },
+    /// A PDC code the claim names has no concept claim in its `depends`
+    /// (Sections 5.9.1 and 5.9.5).
+    ConceptNotInDepends {
+        /// The code.
+        code: String,
+    },
+    /// The concepts in `depends` at a code are not of the form the claim
+    /// names it for.
+    WrongConcept {
+        /// The code.
+        code: String,
+        /// The form it must have: `quantity` or `relation`.
+        expected: &'static str,
+    },
+    /// A calculation names a role its relation concept has no slot for.
+    UnknownRole {
+        /// The relation concept's code.
+        code: String,
+        /// The role.
+        role: String,
+    },
 }
 
 impl Problem {
@@ -195,6 +218,18 @@ impl fmt::Display for Problem {
                 f,
                 "column `{column}` is an output of its calculation, which gives a different kind (Section 5.9.5)"
             ),
+            Self::ConceptNotInDepends { code } => write!(
+                f,
+                "PDC code {code} is named, so `depends` must list a concept claim at it (Section 5.9.1)"
+            ),
+            Self::WrongConcept { code, expected } => write!(
+                f,
+                "PDC code {code} must name a {expected} concept, and the concept `depends` lists there is not one"
+            ),
+            Self::UnknownRole { code, role } => write!(
+                f,
+                "role `{role}` is not a slot of the relation concept at {code} (Section 5.9.5)"
+            ),
         }
     }
 }
@@ -211,10 +246,11 @@ pub fn system() -> (&'static str, &'static str) {
 /// have no units, has nothing to check.
 #[must_use]
 pub fn check(graph: &Graph, claim: &ProseClaim) -> Vec<Problem> {
-    let Some(Data::Table { columns, rows }) = claim.data() else {
-        return Vec::new();
-    };
     let mut problems = Vec::new();
+    check_concepts(graph, claim, &mut problems);
+    let Some(Data::Table { columns, rows }) = claim.data() else {
+        return problems;
+    };
     let defs = definitions(graph, claim, &mut problems);
 
     let systems: Vec<(&str, &str)> = claim
@@ -273,6 +309,89 @@ pub fn check(graph: &Graph, claim: &ProseClaim) -> Vec<Problem> {
     }
     check_derivation(graph, claim, columns, &mut problems);
     problems
+}
+
+/// Check the PDC codes a concept's slots or a calculation's `solves` name
+/// against the concept claims in `depends` (Sections 5.9.1 and 5.9.5).
+fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>) {
+    let mut named: Vec<(&str, &'static str)> = Vec::new();
+    if let Some(Definition::Concept {
+        form: ConceptForm::Relation(r),
+        ..
+    }) = claim.defines()
+    {
+        named.extend(r.slots.iter().filter_map(|s| match &s.binds {
+            Binding::Concept(code) => Some((code.as_str(), "quantity")),
+            Binding::Kind(_) => None,
+        }));
+    }
+    let solves = claim.computes().and_then(|c| c.solves.as_ref());
+    if let Some(s) = solves {
+        named.push((s.concept.as_str(), "relation"));
+    }
+    if named.is_empty() {
+        return;
+    }
+    let mut unheld = false;
+    let mut held: Vec<(&str, &ConceptForm)> = Vec::new();
+    for dep in claim.depends() {
+        let Some(c) = graph.prose_claim(dep) else {
+            unheld = true;
+            problems.push(Problem::Unavailable {
+                cid: dep.to_string(),
+            });
+            continue;
+        };
+        if let Some(Definition::Concept { pdc, form, .. }) = c.defines() {
+            held.push((pdc.as_str(), form));
+        }
+    }
+    for (code, expected) in named {
+        let at: Vec<&ConceptForm> = held
+            .iter()
+            .filter(|(pdc, _)| *pdc == code)
+            .map(|(_, f)| *f)
+            .collect();
+        if at.is_empty() {
+            if !unheld {
+                problems.push(Problem::ConceptNotInDepends {
+                    code: code.to_owned(),
+                });
+            }
+            continue;
+        }
+        let fits = |f: &&ConceptForm| match expected {
+            "quantity" => matches!(f, ConceptForm::Quantity { .. }),
+            _ => matches!(f, ConceptForm::Relation(_)),
+        };
+        if !at.iter().any(fits) {
+            problems.push(Problem::WrongConcept {
+                code: code.to_owned(),
+                expected,
+            });
+            continue;
+        }
+        if let Some(s) = solves.filter(|s| s.concept == code) {
+            let relations = at.iter().filter_map(|f| match f {
+                ConceptForm::Relation(r) => Some(r),
+                _ => None,
+            });
+            let missing = |r: &publet_graph::ConceptRelation| {
+                s.roles()
+                    .find(|role| !r.slots.iter().any(|slot| slot.role == *role))
+                    .map(ToOwned::to_owned)
+            };
+            let all: Vec<Option<String>> = relations.map(missing).collect();
+            if !all.iter().any(Option::is_none)
+                && let Some(Some(role)) = all.into_iter().next()
+            {
+                problems.push(Problem::UnknownRole {
+                    code: code.to_owned(),
+                    role,
+                });
+            }
+        }
+    }
 }
 
 /// Every definition in the claim's dependency closure, by CID.

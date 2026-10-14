@@ -53,11 +53,11 @@ untested.
 | 5.5 | 5 | conformance/evidence_required.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/sources.feature |
 | 5.7 | 2 | conformance/atomicity.feature |
 | 5.8 | 4 | conformance/data.feature |
-| 5.9.1 | 3 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
+| 5.9.1 | 7 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.2 | 5 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.3 | 2 | conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.4 | 3 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
-| 5.9.5 | 3 | conformance/quantities.feature |
+| 5.9.5 | 6 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
 | 6 | 7 | conformance/acyclicity.feature |
 | 6.1 | 1 | plumbing/lineage.feature |
 | 7.1 | 2 | conformance/counts.feature |

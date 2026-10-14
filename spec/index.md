@@ -755,6 +755,7 @@ diverge on its own lineage:
 | a system of units, a base dimension, a unit | `definitional` claim with `defines` | a column's `unit_defs`, and `depends` |
 | a quantity kind | `definitional` claim with `defines` | a column's `kind`, and `depends` |
 | a statistical measure | `definitional` claim with `defines` | a column's `measure`, and `depends` |
+| a concept, of a quantity or a relation | `definitional` claim with `defines` | `classifies` annotations, a calculation's `solves`, and `depends` |
 | a calculation | `procedural` claim, optionally with `computes` | evidence with `role: "derivation"` |
 | a measurement method | `procedural` claim | evidence with `role: "method"` (Section 5.5) |
 
@@ -780,6 +781,23 @@ says what is defined:
              describes: "exact" | "variation" | "uncertainty",
              parameters: [ { name: <string>, type: <type>,
                              meaning: <string> }, ... ] }
+         | { sort: "concept", pdc: <PDC code string>, name: <string>,
+             kind: <CID of a kind definition>,
+             boundary: { includes: [ <string>, ... ],
+                         excludes: [ <string>, ... ] } }
+         | { sort: "concept", pdc: <PDC code string>, name: <string>,
+             relation: { statement: <string>,
+                         slots: [ { role: <identifier>,
+                                    concept: <PDC code> }
+                                | { role: <identifier>,
+                                    kind: <CID of a kind definition> },
+                                  ... ],
+                         form: { product: {
+                                   coefficient: <decimal string>,
+                                   exponents: { <role>: <integer or
+                                                decimal string>, ... } } }
+                             | "explicit" },
+             boundary: { ... } }             // OPTIONAL here
   // any sort, OPTIONAL:
            matches: [ { relation: "exact" | "close", ref: <URI> }, ... ]
 ```
@@ -806,6 +824,39 @@ says what is defined:
   (Section 5.9.4). `describes` says whether its parameters state a value as
   exact, the **variation** in what was measured, or the **uncertainty** in
   what is known: the two are easily confused and combine differently.
+- **`concept`** comes in two forms. Both REQUIRE `pdc`: the concept's
+  code in the Extended Publet Decimal Classification (PDC), an extension of
+  the UDC Summary [UDC] in which every UDC Summary class keeps its code and
+  a narrower PDC class is written as the UDC code it extends, a separator
+  UDC notation never uses, and a number. A concept's broader concept is the
+  one at the code its own code extends. A concept carries `kind` or
+  `relation`, never both.
+
+  A **quantity concept** (`kind`) names what a group of measurements
+  measure, which a kind alone does not say: LED shelf electricity per
+  growing area and day is one concept of the kind energy per area and
+  time, and a daylight greenhouse's is another. `kind` is the kind it
+  narrows. `boundary`, REQUIRED here, states what it takes in and leaves
+  out, one short sentence per entry, so that a reviewer can add or strike a
+  line and two versions can be compared line by line.
+
+  A **relation concept** (`relation`) names a relation between quantities:
+  fresh mass harvested is light received times light use efficiency.
+  `statement` says it in words. Each slot is a quantity it relates, named by
+  a `role` unique within the relation and bound to the PDC code of a
+  quantity concept or to a kind; one kind may fill two slots in different
+  roles. Slots bind by role and concept or kind, never by the variable
+  names of any model, so that two models using one relation can be joined.
+  `form` says how the slots relate. A `product` relation holds when
+  `coefficient` times the product of each slot raised to its exponent is 1;
+  every slot has a non-zero exponent, and any one slot can be solved from
+  all the others. An `explicit` relation is solved only by the
+  calculations that implement it (Section 5.9.5).
+
+  A relation is unit-free. A slot's unit comes from the kind it binds, and
+  a value is converted into the unit the relation is stated in by the
+  units system (Section 5.9.2), never by the relation: `coefficient` MUST
+  NOT absorb a unit conversion factor.
 - **`matches`** links the definition to the same or a close concept
   elsewhere, such as a UCUM code, a QUDT quantity kind, or an ISO 4217
   currency code, so that this vocabulary extends theirs rather than
@@ -816,16 +867,51 @@ A `<symbol>` is a brace annotation (`{tray}`) or a bracketed atom
 `dimension` or `unit` claim using a symbol another claim declares, and a
 `kind` claim whose `dimension` names a declared base, MUST list the
 declaring claim in `depends`; each MUST also list the `system` claim whose
-syntax it is written in. An implementation MUST reject a claim carrying
-`defines` whose class is not `definitional`, whose `sort` is not one of the
-five, or whose fields do not have the shapes above.
+syntax it is written in. A quantity concept MUST list its `kind` in
+`depends`. A relation concept MUST list in `depends` each kind a slot
+binds, and for each PDC code a slot binds, a quantity concept at that
+code. An implementation MUST reject a claim carrying `defines` whose
+class is not `definitional`, whose `sort` is not one of the six, or whose
+fields do not have the shapes above, including a role that is not an
+identifier (a letter or underscore, then letters, digits and underscores),
+a role used twice, or a `product` without one non-zero exponent for each
+slot and none for anything else.
 
 The name a definition goes by is in the definition itself: `symbol` or
-`name` is `term(D)` for Section 9.2. A node that serves definitions under
+`name` is `term(D)` for Section 9.2, except for a `concept`, whose
+`term(D)` is its `pdc` code, so that two concepts at one code are compared
+as two definitions of one term. A node that serves definitions under
 human-readable names (for example `https://pub.<host>/def/<name>`) derives
 that mapping from the definitions it holds; the definition's CID remains
 its identity, so one definition reached through two hosts is one
 definition.
+
+**Concepts and codes.** Each PDC code is meant to hold one concept, and
+each concept one code. The protocol does not keep that rule: it has no
+namespace (Section 9.1), and anyone may publish a concept at a code that
+already has one. A **PDC edition** keeps it: a document (Section 8)
+listing exactly one concept lineage per code. A code with more than one
+candidate concept, in an edition or among the definitions a reader holds,
+is shown as contested, naming each candidate, until a viewpoint or the
+code's expert group (Section 9.3) selects one; neither candidate is hidden.
+Reframing a concept, by moving a boundary line or narrowing it, is a new
+version of it (`supersedes`), so the code keeps one lineage.
+
+Evidence, data and references reach a concept rather than one another:
+an extract claim is placed under a concept by a `classifies` annotation
+naming it (Section 7.1), with any condition on membership in the
+annotation's scope, and a calculation pooling values of a concept lists
+the concept in `depends`. Which values a calculation may pool is then
+the set of claims classified under the concept, and disputing a
+membership, a boundary, or the pooling is disputing one object each.
+Moving a concept to another code is future work (Appendix B).
+
+**Bounds are not part of a concept.** A limit on what values a concept
+may take is a claim of its own citing the concept in `depends`, so that
+it can be disputed apart from the concept: a physical bound, such as a
+share no greater than 1, as a `formal` or `definitional` claim, and a
+sourced limit, such as the best efficacy of LED fixtures on the market,
+as an `empirical` claim with its evidence.
 
 #### 5.9.2 Units
 
@@ -917,17 +1003,53 @@ takes and gives:
 ```
   computes: { inputs:   [ { name: <string>, kind: <CID> }, ... ],
               outputs:  [ { name: <string>, kind: <CID> }, ... ],
+              solves:   { concept:  <PDC code of a relation concept>,
+                          target:   <role>,
+                          requires: [ <role>, ... ],
+                          optional: [ { role: <role>,
+                                        default: <CID of a claim> },
+                                      ... ] },
               rounding: <string>,
               seed:     <unsigned integer> }
 ```
 
-Each `kind` MUST also appear in the claim's `depends`. Because evaluation
+Each `kind` MUST also appear in the claim's `depends`. `solves` says the
+calculation computes the `target` slot of a relation concept (Section
+5.9.1) from the `requires` slots, and can do without the `optional` ones.
+`depends` MUST list a relation concept at `concept`, and every role named
+MUST be one of its slots, each named once. There are no hidden defaults:
+the value an absent optional input takes is stated by the `default`
+claim, which MUST also appear in `depends`, so that it can be disputed
+like any other claim ("leafy greens set no seed, so seed mass adds
+nothing"). Because evaluation
 is bit-identical (R8), a calculation MUST state its rounding where its
 result is not exact, and a simulation MUST state its seed, so that every
 run gives the same digits. Uncertainty propagation -- interval arithmetic
 for ranges, a seeded Monte Carlo for three-point estimates -- is part of
 the calculation. Implementations SHOULD warn where a derived claim's
 column named as one of its calculation's outputs names a different kind.
+
+**A concept's interface.** *Non-normative.* The ways to compute a
+relation concept's slots are its interface, from which a client or a
+code generator can offer every one of them. A `product` relation's
+interface is generated from its exponents: any slot, from all the others.
+An `explicit` relation's interface is the set of calculations whose
+`solves` names it, each one accepted combination of a target, required
+inputs and optional inputs. The code computing it is linked to a
+calculation by `implements` (Section 6.2), so a concept implemented as a
+reusable function is the chain: code, `implements`, calculation,
+`solves`, relation concept. Several implementations of one calculation,
+in different languages, may stand side by side; test cases for the
+relation are claims whose `data` gives values for its slots, and each
+implementation is settled against the same ones (Section 7.2).
+
+**Chained calculations.** A value computed by a model that chains
+several calculations is derived from the whole chain. Its one
+`derivation` entry (Section 5.5) names a `procedural` claim for the run,
+which SHOULD carry the run's trace -- which calculation, solving which
+slot of which concept, produced which value from which -- as `data` or as
+a blob, and list each calculation in `depends`, so that any step of the
+chain can be disputed on its own.
 
 Recomputing a value is settling it: anyone runs an implementation on the
 inputs and files a `settled` annotation, `consistent` or `inconsistent`
@@ -1240,11 +1362,26 @@ REQUIRED disclosure block:
 
 ```
   value: { finding: "redundant-with" | "novel" | "duplicate-of"
-                  | "divergent-terms" | "unsupported-citation",
+                  | "divergent-terms" | "unsupported-citation"
+                  | "groups-under" | "quoted-from",
            refs:   [ <CID>, ... ],
            engine: { model, version, prompt: <CID of blob>,
-                     inputs: <CID of snapshot>, sampling } }
+                     inputs: <CID of snapshot>, sampling },
+           candidate: <CID of blob> }       // OPTIONAL
 ```
+
+- **`groups-under`** proposes that extract claims measure one concept
+  (Section 5.9.1). `refs` names the concept, or the draft concept in
+  `candidate` when none exists yet, followed by the member extracts.
+- **`quoted-from`** proposes that the target, a figure in a review or a
+  secondary source, repeats a primary measurement rather than making one.
+  `refs` names the primary extract.
+- **`candidate`** names a blob holding the unsigned draft objects the
+  finding proposes, such as a concept and the `classifies` annotations
+  placing its members, or the relation linking a quoted figure to its
+  primary. A draft is not an object until a key signs it (R14). A reviewer
+  MAY sign the drafts as they stand or edited; what they sign is theirs,
+  and the triage annotation remains a suggestion either way.
 
 Triage is **re-runnable, not reproducible**, and implementations MUST NOT
 present it as equivalent to `settled`.
@@ -1498,7 +1635,7 @@ recommended path through a line of work.
 ```
   { pub: "1", type: "anchor", created, author,
     body: { lineage: <genesis CID>, current: <CID>, rationale: <CID>,
-            stewards: [ <CID>, ... ],      // 1..9, human principals (R11)
+            stewards: [ <CID>, ... ],      // 1..12, human principals (R11)
             threshold: <M>,
             qualified: { policy: <CID>, floor: <integer>,
                          nominated: [ <CID>, ... ] },
@@ -1527,6 +1664,15 @@ acceptance. A steward MAY resign unilaterally. If the circle falls below
 **dormant** and any qualified key meeting the declared floor MAY publish a
 successor. Competing anchors coexist and resolve per viewpoint; there is no
 election, because an electorate requires a global identity registry.
+
+**Expert groups.** An expert group is an anchor over a PDC code's
+subtree (Section 5.9.1): it anchors the concept lineage at that code and
+is read as covering the codes beneath it, and its stewards recommend which concept holds each code beneath it,
+review suggestions there, and approve changes within it. A group is
+founded by one steward, who nominates others; each nominee joins as any
+steward does, by `threshold` circle signatures plus the nominee's
+acceptance. Anyone may still publish, review, or dispute concepts in the
+subtree, and a group's choice is a recommendation like any anchor's.
 
 No cap on anchors per key is specified. Anchor counts and acquisition rates
 are computable; viewpoints SHOULD discount implausible holdings and clients
@@ -2575,6 +2721,7 @@ annotation kinds.
 
 ### 19.2 Informative
 
+- [UDC] UDC Consortium, "UDC Summary", CC BY-SA 3.0, <http://udcdata.info/>.
 - [RFC8785] Rundgren, A. et al., "JSON Canonicalization Scheme", RFC 8785.
 - [RFC3161] Adams, C. et al., "Time-Stamp Protocol", RFC 3161, 2001.
 - [EIGENTRUST] Kamvar, S. et al., WWW 2003.
@@ -2744,6 +2891,12 @@ offers no basis for setting it. Too large and the majority cannot
 participate locally; too small and splitting fragments fields and inflates
 cross-domain references, which are the cases R16 does not cover.
 
+**B.17 Moving a concept.** A concept placed at the wrong PDC code
+(Section 5.9.1) should be movable without breaking what cites it: a new
+version of the concept with a different `pdc`, allowed only onto a code
+holding no concept yet, after which the old code points to the new one.
+Neither the move nor the pointer is specified.
+
 ---
 
 ## Appendix C. Glossary
@@ -2798,6 +2951,22 @@ it, as a map of parameters a **measure** names, such as `low`, `likely` and
 `high`. Its column's unit is defined by citing `definitional` claims for the
 units system and any symbols it lacks, and what it measures by citing a
 **quantity kind** (Section 5.9).
+
+**Concept** — a `definitional` claim at a **PDC code**, which is the term
+it goes by. A **quantity concept** names what a group of measurements
+measure: the kind it narrows and its boundary, as lines it includes and
+excludes; extracts are placed under it by `classifies`, and calculations
+pool through it. A **relation concept** relates quantity **slots**, each a
+role bound to a quantity concept or a kind, as a `product` solvable for
+any slot or as `explicit`, solved by the calculations whose `solves`
+names it; those ways of solving it are its **interface** (Sections 5.9.1
+and 5.9.5).
+
+**PDC** — the Extended Publet Decimal Classification: the UDC Summary's
+classes under their own codes, extended by narrower classes whose codes
+extend a UDC code. A **PDC edition** is a document listing one concept
+lineage per code; a code with two candidates is shown as contested
+(Section 5.9.1).
 
 **Blob** — a byte string named by the CID of its bytes. Unsigned and not
 an object; what it is, and how large, is stated by the object citing it,
@@ -2951,7 +3120,15 @@ The remedies differ (Section 9.2).
 **Anchor** — a maintained shortcut to the head of a lineage, for readers
 wanting a curated answer rather than a computed one. Explicitly not
 load-bearing (Section 9.3). **Steward** — a human principal maintaining
-one.
+one; an anchor has 1 to 12. **Expert group** — an anchor over a PDC code's
+subtree, founded by one steward who nominates the rest (Section 9.3).
+
+**Triage** — a machine-assisted annotation with a disclosure block naming
+the model, prompt and inputs. Its findings include `groups-under`
+(extracts measuring one concept) and `quoted-from` (a figure repeating a
+primary one), and it may name a **candidate**: a blob of unsigned draft
+objects a reviewer may sign. Advisory only; it never hides or down-weights
+anything (Section 7.4).
 
 ### Identity
 

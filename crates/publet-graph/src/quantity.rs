@@ -60,11 +60,171 @@ pub enum Definition {
         /// The parameters, in order. A quantity cell has exactly these keys.
         parameters: Vec<Parameter>,
     },
+    /// A concept at a PDC code: a quantity, which narrows a kind, or a
+    /// relation between quantities.
+    Concept {
+        /// The PDC code it is defined at. This is its `term(D)`.
+        pdc: String,
+        /// The concept's name, for a reader.
+        name: String,
+        /// What it includes and excludes. Required of a quantity concept.
+        boundary: Option<Boundary>,
+        /// Which form of concept it is.
+        form: ConceptForm,
+    },
+}
+
+/// The two forms of concept (Section 5.9.1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ConceptForm {
+    /// An idea a group of measurements measure.
+    Quantity {
+        /// The kind definition it narrows.
+        kind: Cid,
+    },
+    /// A relation between quantity slots, solvable for a slot.
+    Relation(ConceptRelation),
+}
+
+/// A relation concept's relation (Section 5.9.1). Unit-free: a slot's unit
+/// comes from the kind it binds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConceptRelation {
+    /// The relation in words, for a reader.
+    pub statement: String,
+    /// The quantities it relates, by role.
+    pub slots: Vec<Slot>,
+    /// How the slots relate.
+    pub form: RelationForm,
+}
+
+/// One quantity a relation relates.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Slot {
+    /// The slot's role, an identifier unique within the relation.
+    pub role: String,
+    /// What fills it.
+    pub binds: Binding,
+}
+
+/// What fills a slot: a quantity concept or a kind.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Binding {
+    /// The PDC code of a quantity concept.
+    Concept(String),
+    /// The CID of a kind definition.
+    Kind(Cid),
+}
+
+/// How a relation's slots relate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RelationForm {
+    /// `1 = coefficient * product(slot ^ exponent)`, solvable for any slot.
+    Product {
+        /// A pure number, as a decimal string.
+        coefficient: String,
+        /// Each slot's exponent, by role, as a decimal string.
+        exponents: BTreeMap<String, String>,
+    },
+    /// Solved only by the calculations that implement it.
+    Explicit,
+}
+
+/// The slot of a relation concept a calculation solves for (`solves`,
+/// Section 5.9.5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Solves {
+    /// The relation concept's PDC code.
+    pub concept: String,
+    /// The role solved for.
+    pub target: String,
+    /// The roles it needs.
+    pub requires: Vec<String>,
+    /// The roles it can do without, each with the claim stating the value
+    /// it takes when absent.
+    pub optional: Vec<(String, Cid)>,
+}
+
+impl Solves {
+    /// Read a `solves` field.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GraphError::BadField`] if `concept` is not a PDC code, a
+    /// role is not an identifier or repeats, or an optional input's
+    /// `default` is not a CID.
+    pub fn from_value(value: &Value) -> Result<Self, GraphError> {
+        let Value::Map(_) = value else {
+            return Err(bad("computes.solves", "a map"));
+        };
+        let target = role(value.get("target"), "computes.solves.target")?;
+        let requires = match value.get("requires") {
+            None => Vec::new(),
+            Some(Value::Array(items)) => items
+                .iter()
+                .map(|r| role(Some(r), "computes.solves.requires"))
+                .collect::<Result<_, _>>()?,
+            Some(_) => return Err(bad("computes.solves.requires", "an array of roles")),
+        };
+        let optional = match value.get("optional") {
+            None => Vec::new(),
+            Some(Value::Array(items)) => items
+                .iter()
+                .map(|o| {
+                    Ok((
+                        role(o.get("role"), "computes.solves.optional.role")?,
+                        cid(
+                            o.get("default").unwrap_or(&Value::Null),
+                            "computes.solves.optional.default",
+                            "the CID of the claim stating the default",
+                        )?,
+                    ))
+                })
+                .collect::<Result<_, GraphError>>()?,
+            Some(_) => {
+                return Err(bad(
+                    "computes.solves.optional",
+                    "an array of {role, default}",
+                ));
+            }
+        };
+        let mut seen = std::collections::BTreeSet::from([target.as_str()]);
+        for r in requires.iter().chain(optional.iter().map(|(r, _)| r)) {
+            if !seen.insert(r.as_str()) {
+                return Err(bad("computes.solves", "each role once"));
+            }
+        }
+        Ok(Self {
+            concept: required_text(value, "concept", "computes.solves.concept")?,
+            target,
+            requires,
+            optional,
+        })
+    }
+
+    /// Every role it names, the target first.
+    pub fn roles(&self) -> impl Iterator<Item = &str> {
+        std::iter::once(self.target.as_str())
+            .chain(self.requires.iter().map(String::as_str))
+            .chain(self.optional.iter().map(|(r, _)| r.as_str()))
+    }
+}
+
+/// A concept's boundary: one short sentence per line, so a line can be
+/// added or struck, and two versions compared line by line.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Boundary {
+    /// What the concept takes in.
+    pub includes: Vec<String>,
+    /// What it leaves out.
+    pub excludes: Vec<String>,
 }
 
 impl Definition {
-    /// The name the definition goes by: its `symbol` or `name`. This is
-    /// `term(D)` for Section 9.2.
+    /// The name the definition goes by: its `symbol` or `name`, or a
+    /// concept's PDC code. This is `term(D)` for Section 9.2.
     #[must_use]
     pub fn term(&self) -> &str {
         match self {
@@ -72,6 +232,32 @@ impl Definition {
                 name
             }
             Self::Dimension { symbol } | Self::Unit { symbol, .. } => symbol,
+            Self::Concept { pdc, .. } => pdc,
+        }
+    }
+
+    /// The claims this definition cites, each with the field citing it: a
+    /// quantity concept's kind, and the kinds a relation concept's slots
+    /// bind. Each must also be in `depends` (Section 5.9.1).
+    #[must_use]
+    pub fn cited(&self) -> Vec<(&'static str, &Cid)> {
+        match self {
+            Self::Concept {
+                form: ConceptForm::Quantity { kind },
+                ..
+            } => vec![("defines.kind", kind)],
+            Self::Concept {
+                form: ConceptForm::Relation(r),
+                ..
+            } => r
+                .slots
+                .iter()
+                .filter_map(|s| match &s.binds {
+                    Binding::Kind(kind) => Some(("defines.relation.slots.kind", kind)),
+                    Binding::Concept(_) => None,
+                })
+                .collect(),
+            _ => Vec::new(),
         }
     }
 
@@ -84,6 +270,7 @@ impl Definition {
             Self::Unit { .. } => "unit",
             Self::Kind { .. } => "kind",
             Self::Measure { .. } => "measure",
+            Self::Concept { .. } => "concept",
         }
     }
 
@@ -91,10 +278,11 @@ impl Definition {
     ///
     /// # Errors
     ///
-    /// Returns [`GraphError::BadField`] if `sort` is not one of the five,
+    /// Returns [`GraphError::BadField`] if `sort` is not one of the six,
     /// a field is missing or ill-typed, a symbol is not `{...}` or
     /// `[...]`, a value is not a decimal string, an exponent is not an
-    /// integer, or a measure has no parameters or repeats one.
+    /// integer, a measure has no parameters or repeats one, or a concept
+    /// has no PDC code or a boundary line that is not a non-empty string.
     pub fn from_value(value: &Value) -> Result<Self, GraphError> {
         let Value::Map(_) = value else {
             return Err(bad("defines", "a map with a `sort`"));
@@ -154,9 +342,38 @@ impl Definition {
                 },
                 parameters: parameters(value.get("parameters"))?,
             }),
+            "concept" => {
+                let pdc = required_text(value, "pdc", "defines.pdc")?;
+                let name = required_text(value, "name", "defines.name")?;
+                let bounds = value
+                    .get("boundary")
+                    .map(|b| boundary(Some(b)))
+                    .transpose()?;
+                let form = match (value.get("kind"), value.get("relation")) {
+                    (Some(kind), None) => ConceptForm::Quantity {
+                        kind: cid(kind, "defines.kind", "the CID of a kind definition")?,
+                    },
+                    (None, Some(r)) => ConceptForm::Relation(relation(r)?),
+                    _ => {
+                        return Err(bad(
+                            "defines",
+                            "a concept with a `kind` or a `relation`, not both",
+                        ));
+                    }
+                };
+                if bounds.is_none() && matches!(form, ConceptForm::Quantity { .. }) {
+                    return Err(bad("defines.boundary", "a boundary on a quantity concept"));
+                }
+                Ok(Self::Concept {
+                    pdc,
+                    name,
+                    boundary: bounds,
+                    form,
+                })
+            }
             _ => Err(bad(
                 "defines.sort",
-                "`system`, `dimension`, `unit`, `kind`, or `measure`",
+                "`system`, `dimension`, `unit`, `kind`, `measure`, or `concept`",
             )),
         }
     }
@@ -206,6 +423,8 @@ pub struct Computes {
     pub inputs: Vec<(String, Cid)>,
     /// Named outputs, each with the kind it measures.
     pub outputs: Vec<(String, Cid)>,
+    /// The slot of a relation concept this calculation solves for.
+    pub solves: Option<Solves>,
     /// How a result that is not exact is rounded.
     pub rounding: Option<String>,
     /// A simulation's seed.
@@ -219,7 +438,10 @@ impl Computes {
     ///
     /// Returns [`GraphError::BadField`] if `inputs` or `outputs` is not an
     /// array of `{name, kind}` with a CID for each kind, a name repeats
-    /// within one of them, or `rounding` or `seed` is ill-typed.
+    /// within one of them, `rounding` or `seed` is ill-typed, or `solves`
+    /// is not a relation concept's code, a target role, and input roles
+    /// that are identifiers, distinct from each other and from the target,
+    /// with each optional input's default a claim.
     pub fn from_value(value: &Value) -> Result<Self, GraphError> {
         let Value::Map(_) = value else {
             return Err(bad("computes", "a map"));
@@ -227,6 +449,7 @@ impl Computes {
         Ok(Self {
             inputs: signature(value.get("inputs"), "computes.inputs")?,
             outputs: signature(value.get("outputs"), "computes.outputs")?,
+            solves: value.get("solves").map(Solves::from_value).transpose()?,
             rounding: match value.get("rounding") {
                 None => None,
                 Some(Value::Text(t)) => Some(t.clone()),
@@ -238,6 +461,14 @@ impl Computes {
                 Some(_) => return Err(bad("computes.seed", "an unsigned integer")),
             },
         })
+    }
+
+    /// The claims stating the defaults of the optional inputs it solves
+    /// with (Section 5.9.5).
+    pub fn defaults(&self) -> impl Iterator<Item = &Cid> {
+        self.solves
+            .iter()
+            .flat_map(|s| s.optional.iter().map(|(_, default)| default))
     }
 
     /// Every kind the calculation names, inputs first.
@@ -311,6 +542,156 @@ fn dimension(value: Option<&Value>) -> Result<BTreeMap<String, i64>, GraphError>
         }
     }
     Ok(out)
+}
+
+fn cid(value: &Value, field: &'static str, expected: &'static str) -> Result<Cid, GraphError> {
+    value
+        .as_text()
+        .and_then(|t| t.parse().ok())
+        .ok_or(bad(field, expected))
+}
+
+/// Whether `text` is an identifier a code generator can use: a letter or
+/// underscore, then letters, digits and underscores.
+fn is_identifier(text: &str) -> bool {
+    let mut chars = text.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+fn role(value: Option<&Value>, field: &'static str) -> Result<String, GraphError> {
+    value
+        .and_then(Value::as_text)
+        .filter(|t| is_identifier(t))
+        .map(ToOwned::to_owned)
+        .ok_or(bad(
+            field,
+            "a role: letters, digits and underscores, not starting with a digit",
+        ))
+}
+
+/// Whether a decimal string is zero: `0`, `-0.00`.
+fn is_zero(decimal: &str) -> bool {
+    decimal.bytes().all(|b| matches!(b, b'0' | b'.' | b'-'))
+}
+
+fn relation(value: &Value) -> Result<ConceptRelation, GraphError> {
+    let Value::Map(_) = value else {
+        return Err(bad(
+            "defines.relation",
+            "a map of `statement`, `slots` and `form`",
+        ));
+    };
+    let Some(Value::Array(items)) = value.get("slots") else {
+        return Err(bad("defines.relation.slots", "an array of slots"));
+    };
+    let mut slots: Vec<Slot> = Vec::with_capacity(items.len());
+    for item in items {
+        let role = role(item.get("role"), "defines.relation.slots.role")?;
+        if slots.iter().any(|s| s.role == role) {
+            return Err(bad(
+                "defines.relation.slots.role",
+                "unique within the relation",
+            ));
+        }
+        let binds = match (item.get("concept"), item.get("kind")) {
+            (Some(c), None) => Binding::Concept(
+                c.as_text()
+                    .filter(|t| !t.is_empty())
+                    .map(ToOwned::to_owned)
+                    .ok_or(bad("defines.relation.slots.concept", "a PDC code"))?,
+            ),
+            (None, Some(k)) => Binding::Kind(cid(
+                k,
+                "defines.relation.slots.kind",
+                "the CID of a kind definition",
+            )?),
+            _ => {
+                return Err(bad(
+                    "defines.relation.slots",
+                    "slots naming a `concept` or a `kind`, not both",
+                ));
+            }
+        };
+        slots.push(Slot { role, binds });
+    }
+    if slots.len() < 2 {
+        return Err(bad("defines.relation.slots", "at least two slots"));
+    }
+    let form = match value.get("form") {
+        Some(Value::Text(t)) if t == "explicit" => RelationForm::Explicit,
+        Some(Value::Map(_)) => product(value.get("form").and_then(|f| f.get("product")), &slots)?,
+        _ => return Err(bad("defines.relation.form", "`explicit` or a `product`")),
+    };
+    Ok(ConceptRelation {
+        statement: required_text(value, "statement", "defines.relation.statement")?,
+        slots,
+        form,
+    })
+}
+
+fn product(value: Option<&Value>, slots: &[Slot]) -> Result<RelationForm, GraphError> {
+    const FIELD: &str = "defines.relation.form.product";
+    let Some(product @ Value::Map(_)) = value else {
+        return Err(bad("defines.relation.form", "`explicit` or a `product`"));
+    };
+    let coefficient = required_text(product, "coefficient", FIELD)?;
+    if !is_decimal(&coefficient) || is_zero(&coefficient) {
+        return Err(bad(FIELD, "a non-zero decimal `coefficient`"));
+    }
+    let Some(Value::Map(raw)) = product.get("exponents") else {
+        return Err(bad(FIELD, "a map of `exponents` by role"));
+    };
+    let mut exponents = BTreeMap::new();
+    for (role, exponent) in raw {
+        let e = match exponent {
+            Value::Uint(n) => n.to_string(),
+            // CBOR stores -1 - n.
+            Value::Nint(n) => format!("-{}", u128::from(*n) + 1),
+            Value::Text(t) if is_decimal(t) => t.clone(),
+            _ => return Err(bad(FIELD, "integer or decimal-string exponents")),
+        };
+        if is_zero(&e) {
+            return Err(bad(FIELD, "non-zero exponents"));
+        }
+        exponents.insert(role.clone(), e);
+    }
+    if exponents.len() != slots.len() || slots.iter().any(|s| !exponents.contains_key(&s.role)) {
+        return Err(bad(FIELD, "an exponent for every slot, and only for slots"));
+    }
+    Ok(RelationForm::Product {
+        coefficient,
+        exponents,
+    })
+}
+
+fn boundary(value: Option<&Value>) -> Result<Boundary, GraphError> {
+    let Some(Value::Map(_)) = value else {
+        return Err(bad(
+            "defines.boundary",
+            "a map of `includes` and `excludes`",
+        ));
+    };
+    let lines = |key: &str| -> Result<Vec<String>, GraphError> {
+        let Some(Value::Array(items)) = value.and_then(|v| v.get(key)) else {
+            return Err(bad("defines.boundary", "`includes` and `excludes` arrays"));
+        };
+        items
+            .iter()
+            .map(|line| {
+                line.as_text()
+                    .filter(|t| !t.is_empty())
+                    .map(ToOwned::to_owned)
+                    .ok_or(bad("defines.boundary", "arrays of non-empty strings"))
+            })
+            .collect()
+    };
+    Ok(Boundary {
+        includes: lines("includes")?,
+        excludes: lines("excludes")?,
+    })
 }
 
 fn parameters(value: Option<&Value>) -> Result<Vec<Parameter>, GraphError> {
@@ -484,6 +865,81 @@ mod tests {
     }
 
     #[test]
+    fn a_concept_goes_by_its_pdc_code_and_narrows_a_kind() {
+        let lines = |items: &[&str]| Value::Array(items.iter().map(|t| text(t)).collect());
+        let concept = |pairs: Vec<(&str, Value)>| {
+            let mut all = vec![("sort", text("concept"))];
+            all.extend(pairs);
+            Definition::from_value(&map(all))
+        };
+        let bounds = || {
+            map(vec![
+                ("includes", lines(&["Indoor shelves lit only by LEDs"])),
+                ("excludes", lines(&["Daylight greenhouses"])),
+            ])
+        };
+        let d = concept(vec![
+            ("pdc", text("631.544")),
+            ("name", text("LED shelf electricity per area-day")),
+            ("kind", text(KIND)),
+            ("boundary", bounds()),
+        ])
+        .unwrap();
+        assert_eq!(d.term(), "631.544");
+        assert_eq!(d.sort(), "concept");
+        let Definition::Concept {
+            form: ConceptForm::Quantity { kind },
+            boundary: Some(boundary),
+            ..
+        } = d
+        else {
+            panic!("not a quantity concept");
+        };
+        assert_eq!(kind.to_string(), KIND);
+        assert_eq!(boundary.excludes, ["Daylight greenhouses"]);
+        // A quantity concept states its boundary.
+        assert!(
+            concept(vec![
+                ("pdc", text("631.544")),
+                ("name", text("x")),
+                ("kind", text(KIND)),
+            ])
+            .is_err()
+        );
+        // The PDC code is required, the kind is a CID, and each boundary
+        // line is a non-empty string.
+        assert!(
+            concept(vec![
+                ("name", text("x")),
+                ("kind", text(KIND)),
+                ("boundary", bounds())
+            ])
+            .is_err()
+        );
+        assert!(
+            concept(vec![
+                ("pdc", text("631.544")),
+                ("name", text("x")),
+                ("kind", text("energy")),
+                ("boundary", bounds()),
+            ])
+            .is_err()
+        );
+        assert!(
+            concept(vec![
+                ("pdc", text("631.544")),
+                ("name", text("x")),
+                ("kind", text(KIND)),
+                (
+                    "boundary",
+                    map(vec![("includes", lines(&[""])), ("excludes", lines(&[]))])
+                ),
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
     fn a_unit_is_a_decimal_multiple() {
         let unit = |value: &str| {
             Definition::from_value(&map(vec![
@@ -525,6 +981,165 @@ mod tests {
                 "inputs",
                 Value::Array(vec![entry("energy"), entry("energy")])
             )]))
+            .is_err()
+        );
+    }
+
+    fn relation(slots: Vec<Value>, form: Value) -> Result<Definition, GraphError> {
+        Definition::from_value(&map(vec![
+            ("sort", text("concept")),
+            ("pdc", text("631.544.9")),
+            ("name", text("light use efficiency")),
+            (
+                "relation",
+                map(vec![
+                    ("statement", text("fresh mass is light times efficiency")),
+                    ("slots", Value::Array(slots)),
+                    ("form", form),
+                ]),
+            ),
+        ]))
+    }
+
+    fn slot(role: &str, by: &str, what: &str) -> Value {
+        map(vec![("role", text(role)), (by, text(what))])
+    }
+
+    fn product(coefficient: &str, exponents: Vec<(&str, Value)>) -> Value {
+        map(vec![(
+            "product",
+            map(vec![
+                ("coefficient", text(coefficient)),
+                ("exponents", map(exponents)),
+            ]),
+        )])
+    }
+
+    #[test]
+    fn a_relation_concept_binds_slots_by_role() {
+        let slots = || {
+            vec![
+                slot("fresh_mass", "concept", "631.544.1"),
+                slot("light", "kind", KIND),
+                slot("efficiency", "concept", "631.544.2"),
+            ]
+        };
+        let d = relation(
+            slots(),
+            product(
+                "1",
+                vec![
+                    ("fresh_mass", Value::Uint(1)),
+                    ("light", Value::Nint(0)),
+                    ("efficiency", text("-1")),
+                ],
+            ),
+        )
+        .unwrap();
+        assert_eq!(d.term(), "631.544.9");
+        let Definition::Concept {
+            form: ConceptForm::Relation(r),
+            boundary: None,
+            ..
+        } = d
+        else {
+            panic!("not a relation concept");
+        };
+        assert_eq!(
+            r.slots.get(1).map(|s| &s.binds),
+            Some(&Binding::Kind(KIND.parse().unwrap()))
+        );
+        let RelationForm::Product { exponents, .. } = r.form else {
+            panic!("not a product");
+        };
+        assert_eq!(exponents.get("light").map(String::as_str), Some("-1"));
+        assert!(relation(slots(), text("explicit")).is_ok());
+        // Every slot has a non-zero exponent, and only slots do.
+        let partial = product("1", vec![("fresh_mass", Value::Uint(1))]);
+        assert!(relation(slots(), partial).is_err());
+        let zero = product(
+            "1",
+            vec![
+                ("fresh_mass", Value::Uint(1)),
+                ("light", Value::Uint(0)),
+                ("efficiency", Value::Uint(1)),
+            ],
+        );
+        assert!(relation(slots(), zero).is_err());
+        // Roles are identifiers, unique, and bind a concept or a kind.
+        for bad in [
+            vec![
+                slot("fresh mass", "kind", KIND),
+                slot("light", "kind", KIND),
+            ],
+            vec![slot("light", "kind", KIND), slot("light", "kind", KIND)],
+            vec![slot("light", "kind", KIND)],
+            vec![slot("light", "kind", KIND), map(vec![("role", text("x"))])],
+        ] {
+            assert!(relation(bad, text("explicit")).is_err());
+        }
+        // A concept is a quantity or a relation, never both.
+        assert!(
+            Definition::from_value(&map(vec![
+                ("sort", text("concept")),
+                ("pdc", text("1")),
+                ("name", text("x")),
+                ("kind", text(KIND)),
+                (
+                    "relation",
+                    map(vec![
+                        ("statement", text("x")),
+                        ("slots", Value::Array(slots())),
+                        ("form", text("explicit")),
+                    ]),
+                ),
+            ]))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn a_calculation_solves_one_slot_and_states_its_defaults() {
+        let solves =
+            |pairs: Vec<(&str, Value)>| Computes::from_value(&map(vec![("solves", map(pairs))]));
+        let roles = |names: &[&str]| Value::Array(names.iter().map(|n| text(n)).collect());
+        let c = solves(vec![
+            ("concept", text("631.544.9")),
+            ("target", text("fresh_mass")),
+            ("requires", roles(&["light"])),
+            (
+                "optional",
+                Value::Array(vec![map(vec![
+                    ("role", text("efficiency")),
+                    ("default", text(KIND)),
+                ])]),
+            ),
+        ])
+        .unwrap();
+        let s = c.solves.unwrap();
+        assert_eq!(
+            s.roles().collect::<Vec<_>>(),
+            ["fresh_mass", "light", "efficiency"]
+        );
+        // An optional input states its default by a claim.
+        assert!(
+            solves(vec![
+                ("concept", text("631.544.9")),
+                ("target", text("fresh_mass")),
+                (
+                    "optional",
+                    Value::Array(vec![map(vec![("role", text("efficiency"))])]),
+                ),
+            ])
+            .is_err()
+        );
+        // The target is not also an input.
+        assert!(
+            solves(vec![
+                ("concept", text("631.544.9")),
+                ("target", text("light")),
+                ("requires", roles(&["light"])),
+            ])
             .is_err()
         );
     }

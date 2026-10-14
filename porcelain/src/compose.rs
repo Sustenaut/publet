@@ -300,8 +300,9 @@ fn quantity_fields(flags: &ClaimFlags) -> Result<BTreeMap<String, Value>, String
     Ok(out)
 }
 
-/// The claims a table's columns and a calculation cite: unit definitions,
-/// kinds, and measures (Section 5.9).
+/// The claims a table's columns, a calculation and a concept cite: unit
+/// definitions, kinds, measures, and the claims stating an optional
+/// input's default (Section 5.9).
 fn quantity_citations(data: Option<&Value>, fields: &BTreeMap<String, Value>) -> Vec<String> {
     let mut out = Vec::new();
     let mut push = |v: Option<&Value>| {
@@ -320,12 +321,28 @@ fn quantity_citations(data: Option<&Value>, fields: &BTreeMap<String, Value>) ->
             push(column.get("measure"));
         }
     }
+    if let Some(defines) = fields.get("defines")
+        && defines.get("sort").and_then(Value::as_text) == Some("concept")
+    {
+        push(defines.get("kind"));
+        if let Some(Value::Array(slots)) = defines.get("relation").and_then(|r| r.get("slots")) {
+            for slot in slots {
+                push(slot.get("kind"));
+            }
+        }
+    }
     if let Some(computes) = fields.get("computes") {
         for side in ["inputs", "outputs"] {
             if let Some(Value::Array(entries)) = computes.get(side) {
                 for e in entries {
                     push(e.get("kind"));
                 }
+            }
+        }
+        if let Some(Value::Array(optional)) = computes.get("solves").and_then(|s| s.get("optional"))
+        {
+            for o in optional {
+                push(o.get("default"));
             }
         }
     }
