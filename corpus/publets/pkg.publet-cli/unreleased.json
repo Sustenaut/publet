@@ -43,6 +43,10 @@
     {
       "category": "fixed",
       "change": "pub revise applies --defines and --computes, adding what they cite to depends, instead of keeping the old fields: a concept's boundary is reframed as a new version"
+    },
+    {
+      "category": "security",
+      "change": "rustls 0.23.46 fixes RUSTSEC-2026-0346, -0347, -0348 and -0349 in pub's network client (pub sync, pub serve), through reqwest; its cargo vet exemption moves from 0.23.45 to 0.23.46"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
