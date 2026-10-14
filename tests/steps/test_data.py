@@ -825,6 +825,47 @@ def name_bundle(runner, ctx, name: str):
     assert b["definitions"] == [ctx["q"]["tray"]], b
 
 
+@when(parsers.parse('I place the concept under a subject concept at "{pdc}" and classify the '
+                    'budget claim under it'))
+def place_concept(runner, ctx, pdc: str):
+    ctx["subject"] = _defined(runner, "subject", f"{pdc}: a subject.",
+                              {"sort": "concept", "pdc": pdc, "name": "a subject"})
+    out = compose_estimates(runner, ctx)
+    assert out.code == 0, out.stderr
+    ctx["budget"] = out.stdout.split()[0]
+    for target, subject in ((ctx["concept"], ctx["subject"]), (ctx["budget"], ctx["concept"])):
+        out = runner.run("pub", "annotate", "--kind=classifies", f"--target={target}",
+                         f"--subject={subject}", "--scope=unconditional")
+        assert out.code == 0, out.stderr
+
+
+@then(parsers.parse('the concept\'s bundle says it is a quantity concept under "{pdc}" with the '
+                    'budget claim as a member'))
+def concept_bundle(runner, ctx, pdc: str):
+    c = _bundle(runner, "o", f"{ctx['concept']}.json")["concept"]
+    assert c["form"] == "quantity" and c["broader"] == [ctx["subject"]], c
+    assert [m["cid"] for m in c["members"]] == [ctx["budget"]], c
+
+
+@then("the budget claim's bundle says it is classified under the concept")
+def classified_under(runner, ctx):
+    b = _bundle(runner, "o", f"{ctx['budget']}.json")
+    assert [u["concept"] for u in b["classified_under"]] == [ctx["concept"]], b
+
+
+@when(parsers.parse('I define a subject concept at "{pdc}"'))
+def define_subject(runner, ctx, pdc: str):
+    _defined(runner, "subject", f"{pdc}: a range of subjects.",
+             {"sort": "concept", "pdc": pdc, "name": "a range"})
+
+
+@then(parsers.parse('the name "{name}" has its bundle at "{path}" and the address "{address}"'))
+def name_path(runner, name: str, path: str, address: str):
+    b = _bundle(runner, *path.split("/"))
+    assert b["name"] == name and b["address"] == address, b
+    assert _bundle(runner, "index.json")["name_paths"][name] == path
+
+
 @then(parsers.parse('the name "{name}" has the address "{address}"'))
 def name_address(runner, name: str, address: str):
     assert _bundle(runner, "def", f"{name}.json")["address"] == address

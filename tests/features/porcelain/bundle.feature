@@ -43,6 +43,18 @@ Feature: A set of objects is written out as reading bundles for a theme
     And I write the bundles
     Then the name "{tray}" has a bundle naming both definitions
 
+  Scenario: A concept's bundle names its form, its broader concept and its members
+    Given a concept at PDC code "631" narrowing the kind
+    When I place the concept under a subject concept at "63" and classify the budget claim under it
+    And I write the bundles
+    Then the concept's bundle says it is a quantity concept under "63" with the budget claim as a member
+    And the budget claim's bundle says it is classified under the concept
+
+  Scenario: A name with a slash is served under a segment with an underscore
+    When I define a subject concept at "631/635"
+    And I write the bundles
+    Then the name "631/635" has its bundle at "def/631_635.json" and the address "https://pub.example/def/631_635"
+
   Scenario: A directory of object files is bundled without a workspace
     When I export the workspace's objects to a directory
     And I write the bundles from that directory

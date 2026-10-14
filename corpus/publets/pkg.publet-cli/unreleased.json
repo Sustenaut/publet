@@ -35,6 +35,10 @@
     {
       "category": "added",
       "change": "A calculation's computes may carry solves (spec Section 5.9.5): the relation concept and slot it solves for, the roles it requires, and optional roles each with the claim stating its default, which must be in depends; pub compose refuses a code with no concept in depends or a role the relation has no slot for"
+    },
+    {
+      "category": "added",
+      "change": "pub bundle gives each object the concepts it is classified under and the triage suggestions naming it, and each concept its PDC code, form, broader and narrower concepts, members, the calculations solving it, the concepts competing for its code, and the anchors covering it; a name with a slash, such as the PDC code 631/635, is served under a segment with an underscore (def/631_635.json), listed in the index's name_paths"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
