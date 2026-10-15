@@ -148,4 +148,38 @@ fn a_triage_annotation_without_its_engine_is_not_read() {
     let verified = Object::parse(&bytes).unwrap().verify(&id).unwrap();
     let triage = Triage::from_object(verified.object()).unwrap();
     assert_eq!(triage.engine, "a-model 2026-09");
+    assert_eq!(triage.candidate, None);
+}
+
+#[test]
+fn a_triage_annotation_may_name_its_unsigned_candidate() {
+    // A suggestion's draft objects sit in a blob a reviewer may sign; the
+    // annotation names the blob, and a name that is not a CID is not read.
+    let author = cid("a suggester");
+    let target = cid("an extract");
+    let read = |candidate: Value| {
+        let mut engine = std::collections::BTreeMap::new();
+        engine.insert("model".to_owned(), Value::Text("a-model".into()));
+        engine.insert("version".to_owned(), Value::Text("2026-10".into()));
+        let mut value = std::collections::BTreeMap::new();
+        value.insert("finding".to_owned(), Value::Text("groups-under".into()));
+        value.insert("engine".to_owned(), Value::Map(engine));
+        value.insert("candidate".to_owned(), candidate);
+        let (id, bytes) = build(
+            "claim.annotation",
+            &author,
+            &[
+                ("kind", Value::Text("triage".into())),
+                ("target", Value::Text(target.to_string())),
+                ("value", Value::Map(value)),
+            ],
+        );
+        let verified = Object::parse(&bytes).unwrap().verify(&id).unwrap();
+        Triage::from_object(verified.object())
+    };
+    let blob = cid("the draft concept");
+    let triage = read(Value::Text(blob.to_string())).unwrap();
+    assert_eq!(triage.finding, "groups-under");
+    assert_eq!(triage.candidate, Some(blob));
+    assert!(read(Value::Text("a draft".into())).is_none());
 }

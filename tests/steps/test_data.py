@@ -13,7 +13,7 @@ import json
 
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from support.objects import author_key, cbor_map, cid_of, head, obj, text, write_store
+from support.objects import author_key, cbor_map, cid_of, head, obj, text, uint, write_store
 
 scenarios("../features/conformance/data.feature")
 scenarios("../features/conformance/sources.feature")
@@ -513,6 +513,153 @@ def store_unit_unlisted(tmp_path):
     return {"dir": tmp_path}
 
 
+def _concept(pdc: str, kind: str) -> dict:
+    return {"sort": "concept", "pdc": pdc, "name": "LED shelf electricity per tray",
+            "kind": kind,
+            "boundary": {"includes": ["Indoor shelves lit only by LEDs"],
+                         "excludes": ["Daylight greenhouses"]}}
+
+
+@when(parsers.parse('I compose a concept at PDC code "{pdc}" narrowing the kind'),
+      target_fixture="result")
+def compose_concept(runner, ctx, pdc: str):
+    out = _define(runner, "concept",
+                  "LED shelf electricity per tray: electricity a tray on an LED-lit shelf uses.",
+                  _concept(pdc, ctx["q"]["kind"]))
+    if out.code == 0:
+        ctx["concept"] = out.stdout.split()[0]
+    return out
+
+
+@then("the concept presupposes the kind")
+def concept_presupposes_kind(runner, ctx):
+    shown = _read(runner, ctx["concept"]).split("presupposes:", 1)
+    assert len(shown) == 2, shown
+    assert ctx["q"]["kind"] in shown[1], shown[1]
+
+
+@given("a store holding a concept whose kind is not in depends", target_fixture="store")
+def store_concept_kind_unlisted(tmp_path):
+    ka = author_key("K_a")
+    kind = obj("claim.prose", ka, "2026-09-12T09:00:00Z", [
+        ("class", text("definitional")),
+        ("lang", text("en")),
+        ("content", text("count of trays: how many trays.")),
+        ("scope", cbor_map([("domain", text("unconditional")),
+                            ("conditions", head(4, 0))])),
+        ("depends", head(4, 0)),
+        ("defines", cbor_map([("sort", text("kind")), ("name", text("count of trays")),
+                              ("dimension", cbor_map([("{tray}", uint(1))]))])),
+    ])
+    concept = obj("claim.prose", ka, "2026-09-12T10:00:00Z", [
+        ("class", text("definitional")),
+        ("lang", text("en")),
+        ("content", text("trays on LED shelves: trays grown under LEDs only.")),
+        ("scope", cbor_map([("domain", text("unconditional")),
+                            ("conditions", head(4, 0))])),
+        ("depends", head(4, 0)),
+        ("defines", cbor_map([
+            ("sort", text("concept")), ("pdc", text("631.544")),
+            ("name", text("trays on LED shelves")), ("kind", text(cid_of(kind))),
+            ("boundary", cbor_map([("includes", head(4, 0)), ("excludes", head(4, 0))])),
+        ])),
+    ])
+    write_store(tmp_path, [kind, concept])
+    return {"dir": tmp_path}
+
+
+@when(parsers.parse('I revise the concept to include "{line}"'), target_fixture="result")
+def revise_concept(runner, ctx, line: str):
+    reframed = _concept("631", ctx["q"]["kind"])
+    reframed["boundary"]["includes"].append(line)
+    out = runner.run("pub", "revise", ctx["concept"],
+                     f"--defines={_write(runner, 'reframed.json', reframed)}")
+    if out.code == 0:
+        ctx["revised"] = out.stdout.split()[0]
+    return out
+
+
+@then(parsers.parse('the new version includes "{line}" and presupposes the kind'))
+def revised_concept(runner, ctx, line: str):
+    shown = _read(runner, ctx["revised"])
+    assert ctx["revised"] != ctx["concept"], shown
+    body = json.loads(runner.run("pub", "read", "--json", ctx["revised"]).stdout)
+    defines = body["object"]["body"]["defines"]
+    assert line in defines["boundary"]["includes"], defines
+    assert ctx["q"]["kind"] in shown.split("presupposes:", 1)[1], shown
+
+
+@given(parsers.parse('a concept at PDC code "{pdc}" narrowing the kind'))
+def given_concept(runner, ctx, pdc: str):
+    out = compose_concept(runner, ctx, pdc)
+    assert out.code == 0, out.stderr
+
+
+def _relation(runner, ctx, pdc: str):
+    q = ctx["q"]
+    deps = [ctx["concept"]] if "concept" in ctx else []
+    relation = {"sort": "concept", "pdc": "631.544.9", "name": "LED share of tray energy",
+                "relation": {
+                    "statement": "the LED shelf energy is a share of a tray's energy",
+                    "slots": [{"role": "led", "concept": pdc},
+                              {"role": "energy", "kind": q["kind"]},
+                              {"role": "share", "kind": q["kind"]}],
+                    "form": {"product": {"coefficient": "1",
+                                         "exponents": {"led": 1, "energy": -1, "share": -1}}}}}
+    out = _define(runner, "relation", "LED share: LED shelf energy over a tray's energy.",
+                  relation, *deps)
+    if out.code == 0:
+        ctx["relation"] = out.stdout.split()[0]
+    return out
+
+
+@when(parsers.parse('I compose a relation concept relating "{pdc}" to the kind'),
+      target_fixture="result")
+def compose_relation(runner, ctx, pdc: str):
+    return _relation(runner, ctx, pdc)
+
+
+@given(parsers.parse('a relation concept relating "{pdc}" to the kind'))
+def given_relation(runner, ctx, pdc: str):
+    out = _relation(runner, ctx, pdc)
+    assert out.code == 0, out.stderr
+
+
+@then("the relation concept presupposes the concept and the kind")
+def relation_presupposes(runner, ctx):
+    shown = _read(runner, ctx["relation"]).split("presupposes:", 1)
+    assert len(shown) == 2, shown
+    for cid in (ctx["concept"], ctx["q"]["kind"]):
+        assert cid in shown[1], shown[1]
+
+
+@when(parsers.parse('I compose a calculation solving the relation for "{target}" '
+                    'with optional "{role}"'), target_fixture="result")
+def compose_solving(runner, ctx, target: str, role: str):
+    out = runner.run("pub", "compose", "--class=empirical", "--scope=unconditional",
+                     f"--method={ctx['q']['method']}",
+                     "--content=A tray uses no electricity beyond its LED shelf.")
+    assert out.code == 0, out.stderr
+    ctx["default"] = out.stdout.split()[0]
+    solves = {"solves": {"concept": "631.544.9", "target": target, "requires": ["led"],
+                         "optional": [{"role": role, "default": ctx["default"]}]}}
+    out = runner.run("pub", "compose", "--class=procedural", "--scope=unconditional",
+                     "--content=Divide the LED shelf energy by the tray's energy.",
+                     f"--computes={_write(runner, 'solves.json', solves)}",
+                     f"--depends={ctx['relation']}")
+    if out.code == 0:
+        ctx["calculation"] = out.stdout.split()[0]
+    return out
+
+
+@then("the calculation presupposes the relation concept and the default")
+def calculation_presupposes(runner, ctx):
+    shown = _read(runner, ctx["calculation"]).split("presupposes:", 1)
+    assert len(shown) == 2, shown
+    for cid in (ctx["relation"], ctx["default"]):
+        assert cid in shown[1], shown[1]
+
+
 def _empirical(runner, ctx, *evidence: str):
     q = ctx["q"]
     data = {"columns": [{"name": "setup"},
@@ -697,6 +844,47 @@ def null_cell(runner, ctx):
 def name_bundle(runner, ctx, name: str):
     b = _bundle(runner, "def", f"{name}.json")
     assert b["definitions"] == [ctx["q"]["tray"]], b
+
+
+@when(parsers.parse('I place the concept under a subject concept at "{pdc}" and classify the '
+                    'budget claim under it'))
+def place_concept(runner, ctx, pdc: str):
+    ctx["subject"] = _defined(runner, "subject", f"{pdc}: a subject.",
+                              {"sort": "concept", "pdc": pdc, "name": "a subject"})
+    out = compose_estimates(runner, ctx)
+    assert out.code == 0, out.stderr
+    ctx["budget"] = out.stdout.split()[0]
+    for target, subject in ((ctx["concept"], ctx["subject"]), (ctx["budget"], ctx["concept"])):
+        out = runner.run("pub", "annotate", "--kind=classifies", f"--target={target}",
+                         f"--subject={subject}", "--scope=unconditional")
+        assert out.code == 0, out.stderr
+
+
+@then(parsers.parse('the concept\'s bundle says it is a quantity concept under "{pdc}" with the '
+                    'budget claim as a member'))
+def concept_bundle(runner, ctx, pdc: str):
+    c = _bundle(runner, "o", f"{ctx['concept']}.json")["concept"]
+    assert c["form"] == "quantity" and c["broader"] == [ctx["subject"]], c
+    assert [m["cid"] for m in c["members"]] == [ctx["budget"]], c
+
+
+@then("the budget claim's bundle says it is classified under the concept")
+def classified_under(runner, ctx):
+    b = _bundle(runner, "o", f"{ctx['budget']}.json")
+    assert [u["concept"] for u in b["classified_under"]] == [ctx["concept"]], b
+
+
+@when(parsers.parse('I define a subject concept at "{pdc}"'))
+def define_subject(runner, ctx, pdc: str):
+    _defined(runner, "subject", f"{pdc}: a range of subjects.",
+             {"sort": "concept", "pdc": pdc, "name": "a range"})
+
+
+@then(parsers.parse('the name "{name}" has its bundle at "{path}" and the address "{address}"'))
+def name_path(runner, name: str, path: str, address: str):
+    b = _bundle(runner, *path.split("/"))
+    assert b["name"] == name and b["address"] == address, b
+    assert _bundle(runner, "index.json")["name_paths"][name] == path
 
 
 @then(parsers.parse('the name "{name}" has the address "{address}"'))

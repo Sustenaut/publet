@@ -27,7 +27,10 @@ pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
 pub use graph::{Graph, Lineage, LineageView, MAX_ROTATIONS, ROTATION_PURPOSE};
 pub use lint::{Finding, check, check_in};
-pub use quantity::{Computes, Definition, Describes, Parameter, ParameterType};
+pub use quantity::{
+    Binding, Boundary, Computes, ConceptForm, ConceptRelation, Definition, Describes, Parameter,
+    ParameterType, RelationForm, Slot, Solves,
+};
 pub use view::{Annotation, Class, Key, Principal, ProseClaim, Relation, RelationKind};
 
 pub mod load;

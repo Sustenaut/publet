@@ -107,6 +107,10 @@ pub struct Triage {
     /// those words is why it may not be presented as equivalent to a
     /// machine-checked proof.
     pub engine: String,
+    /// The blob holding the unsigned draft objects the finding proposes,
+    /// such as a concept and its memberships, for a reviewer to sign.
+    /// Until a key signs them they are not objects (R14).
+    pub candidate: Option<Cid>,
 }
 
 impl Triage {
@@ -114,7 +118,8 @@ impl Triage {
     ///
     /// Returns `None` when the engine is undeclared: an undisclosed
     /// machine judgement cannot be re-run, and one that cannot be re-run is
-    /// an opinion wearing the shape of evidence.
+    /// an opinion wearing the shape of evidence. Also `None` when a
+    /// `candidate` is present but is not a CID.
     #[must_use]
     pub fn from_object(object: &Object) -> Option<Self> {
         let body = object.body();
@@ -129,6 +134,10 @@ impl Triage {
             target: body.get("target").and_then(Value::as_text)?.parse().ok()?,
             finding: value.get("finding").and_then(Value::as_text)?.to_owned(),
             engine: format!("{model} {version}"),
+            candidate: match value.get("candidate") {
+                None => None,
+                Some(c) => Some(c.as_text()?.parse().ok()?),
+            },
         })
     }
 }

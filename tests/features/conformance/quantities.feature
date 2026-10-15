@@ -36,6 +36,8 @@ Feature: A number names its unit, its kind, how sure it is, and how it was compu
       | {"sort": "dimension", "symbol": "tray"}                       | defines.symbol  |
       | {"sort": "unit", "symbol": "{flat}", "value": "6e0", "unit": "{tray}"} | defines.value |
       | {"sort": "measure", "name": "range", "describes": "spread", "parameters": []} | defines.describes |
+      | {"sort": "concept", "name": "LED shelf electricity", "boundary": {"includes": [], "excludes": []}} | defines.pdc |
+      | {"sort": "concept", "pdc": "631.544", "name": "LED shelf electricity", "kind": 7, "boundary": {"includes": [], "excludes": []}} | defines.kind |
 
   @must-5.9.2 @must-5.9.3 @must-5.9.4
   Scenario: A measured column cites its unit, kind and measure, which become dependencies
@@ -67,6 +69,55 @@ Feature: A number names its unit, its kind, how sure it is, and how it was compu
     When I load the store
     Then loading the store fails
     And stderr mentions "must also be listed in `depends`"
+
+  @must-5.9.1
+  Scenario: A concept goes by its PDC code and presupposes the kind it narrows
+    When I compose a concept at PDC code "631.544" narrowing the kind
+    Then it succeeds
+    And the concept presupposes the kind
+
+  @must-5.9.1
+  Scenario: A concept whose kind is missing from depends is refused by the loader
+    Given a store holding a concept whose kind is not in depends
+    When I load the store
+    Then loading the store fails
+    And stderr mentions "defines.kind cites"
+
+  @must-5.9.1
+  Scenario: Reframing a concept's boundary is a new version of it
+    Given a concept at PDC code "631" narrowing the kind
+    When I revise the concept to include "Fans and pumps on the shelf"
+    Then it succeeds
+    And the new version includes "Fans and pumps on the shelf" and presupposes the kind
+
+  @must-5.9.1
+  Scenario: A relation concept binds slots by role to a concept or a kind
+    Given a concept at PDC code "631.544" narrowing the kind
+    When I compose a relation concept relating "631.544" to the kind
+    Then it succeeds
+    And the relation concept presupposes the concept and the kind
+
+  @must-5.9.1
+  Scenario: A relation concept naming a code with no concept in depends is refused
+    When I compose a relation concept relating "631.999" to the kind
+    Then it fails
+    And stderr mentions "PDC code 631.999 is named"
+
+  @must-5.9.5
+  Scenario: A calculation solves a slot of a relation concept, stating its defaults
+    Given a concept at PDC code "631.544" narrowing the kind
+    And a relation concept relating "631.544" to the kind
+    When I compose a calculation solving the relation for "share" with optional "energy"
+    Then it succeeds
+    And the calculation presupposes the relation concept and the default
+
+  @must-5.9.5
+  Scenario: A calculation naming a role its relation has no slot for is refused
+    Given a concept at PDC code "631.544" narrowing the kind
+    And a relation concept relating "631.544" to the kind
+    When I compose a calculation solving the relation for "harvest" with optional "energy"
+    Then it fails
+    And stderr mentions "role `harvest` is not a slot"
 
   @must-5.5 @must-5.9.5
   Scenario: A computed value names its calculation instead of a method

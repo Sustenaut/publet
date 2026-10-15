@@ -23,7 +23,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use publet_core::{Cid, Object, cbor::Value};
-use publet_graph::{Data, Definition, Graph, Lineage, ProseClaim};
+use publet_graph::{ConceptForm, Data, Definition, Graph, Lineage, ProseClaim};
 use serde_json::{Value as Json, json};
 
 use crate::workspace::Workspace;
@@ -133,6 +133,14 @@ struct Bundles<'g> {
     term_of: BTreeMap<String, String>,
     /// What cites each object, and how.
     cited_by: BTreeMap<String, BTreeSet<(String, String)>>,
+    /// Every `classifies` annotation: (annotation, member, subject).
+    classifications: Vec<(String, String, String)>,
+    /// Each concept by CID: its PDC code and form (Section 5.9.1).
+    concepts: BTreeMap<String, (String, &'static str)>,
+    /// The calculations solving each relation concept, by PDC code (Section 5.9.5).
+    solvers: BTreeMap<String, Vec<String>>,
+    /// Triage annotations by each object they name, as target or ref (Section 7.4).
+    suggestions: BTreeMap<String, BTreeSet<String>>,
 }
 
 impl<'g> Bundles<'g> {
@@ -142,10 +150,20 @@ impl<'g> Bundles<'g> {
 
         let mut terms: BTreeMap<String, Vec<Cid>> = BTreeMap::new();
         let mut term_of = BTreeMap::new();
+        let mut segments: BTreeMap<String, String> = BTreeMap::new();
         for (term, cid) in graph.terms() {
             if !servable(&term) {
                 eprintln!(
                     "warning: no bundle for the name {term:?} ({cid}): it cannot be a path segment"
+                );
+                continue;
+            }
+            let taken = segments
+                .entry(segment(&term))
+                .or_insert_with(|| term.clone());
+            if *taken != term {
+                eprintln!(
+                    "warning: no bundle for the name {term:?} ({cid}): its path segment is {taken:?}'s"
                 );
                 continue;
             }
@@ -165,6 +183,13 @@ impl<'g> Bundles<'g> {
             }
         }
 
+        let Scan {
+            classifications,
+            concepts,
+            solvers,
+            suggestions,
+        } = scan(graph, &cids);
+
         Self {
             graph,
             title: options.title.clone(),
@@ -173,6 +198,10 @@ impl<'g> Bundles<'g> {
             terms,
             term_of,
             cited_by,
+            classifications,
+            concepts,
+            solvers,
+            suggestions,
         }
     }
 
@@ -191,7 +220,7 @@ impl<'g> Bundles<'g> {
         }
         for (term, cids) in &self.terms {
             put_json(
-                &out.join("def").join(format!("{term}.json")),
+                &out.join("def").join(format!("{}.json", segment(term))),
                 &self.name_bundle(term, cids),
             )?;
         }
@@ -212,6 +241,8 @@ impl<'g> Bundles<'g> {
             "base": self.base,
             "objects": self.cids.iter().map(|c| self.summary(c)).collect::<Vec<_>>(),
             "names": names,
+            "name_paths": self.terms.keys().map(|t| (t.clone(), format!("def/{}.json", segment(t))))
+                .collect::<BTreeMap<_, _>>(),
         })
     }
 
@@ -250,6 +281,22 @@ impl<'g> Bundles<'g> {
         mentioned.extend(used_by.iter().map(|(c, _)| c.clone()));
         mentioned.extend(closure.iter().cloned());
         mentioned.extend(critiques.iter().cloned());
+        let classified_under: Vec<Json> = self
+            .classifications
+            .iter()
+            .filter(|(_, member, _)| *member == text)
+            .map(|(by, _, subject)| {
+                mentioned.insert(subject.clone());
+                json!({ "concept": subject, "by": by })
+            })
+            .collect();
+        let suggestions: Vec<String> = self
+            .suggestions
+            .get(&text)
+            .map(|s| s.iter().cloned().collect())
+            .unwrap_or_default();
+        mentioned.extend(suggestions.iter().cloned());
+        let concept = self.concept(cid, &mut mentioned);
         mentioned.remove(&text);
 
         json!({
@@ -265,7 +312,104 @@ impl<'g> Bundles<'g> {
             "critiques": critiques,
             "lineage": lineage,
             "parameters": claim.map(|c| self.parameters(c)).unwrap_or_default(),
+            "classified_under": classified_under,
+            "suggestions": suggestions,
+            "concept": concept,
             "related": self.related(&mentioned),
+        })
+    }
+
+    /// For a concept (Section 5.9.1): its code and form, the concepts it is
+    /// placed under and over, its members, the calculations solving it, the
+    /// other concepts claiming its code, and the anchors (expert groups)
+    /// covering it or a broader concept. `null` for anything else.
+    fn concept(&self, cid: &Cid, mentioned: &mut BTreeSet<String>) -> Json {
+        let text = cid.to_string();
+        let Some((pdc, form)) = self.concepts.get(&text) else {
+            return Json::Null;
+        };
+        let under = |member: &str| -> Vec<String> {
+            self.classifications
+                .iter()
+                .filter(|(_, m, s)| m == member && self.concepts.contains_key(s))
+                .map(|(_, _, s)| s.clone())
+                .collect()
+        };
+        let broader = under(&text);
+        let (narrower, members): (Pairs, Pairs) = self
+            .classifications
+            .iter()
+            .filter(|(_, _, s)| *s == text)
+            .map(|(by, m, _)| (m.clone(), by.clone()))
+            .partition(|(m, _)| self.concepts.contains_key(m));
+        let solved_by = self.solvers.get(pdc).cloned().unwrap_or_default();
+        let genesis = |c: &Cid| {
+            self.graph
+                .lineage(c, Lineage::Authoritative)
+                .genesis
+                .to_string()
+        };
+        let own = genesis(cid);
+        let competing: Vec<String> = self
+            .concepts
+            .iter()
+            .filter(|(c, (code, _))| code == pdc && **c != text)
+            .filter(|(c, _)| c.parse::<Cid>().is_ok_and(|c| genesis(&c) != own))
+            .map(|(c, _)| c.clone())
+            .collect();
+        // An anchor covers this concept when it anchors its lineage or that
+        // of a concept it is placed under, at any depth (Section 9.3).
+        let mut covered: BTreeMap<String, String> = BTreeMap::from([(own, text.clone())]);
+        let mut frontier = broader.clone();
+        while let Some(next) = frontier.pop() {
+            if let Ok(c) = next.parse::<Cid>()
+                && !covered.contains_key(&genesis(&c))
+            {
+                covered.insert(genesis(&c), next.clone());
+                frontier.extend(under(&next));
+            }
+        }
+        let anchors: Vec<Json> = self
+            .cids
+            .iter()
+            .filter_map(|c| self.graph.anchor(c).map(|a| (c, a)))
+            .filter_map(|(c, a)| {
+                covered.get(&a.lineage().to_string()).map(|over| {
+                    json!({
+                        "cid": c.to_string(),
+                        "over": over,
+                        "stewards": a.stewards().iter().map(ToString::to_string).collect::<Vec<_>>(),
+                        "threshold": a.threshold(),
+                    })
+                })
+            })
+            .collect();
+        for list in [&broader, &solved_by, &competing] {
+            mentioned.extend(list.iter().cloned());
+        }
+        for (m, by) in narrower.iter().chain(&members) {
+            mentioned.insert(m.clone());
+            mentioned.insert(by.clone());
+        }
+        for a in &anchors {
+            if let Some(over) = a["over"].as_str() {
+                mentioned.insert(over.to_owned());
+            }
+        }
+        let pairs = |list: &[(String, String)]| -> Vec<Json> {
+            list.iter()
+                .map(|(m, by)| json!({ "cid": m, "by": by }))
+                .collect()
+        };
+        json!({
+            "pdc": pdc,
+            "form": form,
+            "broader": broader,
+            "narrower": pairs(&narrower),
+            "members": pairs(&members),
+            "solved_by": solved_by,
+            "competing": competing,
+            "anchors": anchors,
         })
     }
 
@@ -274,6 +418,7 @@ impl<'g> Bundles<'g> {
         json!({
             "bundle": VERSION,
             "name": term,
+            "segment": segment(term),
             "address": self.address(term),
             "definitions": cids.iter().map(ToString::to_string).collect::<Vec<_>>(),
             "related": self.related(&mentioned),
@@ -332,8 +477,8 @@ impl<'g> Bundles<'g> {
 
     fn address(&self, term: &str) -> String {
         match &self.base {
-            Some(base) => format!("{base}/def/{}", encode(term)),
-            None => format!("def/{}", encode(term)),
+            Some(base) => format!("{base}/def/{}", encode(&segment(term))),
+            None => format!("def/{}", encode(&segment(term))),
         }
     }
 }
@@ -455,6 +600,88 @@ fn cites(graph: &Graph, cid: &Cid, object: &Object) -> Vec<(String, String)> {
     out
 }
 
+/// Pairs of identifiers: (object, the annotation relating it).
+type Pairs = Vec<(String, String)>;
+
+/// What `pub bundle` gathers about concepts, before writing any bundle.
+struct Scan {
+    classifications: Vec<(String, String, String)>,
+    concepts: BTreeMap<String, (String, &'static str)>,
+    solvers: BTreeMap<String, Vec<String>>,
+    suggestions: BTreeMap<String, BTreeSet<String>>,
+}
+
+/// Every `classifies` and `triage` annotation, every concept, and every
+/// calculation solving a relation concept, among `cids`.
+fn scan(graph: &Graph, cids: &[Cid]) -> Scan {
+    let mut classifications = Vec::new();
+    let mut concepts = BTreeMap::new();
+    let mut solvers: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut suggestions: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for cid in cids {
+        let text = cid.to_string();
+        if let Some(claim) = graph.prose_claim(cid) {
+            if let Some(Definition::Concept { pdc, form, .. }) = claim.defines() {
+                let form = match form {
+                    ConceptForm::Quantity { .. } => "quantity",
+                    ConceptForm::Relation(_) => "relation",
+                    _ => "subject",
+                };
+                concepts.insert(text.clone(), (pdc.clone(), form));
+            }
+            if let Some(solves) = claim.computes().and_then(|c| c.solves.as_ref()) {
+                solvers
+                    .entry(solves.concept.clone())
+                    .or_default()
+                    .push(text.clone());
+            }
+        }
+        let Some(object) = graph.object(cid) else {
+            continue;
+        };
+        if object.kind() != "claim.annotation" {
+            continue;
+        }
+        let body = object.body();
+        let target = body
+            .get("target")
+            .and_then(Value::as_text)
+            .map(ToOwned::to_owned);
+        match (body.get("kind").and_then(Value::as_text), target) {
+            (Some("classifies"), Some(target)) => {
+                if let Some(subject) = body
+                    .get("value")
+                    .and_then(|v| v.get("subject"))
+                    .and_then(Value::as_text)
+                {
+                    classifications.push((text, target, subject.to_owned()));
+                }
+            }
+            (Some("triage"), Some(target)) => {
+                let mut named = BTreeSet::from([target]);
+                if let Some(Value::Array(refs)) = body.get("value").and_then(|v| v.get("refs")) {
+                    named.extend(
+                        refs.iter()
+                            .filter_map(Value::as_text)
+                            .map(ToOwned::to_owned),
+                    );
+                }
+                for n in named {
+                    suggestions.entry(n).or_default().insert(text.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Scan {
+        classifications,
+        concepts,
+        solvers,
+        suggestions,
+    }
+}
+
 fn edges(pairs: &[(String, String)]) -> Json {
     pairs
         .iter()
@@ -496,12 +723,16 @@ fn label(object: &Object, defines: Option<&Definition>) -> String {
 
 /// Whether a name can be one path segment on any server.
 fn servable(term: &str) -> bool {
-    !term.is_empty()
-        && term != "."
-        && term != ".."
-        && !term
-            .chars()
-            .any(|c| c == '/' || c == '\\' || c.is_control())
+    let s = segment(term);
+    !s.is_empty() && s != "." && s != ".." && !s.chars().any(|c| c == '\\' || c.is_control())
+}
+
+/// A name's path segment: the name with each `/` as `_`. A slash cannot
+/// sit inside one segment of a static site, and names have them: UDC's
+/// ranges, such as the PDC code `631/635`. No UDC notation uses `_`; two
+/// names meeting in one segment keep the first, with a warning.
+fn segment(term: &str) -> String {
+    term.replace('/', "_")
 }
 
 /// A name as a URL path segment: every byte outside RFC 3986's unreserved
@@ -556,7 +787,9 @@ mod tests {
     #[test]
     fn a_name_that_is_not_one_segment_gets_no_bundle() {
         assert!(servable("{tray}"));
-        assert!(!servable("kW.h/{tray}"));
+        assert!(servable("631/635"));
+        assert_eq!(segment("631/635"), "631_635");
+        assert!(!servable("a\\b"));
         assert!(!servable(".."));
         assert!(!servable(""));
     }

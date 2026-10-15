@@ -25,6 +25,26 @@
       "change": "pubunit 0.1.0 comes from crates.io instead of its git tag; cargo deny allows no git source again, and cargo vet trusts pubunit's publisher"
     },
     {
+      "category": "added",
+      "change": "Concepts (spec Section 5.9.1): a definitional claim may define a concept at a required PDC code, which is its term: a subject concept such as a UDC class, a quantity concept naming the kind it narrows and a boundary of includes and excludes lines, or a relation concept relating slots, each a role bound to a quantity concept or a kind, as a product solvable for any slot or as explicit; the kinds and concepts it binds must be in depends (pub compose adds the kinds)"
+    },
+    {
+      "category": "added",
+      "change": "Triage (spec Section 7.4) gains the findings groups-under and quoted-from and an optional candidate blob of unsigned draft objects, which publet-graph's Triage reads; anchors may have up to 12 stewards, and an expert group is an anchor over a PDC code's subtree (Section 9.3)"
+    },
+    {
+      "category": "added",
+      "change": "A calculation's computes may carry solves (spec Section 5.9.5): the relation concept and slot it solves for, the roles it requires, and optional roles each with the claim stating its default, which must be in depends; pub compose refuses a code with no concept in depends or a role the relation has no slot for"
+    },
+    {
+      "category": "added",
+      "change": "pub bundle gives each object the concepts it is classified under and the triage suggestions naming it, and each concept its PDC code, form, broader and narrower concepts, members, the calculations solving it, the concepts competing for its code, and the anchors covering it; a name with a slash, such as the PDC code 631/635, is served under a segment with an underscore (def/631_635.json), listed in the index's name_paths"
+    },
+    {
+      "category": "fixed",
+      "change": "pub revise applies --defines and --computes, adding what they cite to depends, instead of keeping the old fields: a concept's boundary is reframed as a new version"
+    },
+    {
       "category": "security",
       "change": "rustls 0.23.46 fixes RUSTSEC-2026-0346, -0347, -0348 and -0349 in pub's network client (pub sync, pub serve), through reqwest; its cargo vet exemption moves from 0.23.45 to 0.23.46"
     }

@@ -196,7 +196,8 @@ impl ProseClaim {
         }
 
         // Section 5.9: units, kinds and measures are presupposed by every
-        // value that uses them, so they sit in the dependency closure.
+        // value that uses them, and a kind by every concept narrowing it,
+        // so they sit in the dependency closure.
         let defines = reserved(body.get("defines"), "defines", class, Class::Definitional)?
             .map(Definition::from_value)
             .transpose()?;
@@ -209,6 +210,15 @@ impl ProseClaim {
         }
         if let Some(c) = &computes {
             cited.extend(c.kinds().map(|k| ("computes", k)));
+        }
+        if let Some(d) = &defines {
+            cited.extend(d.cited());
+        }
+        if let Some(c) = &computes {
+            cited.extend(
+                c.defaults()
+                    .map(|d| ("computes.solves.optional.default", d)),
+            );
         }
         if let Some((field, claim)) = cited.into_iter().find(|(_, c)| !depends.contains(c)) {
             return Err(GraphError::QuantityNotInDepends {

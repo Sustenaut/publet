@@ -154,7 +154,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 /// The next version of a claim: the old body with only the given flags
 /// applied.
 ///
-/// Evidence is replaced by role: `--method` replaces the method entry,
+/// `--defines` and `--computes` replace those fields, and what they cite
+/// is added to `depends`. Evidence is replaced by role: `--method` replaces the method entry,
 /// `--cite` the citations, `--source` the sources, and entries of any role
 /// not given are kept. `depends` is replaced when `--depends` is given;
 /// otherwise the old list is kept, less any claim that was a source and no
@@ -194,6 +195,12 @@ fn revise_claim(
         }
         (None, false) => {}
     }
+
+    // `--defines` and `--computes` replace the old fields (Section 5.9):
+    // reframing a concept's boundary is a new version of it.
+    let fields = compose::quantity_fields(flags)?;
+    let cited = compose::quantity_citations(body.get("data"), &fields);
+    body.extend(fields);
 
     let old_entries = match body.get("evidence") {
         Some(Value::Array(entries)) => entries.clone(),
@@ -252,6 +259,7 @@ fn revise_claim(
         flags.depends.clone()
     };
     compose::add_missing(&mut depends, &source_claims);
+    compose::add_missing(&mut depends, &cited);
     body.insert("depends".to_owned(), compose::text_array(&depends));
 
     Ok(body)
@@ -268,6 +276,8 @@ fn flags_other_than_created(flags: &ClaimFlags) -> bool {
         || !flags.sources.is_empty()
         || flags.data.is_some()
         || flags.no_data
+        || flags.defines.is_some()
+        || flags.computes.is_some()
 }
 
 /// The `supersedes` relation from the new version to the old.
