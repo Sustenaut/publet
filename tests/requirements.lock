@@ -325,11 +325,11 @@ parse==1.22.3 \
 parse_type==0.6.6 \
     --hash=sha256:3ca79bbe71e170dfccc8ec6c341edfd1c2a0fc1e5cfd18330f93af938de2348c \
     --hash=sha256:513a3784104839770d690e04339a8b4d33439fcd5dd99f2e4580f9fc1097bfb2
-pluggy==1.6.0 \
-    --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
-    --hash=sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
-pubkit @ https://github.com/schryer/pubkit/releases/download/v0.11.0/pubkit-0.11.0-py3-none-any.whl \
-    --hash=sha256:501c129ddc77d981d615862f0779527bfb2cb0d3375f1284c38688263afd8a5f
+pluggy==1.7.0 \
+    --hash=sha256:7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec \
+    --hash=sha256:d1eaa46ebb595891b860ab086b4d09c8588af65ebd4361b8e8f4bb8920b90ba8
+pubkit @ https://github.com/schryer/pubkit/releases/download/v0.11.1/pubkit-0.11.1-py3-none-any.whl \
+    --hash=sha256:fca4fb8f38fb51a17eed376bcdfcc07268b0bc0d3e558fe0b5cfaac8e7560291
 pycparser==3.11 \
     --hash=sha256:51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80 \
     --hash=sha256:d875f09c3507d00e1aba0eecc6dcadc1352f30fff09dc6bff2f1c2935e97c2bc
