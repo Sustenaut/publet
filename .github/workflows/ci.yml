@@ -24,13 +24,14 @@ jobs:
   #   conformance scenarios, and the coverage report, which must be
   #   committed up to date.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.11.1
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.11.2
     with:
       gates: guard-floats guard-deps guard-rules guard-msrv
       test-args: --workspace --all-features
       apt-packages: jq
       functional: guard-eval conformance coverage-check
       cross-test-args: --workspace --all-features
+    secrets: inherit
 
   # The shared release workflow: on a pull request, a code change records
   # what it changes and a release is the bump those changes require,
