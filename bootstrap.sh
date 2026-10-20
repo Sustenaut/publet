@@ -37,7 +37,7 @@ install_cargo_tool cargo-deny 0.18.6
 step "Python environment"
 python3 -m venv --upgrade-deps "$VENV" >/dev/null
 "$VENV/bin/python" -m pip install --quiet --upgrade pip
-if [ -f tests/requirements.lock ]; then
+if [[ -f tests/requirements.lock ]]; then
   "$VENV/bin/python" -m pip install --quiet --require-hashes -r tests/requirements.lock
 else
   "$VENV/bin/python" -m pip install --quiet -r tests/requirements.txt

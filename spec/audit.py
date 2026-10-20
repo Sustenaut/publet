@@ -12,6 +12,7 @@ Usage:  ./audit.py [path-to-index.md]     (exit 0 clean, 1 on findings)
 
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 NUMBER_WORDS = {
@@ -126,9 +127,21 @@ def audit(text):
     return out
 
 
+def confined(path, what):
+    """`path`, resolved, when it lies in the working directory or a
+    temporary directory; otherwise the script stops, naming `what`, so a
+    mistyped or hostile argument cannot read or write elsewhere."""
+    resolved = Path(path).resolve()
+    bases = [Path.cwd(), Path(tempfile.gettempdir())]
+    if any(resolved.is_relative_to(base.resolve()) for base in bases):
+        return resolved
+    sys.exit(f"{what} ({path}) must be in the working directory or a "
+             "temporary directory")
+
+
 def main():
-    path = Path(sys.argv[1] if len(sys.argv) > 1
-                else Path(__file__).with_name("index.md"))
+    path = (confined(sys.argv[1], "the specification") if len(sys.argv) > 1
+            else Path(__file__).with_name("index.md"))
     findings = audit(path.read_text())
     if findings:
         print("%s: %d finding(s)\n" % (path.name, len(findings)))

@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -78,6 +79,18 @@ def normative_sections(spec: Path) -> dict[str, int]:
     return counts
 
 
+def confined(path: Path | str, what: str) -> Path:
+    """`path`, resolved, when it lies in the working directory or a
+    temporary directory; otherwise the script stops, naming `what`, so a
+    mistyped or hostile argument cannot read or write elsewhere."""
+    resolved = Path(path).resolve()
+    bases = [Path.cwd(), Path(tempfile.gettempdir())]
+    if any(resolved.is_relative_to(base.resolve()) for base in bases):
+        return resolved
+    sys.exit(f"{what} ({path}) must be in the working directory or a "
+             "temporary directory")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--spec", type=Path, default=DEFAULT_SPEC)
@@ -86,6 +99,9 @@ def main() -> int:
     ap.add_argument("--report", type=Path,
                     help="write the report to a file as well as stdout")
     args = ap.parse_args()
+    args.spec = confined(args.spec, "--spec")
+    if args.report:
+        args.report = confined(args.report, "--report")
 
     covered = tagged_sections(ROOT / "tests" / "features")
 

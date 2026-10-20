@@ -65,7 +65,7 @@ EVAL_BIN="pub-eval"
 # is exactly the kind of divergence a human reading a table would miss.
 digest_for() { # binary-path
   local bin="$1"
-  if [ ! -d "$VECTOR_DIR" ] || [ -z "$(ls -A "$VECTOR_DIR" 2>/dev/null)" ]; then
+  if [[ ! -d "$VECTOR_DIR" ]] || [[ -z "$(ls -A "$VECTOR_DIR" 2>/dev/null)" ]]; then
     echo "SKIP"
     return 0
   fi
@@ -133,7 +133,7 @@ for row in "${TARGETS[@]}"; do
   name="${name// /}"; mode="${mode// /}"; arch="${arch// /}"
   target="${target// /}"; runner="${runner// /}"
 
-  if [ "$QUICK" -eq 1 ] && [ "$mode" = "image" ]; then
+  if [[ "$QUICK" -eq 1 ]] && [[ "$mode" = "image" ]]; then
     continue
   fi
 
@@ -168,30 +168,30 @@ done | sort
 # architectures only to each other would pass a run in which all four had
 # drifted together, which is the likelier failure: they share the source.
 RECORD="${PUBLET_ROOT}/vectors/eval/DIGEST"
-if [ -f "$RECORD" ]; then
+if [[ -f "$RECORD" ]]; then
   reference="$(tr -d '[:space:]' < "$RECORD")"
 fi
 
 for name in "${!DIGESTS[@]}"; do
   d="${DIGESTS[$name]}"
-  [ "$d" = "SKIP" ] && continue
-  if [ -z "$reference" ]; then reference="$d"; continue; fi
-  if [ "$d" != "$reference" ]; then
+  [[ "$d" = "SKIP" ]] && continue
+  if [[ -z "$reference" ]]; then reference="$d"; continue; fi
+  if [[ "$d" != "$reference" ]]; then
     echo "error: $name evaluation output is $d, expected $reference (R8)" >&2
     status=1
   fi
 done
 
 echo
-if [ "$status" -ne 0 ]; then
+if [[ "$status" -ne 0 ]]; then
   echo "matrix: FAILED"
-elif [ "${DIGESTS[amd64]:-SKIP}" = "SKIP" ]; then
+elif [[ "${DIGESTS[amd64]:-SKIP}" = "SKIP" ]]; then
   echo "matrix: builds clean on all targets."
   echo "        No evaluation vectors yet, so R8 is not yet verified."
   echo "        Populate vectors/eval/ in Phase 3."
 else
   echo "matrix: clean, evaluation output identical across all targets"
-  if [ -f "$RECORD" ]; then
+  if [[ -f "$RECORD" ]]; then
     echo "        and equal to the recorded digest $reference"
   fi
 fi

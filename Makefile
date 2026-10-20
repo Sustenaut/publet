@@ -11,17 +11,17 @@ include pubkit.mk
 export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO_SCOPE := --workspace --all-features
 
-.PHONY: bootstrap matrix coverage coverage-check conformance verify-suite verify-optional \
+.PHONY: bootstrap matrix spec-coverage coverage-check conformance verify-suite verify-optional \
         guard-deps guard-floats guard-eval guard-rules guard-msrv check clean \
         release-check release-pr
 
 bootstrap: ## Prepare a bare machine (idempotent)
 	./bootstrap.sh
 
-coverage: ## Report which normative statements have scenarios
+spec-coverage: ## Report which normative statements have scenarios
 	./tools/must-coverage.py --report=conformance/COVERAGE.md
 
-coverage-check: coverage ## Fail if the committed coverage report is stale
+coverage-check: spec-coverage ## Fail if the committed coverage report is stale
 	git diff --exit-code conformance/COVERAGE.md
 
 conformance: build ## Run only the scenarios exercising a normative statement
@@ -65,7 +65,7 @@ guard-msrv: ## Fail if the published crates declare different minimum Rust versi
 	@test "$(MSRV)" = "$$(sed -n 's/^rust-version = "\(.*\)"/\1/p' crates/publet-algorithms/Cargo.toml)" \
 	  || { echo "publet-core and publet-algorithms declare different minimum Rust versions"; exit 1; }
 
-check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules guard-msrv test doc functional coverage vectors-check publish-check doc-coverage-check supply-chain-check vet deny ## Everything CI runs
+check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules guard-msrv test doc functional spec-coverage vectors-check publish-check doc-coverage-check supply-chain-check vet deny ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean
