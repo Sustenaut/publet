@@ -26,7 +26,7 @@ jobs:
   #   (coverage/scripts.xml) the sonar job reads. They run after `make
   #   coverage`, which empties coverage/.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.12.0
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.12.1
     with:
       gates: guard-floats guard-deps guard-rules guard-msrv
       test-args: --workspace --all-features
