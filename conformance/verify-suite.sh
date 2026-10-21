@@ -69,7 +69,7 @@ break_and_check "allow unaccounted removals" \
 cargo build --workspace -q 2>/dev/null
 
 printf '\n'
-if [ "$status" -eq 0 ]; then
+if [[ "$status" -eq 0 ]]; then
   echo "the suite detected every break"
 else
   echo "at least one break went undetected; that is a gap in the suite,"

@@ -41,7 +41,9 @@ import html
 import json
 import re
 import sys
+import tempfile
 import urllib.request
+from pathlib import Path
 
 ROOT = "https://dumps.wikimedia.org"
 
@@ -154,7 +156,7 @@ def fetch_range(url: str, start: int, end: int) -> bytes:
         return response.read()
 
 
-def load_index(path: str, wanted: set[str]) -> dict[str, tuple[int, int, int]]:
+def load_index(path: Path, wanted: set[str]) -> dict[str, tuple[int, int, int]]:
     """Map each wanted title to (stream_start, stream_end, page_id).
 
     The index is sorted by offset, so the end of a stream is the next
@@ -195,7 +197,19 @@ def articles_in_stream(dump: str, start: int, end: int) -> dict[str, tuple[str, 
     return found
 
 
-def main() -> int:
+def confined(path: Path | str, what: str) -> Path:
+    """`path`, resolved, when it lies in the working directory or a
+    temporary directory; otherwise the script stops, naming `what`, so a
+    mistyped or hostile argument cannot read or write elsewhere."""
+    resolved = Path(path).resolve()
+    bases = [Path.cwd(), Path(tempfile.gettempdir())]
+    if any(resolved.is_relative_to(base.resolve()) for base in bases):
+        return resolved
+    sys.exit(f"{what} ({path}) must be in the working directory or a "
+             "temporary directory")
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", default="enwiki", choices=sorted(PROJECTS),
                         help="which dump to read (default: enwiki)")
@@ -209,16 +223,17 @@ def main() -> int:
 
     if args.fetch_index:
         print(f"fetching {index}\n  -> {args.fetch_index}", file=sys.stderr)
-        urllib.request.urlretrieve(index, args.fetch_index)
-        return 0
+        target = confined(args.fetch_index, "--fetch-index")
+        urllib.request.urlretrieve(index, target)
+        return
 
     if not args.index or not args.titles:
         parser.error("--index and --titles are required")
 
-    with open(args.titles, encoding="utf-8") as handle:
+    with open(confined(args.titles, "--titles"), encoding="utf-8") as handle:
         wanted = {line.strip() for line in handle if line.strip()}
 
-    located = load_index(args.index, wanted)
+    located = load_index(confined(args.index, "--index"), wanted)
     missing = wanted - set(located)
     if missing:
         print(f"not in index: {sorted(missing)}", file=sys.stderr)
@@ -229,7 +244,8 @@ def main() -> int:
     for title, (start, end, _) in located.items():
         by_stream.setdefault((start, end), []).append(title)
 
-    out = open(args.out, "w", encoding="utf-8") if args.out else sys.stdout
+    out = (open(confined(args.out, "--out"), "w", encoding="utf-8") if args.out
+           else sys.stdout)
     written = skipped = 0
     try:
         for (start, end), titles in sorted(by_stream.items()):
@@ -264,8 +280,7 @@ def main() -> int:
     print(f"{written} written, {skipped} without a lead sentence "
           f"(redirects and disambiguation pages), "
           f"{len(by_stream)} range requests", file=sys.stderr)
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

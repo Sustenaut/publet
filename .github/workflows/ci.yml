@@ -21,15 +21,17 @@ jobs:
   # - gates: the no-float, dependency-direction, rule and MSRV guards --
   #   cheap, so they fail fast before the matrix.
   # - functional: the evaluation digest (which needs a built pub-eval), the
-  #   conformance scenarios, and the coverage report, which must be
-  #   committed up to date.
+  #   conformance scenarios, the coverage report, which must be committed
+  #   up to date, and the maintainer scripts' tests, whose Cobertura report
+  #   (coverage/scripts.xml) the sonar job reads. They run after `make
+  #   coverage`, which empties coverage/.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.11.2
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.12.1
     with:
       gates: guard-floats guard-deps guard-rules guard-msrv
       test-args: --workspace --all-features
       apt-packages: jq
-      functional: guard-eval conformance coverage-check
+      functional: guard-eval conformance coverage-check script-tests
       cross-test-args: --workspace --all-features
     secrets: inherit
 

@@ -9,12 +9,12 @@ PUBLET_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PUBLET_ROOT
 
 # rustup places its shims here regardless of whether the user's PATH has them.
-if [ -d "${CARGO_HOME:-$HOME/.cargo}/bin" ]; then
+if [[ -d "${CARGO_HOME:-$HOME/.cargo}/bin" ]]; then
   export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 fi
 
 export VENV="$PUBLET_ROOT/.venv"
-if [ -d "$VENV/bin" ]; then
+if [[ -d "$VENV/bin" ]]; then
   export PATH="$VENV/bin:$PATH"
 fi
 

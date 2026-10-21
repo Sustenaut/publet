@@ -17,3 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN rustup target add s390x-unknown-linux-gnu
 
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc
+
+# Not root: tools/matrix.sh runs this with --userns=keep-id:uid=1000,gid=1000,
+# which maps the invoking user onto builder so the build can write the
+# bind-mounted checkout.
+RUN useradd --uid 1000 --user-group --create-home builder \
+ && chown -R builder:builder "$CARGO_HOME" "$RUSTUP_HOME"
+USER builder

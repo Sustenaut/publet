@@ -18,20 +18,20 @@ GUARDED=(crates/publet-core crates/publet-eval crates/publet-algorithms)
 status=0
 
 for dir in "${GUARDED[@]}"; do
-  [ -d "$dir" ] || continue
+  [[ -d "$dir" ]] || continue
   hits=$(
     grep -rnE '\b(f32|f64)\b' "$dir" --include='*.rs' 2>/dev/null \
       | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' \
       || true
   )
-  if [ -n "$hits" ]; then
+  if [[ -n "$hits" ]]; then
     echo "error: floating point is forbidden in $dir" >&2
     echo "$hits" >&2
     status=1
   fi
 done
 
-if [ "$status" -eq 0 ]; then
+if [[ "$status" -eq 0 ]]; then
   echo "guard-floats: clean (${#GUARDED[@]} crates checked)"
 fi
 exit "$status"

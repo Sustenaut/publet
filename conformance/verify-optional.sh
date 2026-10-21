@@ -25,7 +25,7 @@ STASH="$(mktemp -d)"
 restore() {
   for crate in crates/publet-settle bin/pub-settle; do
     name="$(basename "$crate")"
-    if [ -d "$STASH/$name" ]; then
+    if [[ -d "$STASH/$name" ]]; then
       rm -rf "$crate"
       mv "$STASH/$name" "$crate"
     fi

@@ -18,7 +18,8 @@ cd "$(dirname "$0")/.."
 source tools/env.sh
 
 RUST_IMAGE="docker.io/library/rust:1.98.1-slim-bookworm"
-CROSS_IMAGE="publet-cross"
+# Tagged so an image built before the builder user existed is rebuilt.
+CROSS_IMAGE="publet-cross:builder"
 
 # name | mode | podman arch | rust target | runner image
 #
@@ -65,7 +66,7 @@ EVAL_BIN="pub-eval"
 # is exactly the kind of divergence a human reading a table would miss.
 digest_for() { # binary-path
   local bin="$1"
-  if [ ! -d "$VECTOR_DIR" ] || [ -z "$(ls -A "$VECTOR_DIR" 2>/dev/null)" ]; then
+  if [[ ! -d "$VECTOR_DIR" ]] || [[ -z "$(ls -A "$VECTOR_DIR" 2>/dev/null)" ]]; then
     echo "SKIP"
     return 0
   fi
@@ -103,7 +104,7 @@ run_image_digest() { # podman-arch, rust-target, image
 run_cross() { # podman-arch, rust-target, runner-image
   local arch="$1" target="$2" runner="$3"
   # Build natively for the target...
-  podman run --rm --platform=linux/amd64 \
+  podman run --rm --platform=linux/amd64 --userns=keep-id:uid=1000,gid=1000 \
     -v "$PUBLET_ROOT:/w:Z" -w /w \
     -v "$CACHE/registry:/usr/local/cargo/registry:Z" \
     -e CARGO_TARGET_DIR="/w/.matrix-cache/target/$target" \
@@ -133,7 +134,7 @@ for row in "${TARGETS[@]}"; do
   name="${name// /}"; mode="${mode// /}"; arch="${arch// /}"
   target="${target// /}"; runner="${runner// /}"
 
-  if [ "$QUICK" -eq 1 ] && [ "$mode" = "image" ]; then
+  if [[ "$QUICK" -eq 1 ]] && [[ "$mode" = "image" ]]; then
     continue
   fi
 
@@ -168,30 +169,30 @@ done | sort
 # architectures only to each other would pass a run in which all four had
 # drifted together, which is the likelier failure: they share the source.
 RECORD="${PUBLET_ROOT}/vectors/eval/DIGEST"
-if [ -f "$RECORD" ]; then
+if [[ -f "$RECORD" ]]; then
   reference="$(tr -d '[:space:]' < "$RECORD")"
 fi
 
 for name in "${!DIGESTS[@]}"; do
   d="${DIGESTS[$name]}"
-  [ "$d" = "SKIP" ] && continue
-  if [ -z "$reference" ]; then reference="$d"; continue; fi
-  if [ "$d" != "$reference" ]; then
+  [[ "$d" = "SKIP" ]] && continue
+  if [[ -z "$reference" ]]; then reference="$d"; continue; fi
+  if [[ "$d" != "$reference" ]]; then
     echo "error: $name evaluation output is $d, expected $reference (R8)" >&2
     status=1
   fi
 done
 
 echo
-if [ "$status" -ne 0 ]; then
+if [[ "$status" -ne 0 ]]; then
   echo "matrix: FAILED"
-elif [ "${DIGESTS[amd64]:-SKIP}" = "SKIP" ]; then
+elif [[ "${DIGESTS[amd64]:-SKIP}" = "SKIP" ]]; then
   echo "matrix: builds clean on all targets."
   echo "        No evaluation vectors yet, so R8 is not yet verified."
   echo "        Populate vectors/eval/ in Phase 3."
 else
   echo "matrix: clean, evaluation output identical across all targets"
-  if [ -f "$RECORD" ]; then
+  if [[ -f "$RECORD" ]]; then
     echo "        and equal to the recorded digest $reference"
   fi
 fi

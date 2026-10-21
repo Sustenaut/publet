@@ -4,4 +4,6 @@
 -r requirements-pubkit.txt
 # Independent Ed25519 for tools/vectors/generate.py: it makes the signature
 # test vectors, and checks RFC 8032's keys, without using publet's code.
-cryptography==46.0.5
+cryptography==50.0.2
+# Coverage of the maintainer scripts (make script-tests), for SonarQube Cloud.
+coverage==7.16.2
