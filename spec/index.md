@@ -849,9 +849,11 @@ says what is defined:
 - **`concept`** comes in three forms. All REQUIRE `pdc`: the concept's
   code in the Extended Publet Decimal Classification (PDC), an extension of
   the UDC Summary [UDC] in which every UDC Summary class keeps its code and
-  a narrower PDC class is written as the UDC code it extends, a separator
-  UDC notation never uses, and a number. A concept's broader concept is the
-  one at the code its own code extends. A concept carries `kind`,
+  a narrower PDC class is written as the code it extends, a tilde (`~`),
+  which UDC notation never uses, and a number: `(1/9)~1` narrows the UDC
+  place class (1/9), and `(1/9)~1~2` narrows `(1/9)~1`. A concept's
+  broader concept is the one at the code its own code extends, so a code
+  is broader than every code that begins with it. A concept carries `kind`,
   `relation`, or neither, never both.
 
   A **subject concept** carries neither: a class of things or topics, such
@@ -1183,6 +1185,22 @@ the hierarchy is of identifiers, not of shapes, and a singular near a
 cell's edge may be in a neighbour's children by geometry while in this
 cell by identifier. A reader needing geometric containment computes it
 from the cells' boundaries, and that is not a lookup by path.
+
+**Usage pattern.** *Non-normative.* The Sustenaut corpus places every
+place under one subject concept at the UDC place class (1/9), named
+"area" rather than UDC's "Place", so that every place path begins
+`area.`; classes of places narrow it with `~`, such as "site" at
+`(1/9)~1`, and the parts of a place that are places themselves, such as
+a basement, are of the class "area". A singular's `class` is the
+narrowest class that fits it; the path takes its class segments from the
+outermost whole only, so the basement's own class does not appear in
+`area.site.tallinn.basement`. A location is given on the outermost whole
+that has one, at the coarsest cell the purpose needs, and parts inherit
+it. A quantity concept a fact table cites, such as floor area, goes at a
+code narrowing the UDC class of its subject. The name "area" is a choice
+for this corpus: another corpus may define a concept named "Place" at
+(1/9), and a reader holding both in one closure sees the class as
+contested (no path) until one is chosen, as for any code (Section 5.9.1).
 
 **Lookup.** *Non-normative.* Resolving a path key reads the singulars held,
 finds those whose path it is, or whose path is all but its last segment,
@@ -3160,7 +3178,7 @@ registered (Section 5.9.6).
 
 **PDC** — the Extended Publet Decimal Classification: the UDC Summary's
 classes under their own codes, extended by narrower classes whose codes
-extend a UDC code. A **PDC edition** is a document listing one concept
+extend a UDC code with `~` and a number, such as `(1/9)~1`. A **PDC edition** is a document listing one concept
 lineage per code; a code with two candidates is shown as contested
 (Section 5.9.1).
 

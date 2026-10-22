@@ -75,6 +75,10 @@
     {
       "category": "internal",
       "change": "The functional suite's lock adds h3 4.5.0 for the H3 test vectors, and moves parse to 1.22.4 and pycparser to 3.12"
+    },
+    {
+      "category": "added",
+      "change": "Spec Section 5.9.1 fixes the PDC separator: a narrower class is the code it extends, `~`, and a number, such as (1/9)~1; Section 5.9.6 documents the Sustenaut usage pattern, with places under a concept named area at UDC (1/9), so place paths begin area."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

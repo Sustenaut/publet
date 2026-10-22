@@ -30,8 +30,8 @@ THREE_POINT = {
         {"name": "high", "type": "quantity", "meaning": "the most it plausibly is"},
     ],
 }
-# The PDC codes narrowing a UDC class are written here with `~`, which UDC
-# notation does not use; the separator is illustrative.
+# The usage pattern of spec Section 5.9.6: places under a concept named
+# "area" at UDC's place class (1/9), and narrower PDC codes written with `~`.
 AREA = "(1/9)"
 SITE = "(1/9)~1"
 FLOOR_AREA = "69~1"
