@@ -34,7 +34,7 @@ THREE_POINT = {
 # at UDC's place class (1/9), and narrower PDC codes written with `~`.
 PLACE = "(1/9)"
 SITE = "(1/9)~1"
-FLOOR_PLACE = "69~1"
+FLOOR_AREA = "69~1"
 CEILING_HEIGHT = "69~2"
 # A resolution-9 cell in central Tallinn.
 TALLINN_CELL = "89089b1a217ffff"
