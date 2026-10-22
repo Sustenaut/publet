@@ -10,7 +10,9 @@ Nothing here calls publet. Expected values come from:
 - RFC 6962 Section 2.1, implemented below from the RFC's own definitions,
   checked against the Certificate Transparency project's published roots;
 - integer arithmetic with truncation toward zero, for Fixed6;
-- Cargo's caret rule and the other requirement forms, for tool versions.
+- Cargo's caret rule and the other requirement forms, for tool versions;
+- h3-py, the H3 project's own Python binding of its C library, for H3 cell
+  identifiers and their parents.
 
 The vectors are committed; this script documents and reproduces them.
 Run from the repository root: tools/vectors/generate.py
@@ -320,6 +322,41 @@ def versions():
     })
 
 
+def h3_cells():
+    import random
+
+    import h3
+
+    rng = random.Random(20261022)
+    # Tallinn, where the worked example's site is; points anywhere; and
+    # pentagons with their children, where one direction is missing.
+    points = [(59.437, 24.7536)] + [(rng.uniform(-89.9, 89.9), rng.uniform(-180, 180)) for _ in range(60)]
+    cells = [h3.latlng_to_cell(lat, lng, rng.choice([0, 1, 5, 9, 10, 12, 15])) for lat, lng in points]
+    for res in (0, 1, 3, 7, 15):
+        cells += sorted(h3.get_pentagons(res))[:4]
+    for res in (2, 8):
+        for p in sorted(h3.get_pentagons(res))[:2]:
+            cells += sorted(h3.cell_to_children(p, res + 1))
+    valid = [{"cell": c, "resolution": h3.get_resolution(c), "pentagon": h3.is_pentagon(c),
+              "parents": [h3.cell_to_parent(c, r) for r in range(h3.get_resolution(c) + 1)]}
+             for c in cells]
+    # One bit flipped in a valid identifier, kept where H3 says it is no cell.
+    invalid = set()
+    for c in cells:
+        n = int(c, 16)
+        for bit in rng.sample(range(64), 12):
+            flipped = format(n ^ (1 << bit), "x")
+            if not h3.is_valid_cell(flipped):
+                invalid.add(flipped)
+    write("crates/publet-algorithms/testdata/h3.json", {
+        "description": "H3 cell identifiers: each valid cell with its resolution and its parent at every "
+                       "resolution from 0 to its own, and identifiers that are not cells.",
+        "source": f"h3-py {h3.__version__}, the H3 project's binding of its C library {h3.versions()['c']}.",
+        "valid": valid,
+        "invalid": sorted(invalid)[:150],
+    })
+
+
 if __name__ == "__main__":
     canonical()
     identifiers()
@@ -327,3 +364,4 @@ if __name__ == "__main__":
     log()
     fixed()
     versions()
+    h3_cells()

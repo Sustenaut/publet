@@ -1,0 +1,1642 @@
+{
+  "description": "H3 cell identifiers: each valid cell with its resolution and its parent at every resolution from 0 to its own, and identifiers that are not cells.",
+  "source": "h3-py 4.5.0, the H3 project's binding of its C library 4.5.0.",
+  "valid": [
+    {
+      "cell": "8a089b1a2177fff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "8108bffffffffff",
+        "82089ffffffffff",
+        "83089bfffffffff",
+        "84089b1ffffffff",
+        "85089b1bfffffff",
+        "86089b1a7ffffff",
+        "87089b1a2ffffff",
+        "88089b1a21fffff",
+        "89089b1a217ffff",
+        "8a089b1a2177fff"
+      ]
+    },
+    {
+      "cell": "813f7ffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "803ffffffffffff",
+        "813f7ffffffffff"
+      ]
+    },
+    {
+      "cell": "810c3ffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "800dfffffffffff",
+        "810c3ffffffffff"
+      ]
+    },
+    {
+      "cell": "890e918d87bffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "800ffffffffffff",
+        "810ebffffffffff",
+        "820e97fffffffff",
+        "830e91fffffffff",
+        "840e919ffffffff",
+        "850e918ffffffff",
+        "860e918dfffffff",
+        "870e918d8ffffff",
+        "880e918d87fffff",
+        "890e918d87bffff"
+      ]
+    },
+    {
+      "cell": "81f2bffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "80f3fffffffffff",
+        "81f2bffffffffff"
+      ]
+    },
+    {
+      "cell": "8ae901d768c7fff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80e9fffffffffff",
+        "81e93ffffffffff",
+        "82e907fffffffff",
+        "83e901fffffffff",
+        "84e901dffffffff",
+        "85e901d7fffffff",
+        "86e901d77ffffff",
+        "87e901d76ffffff",
+        "88e901d769fffff",
+        "89e901d768fffff",
+        "8ae901d768c7fff"
+      ]
+    },
+    {
+      "cell": "8cccdb72c0127ff",
+      "resolution": 12,
+      "pentagon": false,
+      "parents": [
+        "80cdfffffffffff",
+        "81ccfffffffffff",
+        "82ccdffffffffff",
+        "83ccdbfffffffff",
+        "84ccdb7ffffffff",
+        "85ccdb73fffffff",
+        "86ccdb72fffffff",
+        "87ccdb72cffffff",
+        "88ccdb72c1fffff",
+        "89ccdb72c03ffff",
+        "8accdb72c017fff",
+        "8bccdb72c012fff",
+        "8cccdb72c0127ff"
+      ]
+    },
+    {
+      "cell": "8037fffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "8037fffffffffff"
+      ]
+    },
+    {
+      "cell": "8ae2c612bcd7fff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80e3fffffffffff",
+        "81e2fffffffffff",
+        "82e2c7fffffffff",
+        "83e2c6fffffffff",
+        "84e2c61ffffffff",
+        "85e2c613fffffff",
+        "86e2c612fffffff",
+        "87e2c612bffffff",
+        "88e2c612bdfffff",
+        "89e2c612bcfffff",
+        "8ae2c612bcd7fff"
+      ]
+    },
+    {
+      "cell": "89e70336cd7ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "80e7fffffffffff",
+        "81e73ffffffffff",
+        "82e707fffffffff",
+        "83e703fffffffff",
+        "84e7033ffffffff",
+        "85e70337fffffff",
+        "86e70336fffffff",
+        "87e70336cffffff",
+        "88e70336cdfffff",
+        "89e70336cd7ffff"
+      ]
+    },
+    {
+      "cell": "8af2918d5697fff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80f3fffffffffff",
+        "81f2bffffffffff",
+        "82f297fffffffff",
+        "83f291fffffffff",
+        "84f2919ffffffff",
+        "85f2918ffffffff",
+        "86f2918d7ffffff",
+        "87f2918d5ffffff",
+        "88f2918d57fffff",
+        "89f2918d56bffff",
+        "8af2918d5697fff"
+      ]
+    },
+    {
+      "cell": "8aee490c036ffff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80effffffffffff",
+        "81ee7ffffffffff",
+        "82ee4ffffffffff",
+        "83ee49fffffffff",
+        "84ee491ffffffff",
+        "85ee490ffffffff",
+        "86ee490c7ffffff",
+        "87ee490c0ffffff",
+        "88ee490c03fffff",
+        "89ee490c037ffff",
+        "8aee490c036ffff"
+      ]
+    },
+    {
+      "cell": "85f1a5b7fffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "80f1fffffffffff",
+        "81f1bffffffffff",
+        "82f1a7fffffffff",
+        "83f1a5fffffffff",
+        "84f1a5bffffffff",
+        "85f1a5b7fffffff"
+      ]
+    },
+    {
+      "cell": "80ddfffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "80ddfffffffffff"
+      ]
+    },
+    {
+      "cell": "81013ffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "8001fffffffffff",
+        "81013ffffffffff"
+      ]
+    },
+    {
+      "cell": "8982cc65e97ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8083fffffffffff",
+        "8182fffffffffff",
+        "8282cffffffffff",
+        "8382ccfffffffff",
+        "8482cc7ffffffff",
+        "8582cc67fffffff",
+        "8682cc65fffffff",
+        "8782cc65effffff",
+        "8882cc65e9fffff",
+        "8982cc65e97ffff"
+      ]
+    },
+    {
+      "cell": "85f24173fffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "80f3fffffffffff",
+        "81f27ffffffffff",
+        "82f247fffffffff",
+        "83f241fffffffff",
+        "84f2417ffffffff",
+        "85f24173fffffff"
+      ]
+    },
+    {
+      "cell": "8f5772960014c28",
+      "resolution": 15,
+      "pentagon": false,
+      "parents": [
+        "8057fffffffffff",
+        "81577ffffffffff",
+        "825777fffffffff",
+        "835772fffffffff",
+        "8457729ffffffff",
+        "85577297fffffff",
+        "865772967ffffff",
+        "875772960ffffff",
+        "8857729601fffff",
+        "89577296003ffff",
+        "8a5772960017fff",
+        "8b5772960014fff",
+        "8c5772960014dff",
+        "8d5772960014c3f",
+        "8e5772960014c2f",
+        "8f5772960014c28"
+      ]
+    },
+    {
+      "cell": "80effffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "80effffffffffff"
+      ]
+    },
+    {
+      "cell": "852213cbfffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "8023fffffffffff",
+        "81223ffffffffff",
+        "822217fffffffff",
+        "832213fffffffff",
+        "842213dffffffff",
+        "852213cbfffffff"
+      ]
+    },
+    {
+      "cell": "8f17206a506962e",
+      "resolution": 15,
+      "pentagon": false,
+      "parents": [
+        "8017fffffffffff",
+        "81173ffffffffff",
+        "821727fffffffff",
+        "831720fffffffff",
+        "8417207ffffffff",
+        "8517206bfffffff",
+        "8617206a7ffffff",
+        "8717206a5ffffff",
+        "8817206a51fffff",
+        "8917206a507ffff",
+        "8a17206a506ffff",
+        "8b17206a5069fff",
+        "8c17206a50697ff",
+        "8d17206a506963f",
+        "8e17206a506962f",
+        "8f17206a506962e"
+      ]
+    },
+    {
+      "cell": "80d5fffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "80d5fffffffffff"
+      ]
+    },
+    {
+      "cell": "8af22171d70ffff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80f3fffffffffff",
+        "81f23ffffffffff",
+        "82f227fffffffff",
+        "83f221fffffffff",
+        "84f2217ffffffff",
+        "85f22173fffffff",
+        "86f22171fffffff",
+        "87f22171dffffff",
+        "88f22171d7fffff",
+        "89f22171d73ffff",
+        "8af22171d70ffff"
+      ]
+    },
+    {
+      "cell": "8c70b202c3363ff",
+      "resolution": 12,
+      "pentagon": false,
+      "parents": [
+        "8071fffffffffff",
+        "8170bffffffffff",
+        "8270b7fffffffff",
+        "8370b2fffffffff",
+        "8470b21ffffffff",
+        "8570b203fffffff",
+        "8670b202fffffff",
+        "8770b202cffffff",
+        "8870b202c3fffff",
+        "8970b202c33ffff",
+        "8a70b202c337fff",
+        "8b70b202c336fff",
+        "8c70b202c3363ff"
+      ]
+    },
+    {
+      "cell": "81f2fffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "80f3fffffffffff",
+        "81f2fffffffffff"
+      ]
+    },
+    {
+      "cell": "8001fffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "8001fffffffffff"
+      ]
+    },
+    {
+      "cell": "8cef962614299ff",
+      "resolution": 12,
+      "pentagon": false,
+      "parents": [
+        "80effffffffffff",
+        "81efbffffffffff",
+        "82ef97fffffffff",
+        "83ef96fffffffff",
+        "84ef963ffffffff",
+        "85ef9627fffffff",
+        "86ef96267ffffff",
+        "87ef96261ffffff",
+        "88ef962615fffff",
+        "89ef9626143ffff",
+        "8aef9626142ffff",
+        "8bef96261429fff",
+        "8cef962614299ff"
+      ]
+    },
+    {
+      "cell": "851aad63fffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "801bfffffffffff",
+        "811abffffffffff",
+        "821aaffffffffff",
+        "831aadfffffffff",
+        "841aad7ffffffff",
+        "851aad63fffffff"
+      ]
+    },
+    {
+      "cell": "8c1e6a24926e5ff",
+      "resolution": 12,
+      "pentagon": false,
+      "parents": [
+        "801ffffffffffff",
+        "811e7ffffffffff",
+        "821e6ffffffffff",
+        "831e6afffffffff",
+        "841e6a3ffffffff",
+        "851e6a27fffffff",
+        "861e6a24fffffff",
+        "871e6a249ffffff",
+        "881e6a2493fffff",
+        "891e6a24927ffff",
+        "8a1e6a24926ffff",
+        "8b1e6a24926efff",
+        "8c1e6a24926e5ff"
+      ]
+    },
+    {
+      "cell": "8503354ffffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "8003fffffffffff",
+        "81033ffffffffff",
+        "820337fffffffff",
+        "830335fffffffff",
+        "8403355ffffffff",
+        "8503354ffffffff"
+      ]
+    },
+    {
+      "cell": "896cc97768bffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "806dfffffffffff",
+        "816cfffffffffff",
+        "826ccffffffffff",
+        "836cc9fffffffff",
+        "846cc97ffffffff",
+        "856cc977fffffff",
+        "866cc9777ffffff",
+        "876cc9776ffffff",
+        "886cc97769fffff",
+        "896cc97768bffff"
+      ]
+    },
+    {
+      "cell": "8af10922a61ffff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80f1fffffffffff",
+        "81f13ffffffffff",
+        "82f10ffffffffff",
+        "83f109fffffffff",
+        "84f1093ffffffff",
+        "85f10923fffffff",
+        "86f10922fffffff",
+        "87f10922affffff",
+        "88f10922a7fffff",
+        "89f10922a63ffff",
+        "8af10922a61ffff"
+      ]
+    },
+    {
+      "cell": "8aad640d4d87fff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80adfffffffffff",
+        "81ad7ffffffffff",
+        "82ad67fffffffff",
+        "83ad64fffffffff",
+        "84ad641ffffffff",
+        "85ad640ffffffff",
+        "86ad640d7ffffff",
+        "87ad640d4ffffff",
+        "88ad640d4dfffff",
+        "89ad640d4dbffff",
+        "8aad640d4d87fff"
+      ]
+    },
+    {
+      "cell": "8921a228957ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8021fffffffffff",
+        "8121bffffffffff",
+        "8221a7fffffffff",
+        "8321a2fffffffff",
+        "8421a23ffffffff",
+        "8521a22bfffffff",
+        "8621a228fffffff",
+        "8721a2289ffffff",
+        "8821a22895fffff",
+        "8921a228957ffff"
+      ]
+    },
+    {
+      "cell": "8031fffffffffff",
+      "resolution": 0,
+      "pentagon": true,
+      "parents": [
+        "8031fffffffffff"
+      ]
+    },
+    {
+      "cell": "8a9554d8342ffff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "8095fffffffffff",
+        "81957ffffffffff",
+        "829557fffffffff",
+        "839554fffffffff",
+        "849554dffffffff",
+        "859554dbfffffff",
+        "869554d87ffffff",
+        "879554d83ffffff",
+        "889554d835fffff",
+        "899554d8343ffff",
+        "8a9554d8342ffff"
+      ]
+    },
+    {
+      "cell": "8aec11314c4ffff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "80edfffffffffff",
+        "81ec3ffffffffff",
+        "82ec17fffffffff",
+        "83ec11fffffffff",
+        "84ec113ffffffff",
+        "85ec1133fffffff",
+        "86ec11317ffffff",
+        "87ec11314ffffff",
+        "88ec11314dfffff",
+        "89ec11314c7ffff",
+        "8aec11314c4ffff"
+      ]
+    },
+    {
+      "cell": "805dfffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "805dfffffffffff"
+      ]
+    },
+    {
+      "cell": "81efbffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "80effffffffffff",
+        "81efbffffffffff"
+      ]
+    },
+    {
+      "cell": "81f17ffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "80f1fffffffffff",
+        "81f17ffffffffff"
+      ]
+    },
+    {
+      "cell": "89998384d13ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8099fffffffffff",
+        "8199bffffffffff",
+        "829987fffffffff",
+        "839983fffffffff",
+        "8499839ffffffff",
+        "85998387fffffff",
+        "86998384fffffff",
+        "87998384dffffff",
+        "88998384d1fffff",
+        "89998384d13ffff"
+      ]
+    },
+    {
+      "cell": "8fb0b41a0484516",
+      "resolution": 15,
+      "pentagon": false,
+      "parents": [
+        "80b1fffffffffff",
+        "81b0bffffffffff",
+        "82b0b7fffffffff",
+        "83b0b4fffffffff",
+        "84b0b41ffffffff",
+        "85b0b41bfffffff",
+        "86b0b41a7ffffff",
+        "87b0b41a0ffffff",
+        "88b0b41a05fffff",
+        "89b0b41a04bffff",
+        "8ab0b41a0487fff",
+        "8bb0b41a0484fff",
+        "8cb0b41a04845ff",
+        "8db0b41a048453f",
+        "8eb0b41a0484517",
+        "8fb0b41a0484516"
+      ]
+    },
+    {
+      "cell": "8100fffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "8001fffffffffff",
+        "8100fffffffffff"
+      ]
+    },
+    {
+      "cell": "894e6b2b6b3ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "804ffffffffffff",
+        "814e7ffffffffff",
+        "824e6ffffffffff",
+        "834e6bfffffffff",
+        "844e6b3ffffffff",
+        "854e6b2bfffffff",
+        "864e6b2b7ffffff",
+        "874e6b2b6ffffff",
+        "884e6b2b6bfffff",
+        "894e6b2b6b3ffff"
+      ]
+    },
+    {
+      "cell": "803dfffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "803dfffffffffff"
+      ]
+    },
+    {
+      "cell": "8003fffffffffff",
+      "resolution": 0,
+      "pentagon": false,
+      "parents": [
+        "8003fffffffffff"
+      ]
+    },
+    {
+      "cell": "81447ffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "8045fffffffffff",
+        "81447ffffffffff"
+      ]
+    },
+    {
+      "cell": "89808b80da3ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8081fffffffffff",
+        "8180bffffffffff",
+        "82808ffffffffff",
+        "83808bfffffffff",
+        "84808b9ffffffff",
+        "85808b83fffffff",
+        "86808b80fffffff",
+        "87808b80dffffff",
+        "88808b80dbfffff",
+        "89808b80da3ffff"
+      ]
+    },
+    {
+      "cell": "8115bffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "8015fffffffffff",
+        "8115bffffffffff"
+      ]
+    },
+    {
+      "cell": "8fafa62b064571c",
+      "resolution": 15,
+      "pentagon": false,
+      "parents": [
+        "80affffffffffff",
+        "81afbffffffffff",
+        "82afa7fffffffff",
+        "83afa6fffffffff",
+        "84afa63ffffffff",
+        "85afa62bfffffff",
+        "86afa62b7ffffff",
+        "87afa62b0ffffff",
+        "88afa62b07fffff",
+        "89afa62b067ffff",
+        "8aafa62b0647fff",
+        "8bafa62b0645fff",
+        "8cafa62b06457ff",
+        "8dafa62b064573f",
+        "8eafa62b064571f",
+        "8fafa62b064571c"
+      ]
+    },
+    {
+      "cell": "81123ffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "8013fffffffffff",
+        "81123ffffffffff"
+      ]
+    },
+    {
+      "cell": "8974b264603ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8075fffffffffff",
+        "8174bffffffffff",
+        "8274b7fffffffff",
+        "8374b2fffffffff",
+        "8474b27ffffffff",
+        "8574b267fffffff",
+        "8674b2647ffffff",
+        "8774b2646ffffff",
+        "8874b26461fffff",
+        "8974b264603ffff"
+      ]
+    },
+    {
+      "cell": "89c68ac6cb3ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "80c7fffffffffff",
+        "81c6bffffffffff",
+        "82c68ffffffffff",
+        "83c68afffffffff",
+        "84c68adffffffff",
+        "85c68ac7fffffff",
+        "86c68ac6fffffff",
+        "87c68ac6cffffff",
+        "88c68ac6cbfffff",
+        "89c68ac6cb3ffff"
+      ]
+    },
+    {
+      "cell": "850322d3fffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "8003fffffffffff",
+        "81033ffffffffff",
+        "820327fffffffff",
+        "830322fffffffff",
+        "840322dffffffff",
+        "850322d3fffffff"
+      ]
+    },
+    {
+      "cell": "81337ffffffffff",
+      "resolution": 1,
+      "pentagon": false,
+      "parents": [
+        "8033fffffffffff",
+        "81337ffffffffff"
+      ]
+    },
+    {
+      "cell": "8c0b28315810dff",
+      "resolution": 12,
+      "pentagon": false,
+      "parents": [
+        "800bfffffffffff",
+        "810b3ffffffffff",
+        "820b2ffffffffff",
+        "830b28fffffffff",
+        "840b283ffffffff",
+        "850b2833fffffff",
+        "860b28317ffffff",
+        "870b28315ffffff",
+        "880b283159fffff",
+        "890b2831583ffff",
+        "8a0b28315817fff",
+        "8b0b28315810fff",
+        "8c0b28315810dff"
+      ]
+    },
+    {
+      "cell": "89bb2a9680fffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "80bbfffffffffff",
+        "81bb3ffffffffff",
+        "82bb2ffffffffff",
+        "83bb2afffffffff",
+        "84bb2a9ffffffff",
+        "85bb2a97fffffff",
+        "86bb2a96fffffff",
+        "87bb2a968ffffff",
+        "88bb2a9681fffff",
+        "89bb2a9680fffff"
+      ]
+    },
+    {
+      "cell": "851f942ffffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "801ffffffffffff",
+        "811fbffffffffff",
+        "821f97fffffffff",
+        "831f94fffffffff",
+        "841f943ffffffff",
+        "851f942ffffffff"
+      ]
+    },
+    {
+      "cell": "8a139533202ffff",
+      "resolution": 10,
+      "pentagon": false,
+      "parents": [
+        "8013fffffffffff",
+        "8113bffffffffff",
+        "821397fffffffff",
+        "831395fffffffff",
+        "8413953ffffffff",
+        "85139533fffffff",
+        "861395337ffffff",
+        "871395332ffffff",
+        "8813953321fffff",
+        "89139533203ffff",
+        "8a139533202ffff"
+      ]
+    },
+    {
+      "cell": "8532d93bfffffff",
+      "resolution": 5,
+      "pentagon": false,
+      "parents": [
+        "8033fffffffffff",
+        "8132fffffffffff",
+        "8232dffffffffff",
+        "8332d9fffffffff",
+        "8432d93ffffffff",
+        "8532d93bfffffff"
+      ]
+    },
+    {
+      "cell": "8f9d82476c21959",
+      "resolution": 15,
+      "pentagon": false,
+      "parents": [
+        "809dfffffffffff",
+        "819dbffffffffff",
+        "829d87fffffffff",
+        "839d82fffffffff",
+        "849d825ffffffff",
+        "859d8247fffffff",
+        "869d82477ffffff",
+        "879d82476ffffff",
+        "889d82476dfffff",
+        "899d82476c3ffff",
+        "8a9d82476c27fff",
+        "8b9d82476c21fff",
+        "8c9d82476c219ff",
+        "8d9d82476c2197f",
+        "8e9d82476c2195f",
+        "8f9d82476c21959"
+      ]
+    },
+    {
+      "cell": "8009fffffffffff",
+      "resolution": 0,
+      "pentagon": true,
+      "parents": [
+        "8009fffffffffff"
+      ]
+    },
+    {
+      "cell": "801dfffffffffff",
+      "resolution": 0,
+      "pentagon": true,
+      "parents": [
+        "801dfffffffffff"
+      ]
+    },
+    {
+      "cell": "8031fffffffffff",
+      "resolution": 0,
+      "pentagon": true,
+      "parents": [
+        "8031fffffffffff"
+      ]
+    },
+    {
+      "cell": "804dfffffffffff",
+      "resolution": 0,
+      "pentagon": true,
+      "parents": [
+        "804dfffffffffff"
+      ]
+    },
+    {
+      "cell": "81083ffffffffff",
+      "resolution": 1,
+      "pentagon": true,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff"
+      ]
+    },
+    {
+      "cell": "811c3ffffffffff",
+      "resolution": 1,
+      "pentagon": true,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff"
+      ]
+    },
+    {
+      "cell": "81303ffffffffff",
+      "resolution": 1,
+      "pentagon": true,
+      "parents": [
+        "8031fffffffffff",
+        "81303ffffffffff"
+      ]
+    },
+    {
+      "cell": "814c3ffffffffff",
+      "resolution": 1,
+      "pentagon": true,
+      "parents": [
+        "804dfffffffffff",
+        "814c3ffffffffff"
+      ]
+    },
+    {
+      "cell": "830800fffffffff",
+      "resolution": 3,
+      "pentagon": true,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff"
+      ]
+    },
+    {
+      "cell": "831c00fffffffff",
+      "resolution": 3,
+      "pentagon": true,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff"
+      ]
+    },
+    {
+      "cell": "833000fffffffff",
+      "resolution": 3,
+      "pentagon": true,
+      "parents": [
+        "8031fffffffffff",
+        "81303ffffffffff",
+        "823007fffffffff",
+        "833000fffffffff"
+      ]
+    },
+    {
+      "cell": "834c00fffffffff",
+      "resolution": 3,
+      "pentagon": true,
+      "parents": [
+        "804dfffffffffff",
+        "814c3ffffffffff",
+        "824c07fffffffff",
+        "834c00fffffffff"
+      ]
+    },
+    {
+      "cell": "870800000ffffff",
+      "resolution": 7,
+      "pentagon": true,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff"
+      ]
+    },
+    {
+      "cell": "871c00000ffffff",
+      "resolution": 7,
+      "pentagon": true,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff"
+      ]
+    },
+    {
+      "cell": "873000000ffffff",
+      "resolution": 7,
+      "pentagon": true,
+      "parents": [
+        "8031fffffffffff",
+        "81303ffffffffff",
+        "823007fffffffff",
+        "833000fffffffff",
+        "8430001ffffffff",
+        "85300003fffffff",
+        "863000007ffffff",
+        "873000000ffffff"
+      ]
+    },
+    {
+      "cell": "874c00000ffffff",
+      "resolution": 7,
+      "pentagon": true,
+      "parents": [
+        "804dfffffffffff",
+        "814c3ffffffffff",
+        "824c07fffffffff",
+        "834c00fffffffff",
+        "844c001ffffffff",
+        "854c0003fffffff",
+        "864c00007ffffff",
+        "874c00000ffffff"
+      ]
+    },
+    {
+      "cell": "8f0800000000000",
+      "resolution": 15,
+      "pentagon": true,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff",
+        "8808000001fffff",
+        "89080000003ffff",
+        "8a0800000007fff",
+        "8b0800000000fff",
+        "8c08000000001ff",
+        "8d080000000003f",
+        "8e0800000000007",
+        "8f0800000000000"
+      ]
+    },
+    {
+      "cell": "8f1c00000000000",
+      "resolution": 15,
+      "pentagon": true,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff",
+        "881c000001fffff",
+        "891c0000003ffff",
+        "8a1c00000007fff",
+        "8b1c00000000fff",
+        "8c1c000000001ff",
+        "8d1c0000000003f",
+        "8e1c00000000007",
+        "8f1c00000000000"
+      ]
+    },
+    {
+      "cell": "8f3000000000000",
+      "resolution": 15,
+      "pentagon": true,
+      "parents": [
+        "8031fffffffffff",
+        "81303ffffffffff",
+        "823007fffffffff",
+        "833000fffffffff",
+        "8430001ffffffff",
+        "85300003fffffff",
+        "863000007ffffff",
+        "873000000ffffff",
+        "8830000001fffff",
+        "89300000003ffff",
+        "8a3000000007fff",
+        "8b3000000000fff",
+        "8c30000000001ff",
+        "8d300000000003f",
+        "8e3000000000007",
+        "8f3000000000000"
+      ]
+    },
+    {
+      "cell": "8f4c00000000000",
+      "resolution": 15,
+      "pentagon": true,
+      "parents": [
+        "804dfffffffffff",
+        "814c3ffffffffff",
+        "824c07fffffffff",
+        "834c00fffffffff",
+        "844c001ffffffff",
+        "854c0003fffffff",
+        "864c00007ffffff",
+        "874c00000ffffff",
+        "884c000001fffff",
+        "894c0000003ffff",
+        "8a4c00000007fff",
+        "8b4c00000000fff",
+        "8c4c000000001ff",
+        "8d4c0000000003f",
+        "8e4c00000000007",
+        "8f4c00000000000"
+      ]
+    },
+    {
+      "cell": "830800fffffffff",
+      "resolution": 3,
+      "pentagon": true,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff"
+      ]
+    },
+    {
+      "cell": "830802fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830802fffffffff"
+      ]
+    },
+    {
+      "cell": "830803fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830803fffffffff"
+      ]
+    },
+    {
+      "cell": "830804fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830804fffffffff"
+      ]
+    },
+    {
+      "cell": "830805fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830805fffffffff"
+      ]
+    },
+    {
+      "cell": "830806fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830806fffffffff"
+      ]
+    },
+    {
+      "cell": "831c00fffffffff",
+      "resolution": 3,
+      "pentagon": true,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff"
+      ]
+    },
+    {
+      "cell": "831c02fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c02fffffffff"
+      ]
+    },
+    {
+      "cell": "831c03fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c03fffffffff"
+      ]
+    },
+    {
+      "cell": "831c04fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c04fffffffff"
+      ]
+    },
+    {
+      "cell": "831c05fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c05fffffffff"
+      ]
+    },
+    {
+      "cell": "831c06fffffffff",
+      "resolution": 3,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c06fffffffff"
+      ]
+    },
+    {
+      "cell": "89080000003ffff",
+      "resolution": 9,
+      "pentagon": true,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff",
+        "8808000001fffff",
+        "89080000003ffff"
+      ]
+    },
+    {
+      "cell": "8908000000bffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff",
+        "8808000001fffff",
+        "8908000000bffff"
+      ]
+    },
+    {
+      "cell": "8908000000fffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff",
+        "8808000001fffff",
+        "8908000000fffff"
+      ]
+    },
+    {
+      "cell": "89080000013ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff",
+        "8808000001fffff",
+        "89080000013ffff"
+      ]
+    },
+    {
+      "cell": "89080000017ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff",
+        "8808000001fffff",
+        "89080000017ffff"
+      ]
+    },
+    {
+      "cell": "8908000001bffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "8009fffffffffff",
+        "81083ffffffffff",
+        "820807fffffffff",
+        "830800fffffffff",
+        "8408001ffffffff",
+        "85080003fffffff",
+        "860800007ffffff",
+        "870800000ffffff",
+        "8808000001fffff",
+        "8908000001bffff"
+      ]
+    },
+    {
+      "cell": "891c0000003ffff",
+      "resolution": 9,
+      "pentagon": true,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff",
+        "881c000001fffff",
+        "891c0000003ffff"
+      ]
+    },
+    {
+      "cell": "891c000000bffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff",
+        "881c000001fffff",
+        "891c000000bffff"
+      ]
+    },
+    {
+      "cell": "891c000000fffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff",
+        "881c000001fffff",
+        "891c000000fffff"
+      ]
+    },
+    {
+      "cell": "891c0000013ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff",
+        "881c000001fffff",
+        "891c0000013ffff"
+      ]
+    },
+    {
+      "cell": "891c0000017ffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff",
+        "881c000001fffff",
+        "891c0000017ffff"
+      ]
+    },
+    {
+      "cell": "891c000001bffff",
+      "resolution": 9,
+      "pentagon": false,
+      "parents": [
+        "801dfffffffffff",
+        "811c3ffffffffff",
+        "821c07fffffffff",
+        "831c00fffffffff",
+        "841c001ffffffff",
+        "851c0003fffffff",
+        "861c00007ffffff",
+        "871c00000ffffff",
+        "881c000001fffff",
+        "891c000001bffff"
+      ]
+    }
+  ],
+  "invalid": [
+    "1447ffffffffff",
+    "18003fffffffffff",
+    "1801dfffffffffff",
+    "181083ffffffffff",
+    "181f17ffffffffff",
+    "1830800fffffffff",
+    "1831c06fffffffff",
+    "1833000fffffffff",
+    "18a9554d8342ffff",
+    "18c70b202c3363ff",
+    "18f0800000000000",
+    "18f17206a506962e",
+    "280effffffffffff",
+    "2811c3ffffffffff",
+    "2813f7ffffffffff",
+    "281f2bffffffffff",
+    "2831c00fffffffff",
+    "2831c05fffffffff",
+    "28532d93bfffffff",
+    "285f1a5b7fffffff",
+    "2871c00000ffffff",
+    "2874c00000ffffff",
+    "2891c0000013ffff",
+    "2891c0000017ffff",
+    "28974b264603ffff",
+    "28ae901d768c7fff",
+    "28cccdb72c0127ff",
+    "28cef962614299ff",
+    "28f4c00000000000",
+    "28f9d82476c21959",
+    "28fafa62b064571c",
+    "31c00fffffffff",
+    "31c03fffffffff",
+    "31c04fffffffff",
+    "3dfffffffffff",
+    "48001fffffffffff",
+    "4810c3ffffffffff",
+    "481337ffffffffff",
+    "481f17ffffffffff",
+    "481f2bffffffffff",
+    "4831c00fffffffff",
+    "4831c04fffffffff",
+    "4831c06fffffffff",
+    "4870800000ffffff",
+    "4871c00000ffffff",
+    "489080000003ffff",
+    "489998384d13ffff",
+    "48a089b1a2177fff",
+    "48a139533202ffff",
+    "48c70b202c3363ff",
+    "48f3000000000000",
+    "50322d3fffffff",
+    "51aad63fffffff",
+    "52213cbfffffff",
+    "532d93bfffffff",
+    "5dfffffffffff",
+    "8001fefffffffff",
+    "8001ffffeffffff",
+    "8001fffffefffff",
+    "8001ffffffff7ff",
+    "8001ffffffffdff",
+    "8001ffffffffeff",
+    "8001fffffffff7f",
+    "8001fffffffffef",
+    "80037ffffffffff",
+    "8003dffffffffff",
+    "8003fefffffffff",
+    "8003ffffbffffff",
+    "8003ffffffbffff",
+    "8003ffffffdffff",
+    "8003fffffffdfff",
+    "8003ffffffff7ff",
+    "8003ffffffffbff",
+    "80083ffffffffff",
+    "8009dffffffffff",
+    "8009effffffffff",
+    "8009ffbffffffff",
+    "8009fff7fffffff",
+    "8009fffffdfffff",
+    "8009ffffffeffff",
+    "8009fffffff7fff",
+    "8009fffffffefff",
+    "8009ffffffffff7",
+    "8009ffffffffffe",
+    "801ddffffffffff",
+    "801dffbffffffff",
+    "801dfff7fffffff",
+    "801dffffffbffff",
+    "801dffffffffeff",
+    "801dfffffffffdf",
+    "801dffffffffffb",
+    "801dffffffffffd",
+    "8030fffffffffff",
+    "8031fbfffffffff",
+    "8031fdfffffffff",
+    "8031fefffffffff",
+    "8031fffefffffff",
+    "8031ffff7ffffff",
+    "8031ffffdffffff",
+    "8031ffffeffffff",
+    "8031fffffefffff",
+    "8031ffffffdffff",
+    "8031fffffffefff",
+    "8031ffffffffdff",
+    "8031fffffffff7f",
+    "8031fffffffffdf",
+    "8031ffffffffffb",
+    "8031ffffffffffe",
+    "8036fffffffffff",
+    "8037fefffffffff",
+    "8037fffefffffff",
+    "8037ffffeffffff",
+    "8037fffffefffff",
+    "8037ffffff7ffff",
+    "8037fffffffefff",
+    "8037ffffffff7ff",
+    "803d7ffffffffff",
+    "803dbffffffffff",
+    "803dfefffffffff",
+    "803dffeffffffff",
+    "803dfff7fffffff",
+    "803dfffdfffffff",
+    "803dffffffffeff",
+    "804deffffffffff",
+    "804df7fffffffff",
+    "804dfdfffffffff",
+    "804dfefffffffff",
+    "804dfffffffff7f",
+    "804dfffffffffdf",
+    "804dfffffffffef",
+    "805dfdfffffffff",
+    "805dff7ffffffff",
+    "805dffdffffffff",
+    "805dfff7fffffff",
+    "805dffffeffffff",
+    "805dffffffffbff",
+    "805dffffffffeff",
+    "805dffffffffffd",
+    "80d5bffffffffff",
+    "80d5fffbfffffff",
+    "80d5ffffffeffff",
+    "80d5ffffffffbff",
+    "80d5fffffffff7f",
+    "80d5ffffffffffb",
+    "80d5ffffffffffe",
+    "80ddff7ffffffff",
+    "80ddffffeffffff",
+    "80ddfffff7fffff",
+    "80ddfffffbfffff",
+    "80ddfffffffdfff"
+  ]
+}
