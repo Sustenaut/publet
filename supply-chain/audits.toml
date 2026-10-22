@@ -1,7 +1,23 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.rustls-webpki]]
+who = "David Schryer <schryer@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.103.15 -> 0.103.16"
+notes = "Adds DISTRUSTED_SPKIS: eight 118-byte P-384 SPKI blobs pulled in with include_bytes! from src/data/distrusted/. build_chain_inner returns the new Error::CertDistrusted when the path head SPKI or a candidate trust anchor SPKI is on the list, replacing a TODO check_distrust. EndEntityCert::verify_for_usage passes the list, and every ChainOptions construction sets it. Error is non_exhaustive, so the new variant is not breaking, and it ranks with CertRevoked (270). Tests cover distrusted and cross-signed intermediates. The change only rejects more paths. The eight keys were taken to be the emSign G3 intermediates per rustls/webpki#546, and were not matched against the certificates independently."
+
+[[audits.webpki-root-certs]]
+who = "David Schryer <schryer@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.9 -> 1.0.10"
+notes = 'Delta only removes the "emSign ECC Root CA - G3" CertificateDer from the bundled list, and bumps the version and rust-version (1.70 to 1.71). No code changes.'
+
+[[audits.webpki-roots]]
+who = "David Schryer <schryer@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.9 -> 1.0.10"
+notes = 'Delta only removes the "emSign ECC Root CA - G3" TrustAnchor (subject, SPKI and its PEM comment) from the bundled roots, and bumps the version and rust-version (1.70 to 1.71). No code changes.'
 
 [[trusted.autocfg]]
 criteria = "safe-to-deploy"
