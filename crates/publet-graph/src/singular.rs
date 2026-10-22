@@ -5,7 +5,7 @@
 //! sample, a company -- defined by a `definitional` claim with `defines.sort`
 //! `singular`. A fact is a value in a table whose `about` column names the
 //! singular and whose value column is of a quantity concept. A path key such
-//! as `area.site.tallinn.basement.floor_area` is computed from the names in
+//! as `place.site.tallinn.basement.floor_area` is computed from the names in
 //! those claims: the singular's class and the classes it narrows, the chain
 //! of singulars it is part of, and the concept. Nothing is registered: two
 //! readers holding the same claims compute the same paths.
@@ -218,7 +218,7 @@ impl Graph {
 
     /// A singular's path key without a concept: its class path, then the
     /// name of each singular from the outermost it is part of down to it
-    /// (Section 5.9.6). `area.site.tallinn.basement`.
+    /// (Section 5.9.6). `place.site.tallinn.basement`.
     ///
     /// # Errors
     ///

@@ -62,7 +62,7 @@
     },
     {
       "category": "added",
-      "change": "pub get PATH finds a fact by its path key, such as area.site.tallinn.basement.floor_area, computed from the names in the claims held: the head of each matching fact lineage (or the member every anchor over it recommends) with its value, unit, measure, evidence roles, and the status they imply by the convention of spec Section 5.9.7 (confirmed, estimate or to-verify); a path whose segment is an H3 cell, such as area.87089b1a2ffffff, finds the facts about every singular located in the cell by H3's identifier hierarchy"
+      "change": "pub get PATH finds a fact by its path key, such as place.site.tallinn.basement.floor_area, computed from the names in the claims held: the head of each matching fact lineage (or the member every anchor over it recommends) with its value, unit, measure, evidence roles, and the status they imply by the convention of spec Section 5.9.7 (confirmed, estimate or to-verify); a path whose segment is an H3 cell, such as place.87089b1a2ffffff, finds the facts about every singular located in the cell by H3's identifier hierarchy"
     },
     {
       "category": "added",
@@ -78,7 +78,7 @@
     },
     {
       "category": "added",
-      "change": "Spec Section 5.9.1 fixes the PDC separator: a narrower class is the code it extends, `~`, and a number, such as (1/9)~1; Section 5.9.6 documents the Sustenaut usage pattern, with places under a concept named area at UDC (1/9), so place paths begin area."
+      "change": "Spec Section 5.9.1 fixes the PDC separator: a narrower class is the code it extends, `~`, and a number, such as (1/9)~1; Section 5.9.6 documents the Sustenaut usage pattern, with places under the concept Place at UDC (1/9), so place paths begin place."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

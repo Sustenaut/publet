@@ -30,11 +30,11 @@ THREE_POINT = {
         {"name": "high", "type": "quantity", "meaning": "the most it plausibly is"},
     ],
 }
-# The usage pattern of spec Section 5.9.6: places under a concept named
-# "area" at UDC's place class (1/9), and narrower PDC codes written with `~`.
-AREA = "(1/9)"
+# The usage pattern of spec Section 5.9.6: places under the concept "Place"
+# at UDC's place class (1/9), and narrower PDC codes written with `~`.
+PLACE = "(1/9)"
 SITE = "(1/9)~1"
-FLOOR_AREA = "69~1"
+FLOOR_PLACE = "69~1"
 CEILING_HEIGHT = "69~2"
 # A resolution-9 cell in central Tallinn.
 TALLINN_CELL = "89089b1a217ffff"
@@ -101,10 +101,10 @@ def tallinn_basement(runner):
     s["ucum"] = _defined(runner, "ucum", "UCUM: the Unified Code for Units of Measure, version 2.2.", UCUM)
     s["area_kind"] = _defined(runner, "area_kind", "area: the size of a surface.", AREA_KIND, s["ucum"])
     s["exact"] = _defined(runner, "exact", "exact value: a value stated as exact, such as a count or a figure measured or confirmed.", EXACT)
-    s["area"] = _defined(runner, "area", "area: a place, as UDC's place class (1/9) has it.",
-                         {"sort": "concept", "pdc": AREA, "name": "area"})
+    s["place"] = _defined(runner, "place", "Place: a place, as UDC's place class (1/9) has it.",
+                          {"sort": "concept", "pdc": PLACE, "name": "Place"})
     s["site"] = _defined(runner, "site", "site: a place where Sustenaut grows, such as a basement or a shop.",
-                         {"sort": "concept", "pdc": SITE, "name": "site"}, s["area"])
+                         {"sort": "concept", "pdc": SITE, "name": "site"}, s["place"])
     s["floor_area"] = _defined(
         runner, "floor_area", "floor area: the area of a room's floor, measured inside its walls.",
         {"sort": "concept", "pdc": FLOOR_AREA, "name": "floor area", "kind": s["area_kind"],
@@ -113,11 +113,11 @@ def tallinn_basement(runner):
     s["tallinn"] = _defined(
         runner, "tallinn", "Tallinn: Sustenaut's growing site in Tallinn.",
         {"sort": "singular", "name": "Tallinn", "class": SITE, "location": {"h3": TALLINN_CELL}},
-        s["site"], s["area"])
+        s["site"], s["place"])
     s["basement"] = _defined(
         runner, "basement", "basement: the basement of Sustenaut's Tallinn site.",
-        {"sort": "singular", "name": "basement", "class": AREA, "part_of": s["tallinn"]},
-        s["area"])
+        {"sort": "singular", "name": "basement", "class": PLACE, "part_of": s["tallinn"]},
+        s["place"])
     s["method"] = _compose(runner, "--class=procedural", "--scope=unconditional",
                            "--content=Measure the floor's length and width inside the walls with a tape, and multiply.")
     s["statement"] = _compose(runner, "--class=attributive", "--scope=unconditional",
@@ -175,22 +175,22 @@ def dispute(runner, ctx):
 
 @when("I compose a singular defining", target_fixture="result")
 def compose_singular(runner, ctx, docstring: str):
-    return _define(runner, "bad", "shed: a shed.", json.loads(docstring), ctx["s"]["area"])
+    return _define(runner, "bad", "shed: a shed.", json.loads(docstring), ctx["s"]["place"])
 
 
 @when(parsers.parse('I compose a singular of class "{code}" with no concept for it'),
       target_fixture="result")
 def compose_unclassed(runner, ctx, code: str):
     return _define(runner, "unclassed", "shed: the shed at the Tallinn site.",
-                   {"sort": "singular", "name": "shed", "class": code}, ctx["s"]["area"])
+                   {"sort": "singular", "name": "shed", "class": code}, ctx["s"]["place"])
 
 
 @when("I compose a singular part of the floor area concept", target_fixture="result")
 def compose_part_of_concept(runner, ctx):
     s = ctx["s"]
     return _define(runner, "wrong_whole", "shed: a shed.",
-                   {"sort": "singular", "name": "shed", "class": AREA, "part_of": s["floor_area"]},
-                   s["area"])
+                   {"sort": "singular", "name": "shed", "class": PLACE, "part_of": s["floor_area"]},
+                   s["place"])
 
 
 @when(parsers.parse('I compose a fact about "{about}"'), target_fixture="result")
@@ -238,11 +238,11 @@ def reading_basement(runner, ctx, fragment: str):
     assert fragment in out.stdout, out.stdout
 
 
-@then("the basement presupposes the Tallinn site and the area concept")
+@then("the basement presupposes the Tallinn site and the Place concept")
 def basement_presupposes(runner, ctx):
     s = ctx["s"]
     listed = _depends(runner, s["basement"])
-    assert s["tallinn"] in listed and s["area"] in listed, listed
+    assert s["tallinn"] in listed and s["place"] in listed, listed
 
 
 @then("the floor area fact presupposes the basement")

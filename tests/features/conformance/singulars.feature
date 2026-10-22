@@ -12,7 +12,7 @@ Feature: A singular is one particular thing, and a fact is a value about it
   @must-5.9.1 @must-5.9.6
   Scenario: A singular names its class and what it is part of, which it presupposes
     Then reading the basement shows "class     definitional"
-    And the basement presupposes the Tallinn site and the area concept
+    And the basement presupposes the Tallinn site and the Place concept
 
   @must-5.9.1
   Scenario Outline: A singular of the wrong shape is refused

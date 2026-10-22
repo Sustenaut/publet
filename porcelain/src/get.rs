@@ -1,6 +1,6 @@
 //! `pub get PATH`: the current value of a fact, found by its path key.
 //!
-//! A path key such as `area.site.tallinn.basement.floor_area` names a
+//! A path key such as `place.site.tallinn.basement.floor_area` names a
 //! singular by its class and the chain of things it is part of, then a
 //! quantity concept (Section 5.9.6). The path is computed from the claims
 //! held, never registered, so `pub get` reads every singular here, finds the
@@ -8,7 +8,7 @@
 //! a value about it: the value, its unit and measure, the roles of its
 //! evidence, and the status those imply by convention (Section 5.9.7).
 //!
-//! A segment that is an H3 cell asks spatially: `area.<cell>` is every fact
+//! A segment that is an H3 cell asks spatially: `place.<cell>` is every fact
 //! about a singular of that class located in the cell, by H3's identifier
 //! hierarchy rather than by geometry.
 
@@ -122,7 +122,7 @@ fn within<'g>(
         [one] => Some(*one),
         _ => {
             return Err(
-                "after an H3 cell, a path names at most a concept: area.<cell>.floor_area"
+                "after an H3 cell, a path names at most a concept: place.<cell>.floor_area"
                     .to_owned(),
             );
         }

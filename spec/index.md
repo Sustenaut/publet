@@ -1160,9 +1160,9 @@ For a singular, the segments are
 Each name becomes a segment by lowercasing it and making each run of
 characters that are not letters or digits one underscore, with none at
 either end: "Floor area" is `floor_area`. The Tallinn site, a singular of
-the class "site" narrowing the class "area", has the path `area.site.tallinn`; the
-basement that is part of it, `area.site.tallinn.basement`; and its floor
-area, `area.site.tallinn.basement.floor_area`.
+the class "site" narrowing the class "Place", has the path `place.site.tallinn`; the
+basement that is part of it, `place.site.tallinn.basement`; and its floor
+area, `place.site.tallinn.basement.floor_area`.
 
 A path names what the claims held say, so two readers holding the same
 claims compute the same paths, and a renamed singular has a new path from
@@ -1175,7 +1175,7 @@ by CID.
 
 **Places.** Under a class of places -- the UDC Summary's place class (1/9)
 and the classes narrowing it -- a segment MAY instead be an H3 cell in its
-canonical form, `area.<cell>`, naming every singular of the class whose
+canonical form, `place.<cell>`, naming every singular of the class whose
 location is in the cell. A singular with no `location` is where the
 nearest singular it is part of is. "In" is by H3's identifier hierarchy:
 a cell is in another when its parent at the other's resolution is the
@@ -1188,18 +1188,18 @@ from the cells' boundaries, and that is not a lookup by path.
 
 **Usage pattern.** *Non-normative.* The Sustenaut corpus places every
 place under one subject concept at the UDC place class (1/9), named
-"area" rather than UDC's "Place", so that every place path begins
-`area.`; classes of places narrow it with `~`, such as "site" at
-`(1/9)~1`, and the parts of a place that are places themselves, such as
-a basement, are of the class "area". A singular's `class` is the
+"Place" as UDC names it, so that every place path begins `place.`;
+classes of places narrow it with `~`, such as "site" at `(1/9)~1`, and
+the parts of a place that are places themselves, such as a basement, are
+of the class "Place". A singular's `class` is the
 narrowest class that fits it; the path takes its class segments from the
 outermost whole only, so the basement's own class does not appear in
-`area.site.tallinn.basement`. A location is given on the outermost whole
+`place.site.tallinn.basement`. A location is given on the outermost whole
 that has one, at the coarsest cell the purpose needs, and parts inherit
 it. A quantity concept a fact table cites, such as floor area, goes at a
-code narrowing the UDC class of its subject. The name "area" is a choice
-for this corpus: another corpus may define a concept named "Place" at
-(1/9), and a reader holding both in one closure sees the class as
+code narrowing the UDC class of its subject. Keeping UDC's own name means
+another corpus defining (1/9) from the UDC Summary agrees with this one;
+a concept of another name at (1/9) in the same closure makes the class
 contested (no path) until one is chosen, as for any code (Section 5.9.1).
 
 **Lookup.** *Non-normative.* Resolving a path key reads the singulars held,
@@ -1209,7 +1209,7 @@ comes from a claim on a lineage (Section 6.1); what a lookup reports is
 the head of that lineage, or the member every anchor held over it
 recommends (Section 9.3), with the value, its unit, its measure, and the
 roles of its evidence. A branched lineage reports every head. `pub get`
-in the reference implementation is this lookup, and `pub get area.<cell>`
+in the reference implementation is this lookup, and `pub get place.<cell>`
 its spatial form.
 
 #### 5.9.7 Status as Data
@@ -1236,14 +1236,14 @@ A viewpoint MAY weigh these differently: which keys' assessments count is
 its business (Section 11), and the convention reads annotations before
 any viewpoint does.
 
-*Worked example.* The Tallinn basement is a singular of the class "area",
+*Worked example.* The Tallinn basement is a singular of the class "Place",
 part of the singular for the Tallinn site, whose class "site" narrows
-"area". An `empirical` claim states its floor area in a fact table: one row
+"Place". An `empirical` claim states its floor area in a fact table: one row
 about the basement, the value `{ value: "50" }` in square metres under the
 measure "exact value" (`describes: "exact"`), and the concept floor area.
 Its evidence is the `method` by which the floor was measured and a
 `statement` naming an `attributive` claim that the owner confirmed 50 m².
-Nothing annotates it, so `area.site.tallinn.basement.floor_area` is
+Nothing annotates it, so `place.site.tallinn.basement.floor_area` is
 **confirmed**. Had the owner given a range, the measure would be a
 three-point estimate and the fact an **estimate**; and if a visitor filed
 a dispute measuring 46 m², the fact would be **to-verify** until a
@@ -3171,7 +3171,7 @@ than a class: a basement, a growing box, a soil sample, a company. It names
 the class it is a member of by PDC code, and optionally the singular it is
 part of and the H3 cell it is in. A **fact** is a value in a table whose
 `about` column names the singular, in a column naming a quantity concept.
-A **path key**, such as `area.site.tallinn.basement.floor_area`, finds a
+A **path key**, such as `place.site.tallinn.basement.floor_area`, finds a
 fact by the names of the singular's class, the chain of singulars it is
 part of, and the concept; it is computed from the claims held, never
 registered (Section 5.9.6).
