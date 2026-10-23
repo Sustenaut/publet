@@ -322,16 +322,26 @@ def versions():
     })
 
 
-def h3_cells():
-    import random
+def drawn(label, n):
+    """A number below n, the same on every run, read from a hash of label.
 
+    The H3 vectors need points spread over the globe, not unpredictable
+    ones, so they are taken from SHA-256 rather than a random generator.
+    """
+    return int.from_bytes(hashlib.sha256(label.encode()).digest()[:8], "big") % n
+
+
+def h3_cells():
     import h3
 
-    rng = random.Random(20261022)
     # Tallinn, where the worked example's site is; points anywhere; and
     # pentagons with their children, where one direction is missing.
-    points = [(59.437, 24.7536)] + [(rng.uniform(-89.9, 89.9), rng.uniform(-180, 180)) for _ in range(60)]
-    cells = [h3.latlng_to_cell(lat, lng, rng.choice([0, 1, 5, 9, 10, 12, 15])) for lat, lng in points]
+    resolutions = [0, 1, 5, 9, 10, 12, 15]
+    points = [(59.437, 24.7536, 10)] + [
+        (drawn(f"lat {i}", 1_798_000) / 10_000 - 89.9, drawn(f"lng {i}", 3_600_000) / 10_000 - 180,
+         resolutions[drawn(f"res {i}", len(resolutions))])
+        for i in range(60)]
+    cells = [h3.latlng_to_cell(lat, lng, res) for lat, lng, res in points]
     for res in (0, 1, 3, 7, 15):
         cells += sorted(h3.get_pentagons(res))[:4]
     for res in (2, 8):
@@ -340,11 +350,12 @@ def h3_cells():
     valid = [{"cell": c, "resolution": h3.get_resolution(c), "pentagon": h3.is_pentagon(c),
               "parents": [h3.cell_to_parent(c, r) for r in range(h3.get_resolution(c) + 1)]}
              for c in cells]
-    # One bit flipped in a valid identifier, kept where H3 says it is no cell.
+    # Each bit of a valid identifier flipped in turn, kept where H3 says
+    # the result is no cell.
     invalid = set()
     for c in cells:
         n = int(c, 16)
-        for bit in rng.sample(range(64), 12):
+        for bit in range(64):
             flipped = format(n ^ (1 << bit), "x")
             if not h3.is_valid_cell(flipped):
                 invalid.add(flipped)
@@ -353,7 +364,7 @@ def h3_cells():
                        "resolution from 0 to its own, and identifiers that are not cells.",
         "source": f"h3-py {h3.__version__}, the H3 project's binding of its C library {h3.versions()['c']}.",
         "valid": valid,
-        "invalid": sorted(invalid)[:150],
+        "invalid": sorted(invalid, key=lambda c: hashlib.sha256(c.encode()).digest())[:300],
     })
 
 

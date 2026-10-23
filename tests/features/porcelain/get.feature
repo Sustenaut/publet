@@ -57,3 +57,38 @@ Feature: pub get finds the current value of a fact by its path key
     When I get "place.site.tartu.basement.floor_area"
     Then it fails
     And stderr mentions "nothing held here answers"
+
+  Scenario: A branched lineage shows every head
+    Given the floor area fact is revised to 52
+    And the floor area fact is revised to 48
+    When I get "place.site.tallinn.basement.floor_area"
+    Then it succeeds
+    And it prints "lineage   branched: 2 heads"
+    And it prints "value     value 52"
+    And it prints "value     value 48"
+
+  Scenario: A value not yet known is to be verified
+    Given the floor area fact is revised to unknown
+    When I get "place.site.tallinn.basement.floor_area"
+    Then it succeeds
+    And it prints "value     null: not yet known"
+    And it prints "status    to-verify (no value is stated yet"
+
+  Scenario Outline: A malformed lookup is refused
+    When I run pub get with <arguments>
+    Then it fails
+    And stderr mentions "<reason>"
+
+    Examples:
+      | arguments                                         | reason                          |
+      | no arguments                                      | usage: pub get PATH             |
+      | "place..basement"                                 | a path is segments joined by dots |
+      | "place.site" and "place.site"                     | one path at a time              |
+      | "--json"                                          | unknown argument: --json        |
+      | "place.87089b1a2ffffff.floor_area.extra"          | after an H3 cell, a path names at most a concept |
+
+  Scenario: A class whose code has concepts of two names has no path
+    Given a shed whose class has concepts named "Place" and "Area"
+    When I get "place.shed"
+    Then it fails
+    And stderr mentions "nothing held here answers"

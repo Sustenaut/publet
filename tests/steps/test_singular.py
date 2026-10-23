@@ -130,10 +130,11 @@ def tallinn_basement(runner):
     return ctx
 
 
-@given(parsers.parse("the floor area fact is revised to {value:d}"))
-def revise_fact(runner, ctx, value: int):
+@given(parsers.parse("the floor area fact is revised to {value}"))
+def revise_fact(runner, ctx, value: str):
     s = ctx["s"]
-    data = _fact_table(s["basement"], {"value": str(value)}, kind=s["area_kind"], measure=s["exact"])
+    cell = None if value == "unknown" else {"value": value}
+    data = _fact_table(s["basement"], cell, kind=s["area_kind"], measure=s["exact"])
     out = runner.run("pub", "revise", s["fact"], f"--data={_write(runner, 'next.json', data)}")
     assert out.code == 0, out.stderr
 
@@ -167,6 +168,18 @@ def dispute(runner, ctx):
                        "--content=The basement's floor area should be measured again before the lease is signed.")
     out = runner.run("pub", "relate", "--scope=unconditional", "--kind=disputes",
                      f"--from={counter}", f"--to={s['fact']}")
+    assert out.code == 0, out.stderr
+
+
+@given(parsers.parse('a shed whose class has concepts named "{first}" and "{second}"'))
+def contested_shed(runner, ctx, first: str, second: str):
+    s = ctx["s"]
+    rival = _defined(runner, "rival", f"{second}: a place, under another name.",
+                     {"sort": "concept", "pdc": PLACE, "name": second})
+    shed = _defined(runner, "shed", "shed: the shed behind the Tallinn site.",
+                    {"sort": "singular", "name": "shed", "class": PLACE}, s["place"], rival)
+    data = _fact_table(shed, {"value": "6"}, kind=s["area_kind"], measure=s["exact"])
+    out = _compose_fact(runner, ctx, data)
     assert out.code == 0, out.stderr
 
 
@@ -222,6 +235,12 @@ def compose_fact_unknown_concept(runner, ctx, code: str):
     s = ctx["s"]
     return _compose_fact(runner, ctx, _fact_table(s["basement"], {"value": "50"}, concept=code,
                                                   kind=s["area_kind"], measure=s["exact"]))
+
+
+@when(parsers.parse("I run pub get with {arguments}"), target_fixture="result")
+def get_with(runner, arguments: str):
+    args = [] if arguments == "no arguments" else [a.strip('" ') for a in arguments.split(" and ")]
+    return runner.run("pub", "get", *args)
 
 
 @when(parsers.parse('I get "{path}"'), target_fixture="result")
