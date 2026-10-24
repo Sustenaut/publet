@@ -388,7 +388,7 @@ version = "0.11.11"
 criteria = "safe-to-deploy"
 
 [[exemptions.quinn-proto]]
-version = "0.11.17"
+version = "0.11.19"
 criteria = "safe-to-deploy"
 
 [[exemptions.quinn-udp]]
@@ -563,7 +563,7 @@ criteria = "safe-to-deploy"
 notes = "Google audited 1.6.0 as safe-to-deploy and deltas up to 1.9.0; the 1.9.0 to 1.13.2 diff is unreviewed. As of 2026-10-05."
 
 [[exemptions.tokio]]
-version = "1.53.1"
+version = "1.54.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.tokio-macros]]
