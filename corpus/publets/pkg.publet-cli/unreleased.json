@@ -51,6 +51,10 @@
     {
       "category": "security",
       "change": "pub's HTTPS connections (pub sync, pub serve) no longer trust the distrusted emSign ECC Root CA - G3 or certificate paths through its distrusted intermediates: rustls-webpki 0.103.16, webpki-roots 1.0.10 and webpki-root-certs 1.0.10 (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383)"
+    },
+    {
+      "category": "security",
+      "change": "tokio 1.54.1 fixes RUSTSEC-2026-0386 and quinn-proto 0.11.19 fixes RUSTSEC-2026-0338, -0340 and -0343 in pub's network client and server (pub sync, pub serve); their cargo vet exemptions move to the fixed versions"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
