@@ -4,5 +4,6 @@
   "published": [
     "publet-core",
     "publet-algorithms"
-  ]
+  ],
+  "protect": {"checks": ["ci / passed", "release / release"]}
 }
