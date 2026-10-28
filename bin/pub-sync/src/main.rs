@@ -5,8 +5,10 @@
 //! Section 14.3.2 forbids that and because partial holdings fingerprint what
 //! a reader has been working with.
 //!
-//! Every object received is verified against its own identifier before it is
-//! stored, so a peer serving altered bytes is caught here rather than later.
+//! Each object is stored under the identifier of the bytes received. A peer
+//! serving altered bytes cannot pass them off as the object they alter:
+//! they have an identifier of their own. This command does not check the
+//! objects received against the domain's generation records.
 
 use std::process::ExitCode;
 

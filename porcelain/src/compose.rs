@@ -54,22 +54,47 @@ impl SourceArg {
 /// of flags is how the two would come to disagree about what one means.
 #[derive(Debug, Default)]
 pub(crate) struct ClaimFlags {
+    /// `--class=`: the claim's class, such as `formal` or `empirical`.
     pub(crate) class: Option<String>,
+    /// `--content=`: the one sentence the claim asserts.
     pub(crate) content: Option<String>,
+    /// `--scope=`: the conditions the claim is asserted under.
     pub(crate) scope: Option<String>,
+    /// `--lang=`: the language of `content`. `pub compose` writes `en`
+    /// when it is not given.
     pub(crate) lang: Option<String>,
+    /// `--depends=`, repeatable: the claims this one presupposes.
     pub(crate) depends: Vec<String>,
+    /// `--method=`: the `procedural` claim saying how the observation may
+    /// be repeated. An empirical claim needs it or `--derivation`.
     pub(crate) method: Option<String>,
+    /// `--derivation=`: the calculation that computed the claim's values,
+    /// written as `derivation` evidence.
     pub(crate) derivation: Option<String>,
+    /// `--defines=FILE`: a JSON file holding the claim's `defines` field.
     pub(crate) defines: Option<PathBuf>,
+    /// `--computes=FILE`: a JSON file holding the claim's `computes` field.
     pub(crate) computes: Option<PathBuf>,
+    /// `--cite=`, repeatable: external references, written as `citation`
+    /// evidence.
     pub(crate) cites: Vec<String>,
+    /// `--cite-note=`, repeatable: the note on the `--cite` at the same
+    /// position.
     pub(crate) cite_notes: Vec<String>,
+    /// `--statement=`, repeatable: `statement` evidence.
     pub(crate) statements: Vec<String>,
+    /// `--quote=`, repeatable: `quote` evidence.
     pub(crate) quotes: Vec<String>,
+    /// `--source=`, repeatable, each with the `--source-*` flags that
+    /// follow it.
     pub(crate) sources: Vec<SourceArg>,
+    /// `--data=FILE`: the JSON file the claim's `data` is read from.
     pub(crate) data: Option<PathBuf>,
+    /// `--no-data`: drop the old version's `data`. Only `pub revise`
+    /// accepts it.
     pub(crate) no_data: bool,
+    /// `--created=`: the creation instant. [`DEFAULT_CREATED`] when not
+    /// given.
     pub(crate) created: Option<String>,
 }
 
@@ -522,12 +547,14 @@ pub(crate) fn check_cite_notes(cites: &[String], cite_notes: &[String]) -> Resul
 /// A citation names a source lying outside this corpus's integrity
 /// guarantees, so `kind` is `"external"` and `ref` is whatever the author
 /// gave -- a DOI, a URL, a stable identifier -- displayed as unverified,
-/// per Section 5.5. This is deliberately the only evidence role `pub
-/// compose` writes besides `method`: `measurement`, `derivation`, and
-/// `replication` name evidence a claim's own author produced, which is a
-/// different act from citing someone else's, and conflating them here
-/// would let a citation masquerade as one of the roles Section 11.4
-/// weighs more heavily.
+/// per Section 5.5. A citation is only ever written as `citation`:
+/// `measurement` and `replication` name evidence a claim's own author
+/// produced, which is a different act from citing someone else's, and
+/// writing a citation as one of them would let it pass for a role Section
+/// 11.4 weighs more heavily. `pub compose` writes no `measurement` or
+/// `replication` entry at all. It adds its other roles elsewhere: a
+/// `derivation` entry for `--derivation`, [`stated_entries`] for
+/// `--statement` and `--quote`, and [`source_entries`] for `--source`.
 pub(crate) fn evidence_for(method: Option<&str>, cites: &[String], cite_notes: &[String]) -> Value {
     let mut entries = Vec::new();
 

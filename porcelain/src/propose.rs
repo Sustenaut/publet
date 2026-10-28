@@ -1,19 +1,23 @@
-//! `pub propose`: submit objects, recording what they were composed against.
+//! `pub propose`: report what has moved under objects since the generation
+//! they were composed against.
 //!
-//! A proposal declares its basis: the generation the author read. The domain
-//! may advance between reading and landing, and under R1 nothing is
-//! overwritten, so a stale basis cannot cause a lost update. It is
-//! information to disclose, never a reason to refuse.
+//! A proposal declares its basis: the generation the author read. The
+//! command takes it as `--basis=N`. Without one, it uses the head
+//! generation this workspace holds for its domain, or 0 if it holds none.
+//! It sends nothing to a peer and stores nothing.
 //!
-//! What the command does with it is report the **relevant delta**: the three
-//! ways a proposal can be stale, each of which has a different remedy.
+//! The domain may advance between reading and landing, and under R1
+//! nothing is overwritten, so a stale basis cannot cause a lost update. It
+//! is information to disclose, never a reason to refuse. What the command
+//! does with it is report the **relevant delta**: the three ways a
+//! proposal can be stale, each of which has a different remedy.
 
 use publet_core::Cid;
 use publet_graph::{Graph, Lineage, RelationKind, load};
 
 use crate::workspace::Workspace;
 
-/// Submit objects with a recorded basis.
+/// Print the basis and, for each object named, the ways it is stale.
 ///
 /// # Errors
 ///

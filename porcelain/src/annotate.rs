@@ -1,7 +1,7 @@
 //! `pub annotate`: author an annotation.
 //!
 //! Annotations are how anything is said *about* an object without touching
-//! it (R3, R6). Four kinds are covered here because four were blocking:
+//! it (R3, R6). This command writes nine kinds:
 //!
 //! * `usage` -- corpus evidence. Section 5.2 permits no verdict on a
 //!   `definitional` claim and settles it by usage instead, so without this
@@ -12,12 +12,18 @@
 //!   discipline as `classifies` applied to Section 9.1's citation tags.
 //! * `trusts` -- trust graph edges, optionally scoped to subjects.
 //! * `affiliated` -- Section 10.4, load-bearing for independence.
+//! * `assessment` -- a Section 5.2 judgement of a claim, such as
+//!   `sound-in-scope`, with the `--grounds` it rests on.
+//! * `attests` -- a Section 10.2 claim by one key about another, such as
+//!   `same-person-as`.
+//! * `timestamped` -- Section 10.5: when an independent service observed
+//!   the object.
+//! * `verdict` -- `affirm`, `deny` or `abstain`.
 //!
-//! `verdict` is here too, because a command that writes annotations and
-//! cannot write the commonest one would be strange. The class rule that
-//! rejects a verdict on a non-truth-apt claim is not reimplemented: as in
-//! `pub relate`, the object is offered to the loader and stored only if the
-//! loader accepts, so there is one implementation of the rule.
+//! The class rule that rejects a verdict on a non-truth-apt claim is not
+//! reimplemented: as in `pub relate`, the object is offered to the loader
+//! and stored only if the loader accepts, so there is one implementation
+//! of the rule.
 
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
 
@@ -48,6 +54,8 @@ const ASSESSMENTS: [&str; 6] = [
     "undetermined",
 ];
 
+/// Section 10.4: the roles an `affiliated` annotation may give an
+/// organization.
 const ROLES: [&str; 5] = [
     "employer",
     "funder",
@@ -133,7 +141,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     }
 
     let kind_id = kind
-        .ok_or("--kind is required: usage, classifies, tagged, trusts, affiliated, or verdict")?;
+        .ok_or("--kind is required: usage, classifies, tagged, trusts, affiliated, assessment, attests, timestamped, or verdict")?;
     let target = target.ok_or("--target is required: the CID being annotated")?;
     let target_cid: Cid = target
         .parse()

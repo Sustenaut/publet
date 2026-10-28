@@ -1,11 +1,10 @@
-//! `pub sign`: generate a signing key, or sign a stored object.
+//! `pub sign`: generate a signing key, rotate it, or sign a stored object.
 //!
-//! Section 4.4 defines a `sig` object and Section 10.1 a `key` object, but
-//! until now nothing in this codebase ever produced either: `pub init`
-//! seeded `author` with `Cid::of(process_id_bytes)`, a placeholder its own
-//! comment says is "the user's to replace" -- and nothing ever did. Every
-//! object this corpus has built is self-declared, unauthenticated
-//! authorship. This is the replacement.
+//! Section 4.4 defines a `sig` object and Section 10.1 a `key` object, and
+//! this command produces both. `pub init` seeds `author` with
+//! `Cid::of(process_id_bytes)`, a placeholder for the user to replace.
+//! Until `pub sign --generate-key` replaces it, everything the workspace
+//! writes claims an author no key backs.
 //!
 //! `--generate-key` writes `.publet/signing.key` (the private half, never
 //! stored as an object -- Section 10 has no notion of publishing a secret

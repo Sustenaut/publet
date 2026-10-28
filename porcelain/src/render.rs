@@ -32,7 +32,7 @@
 //!
 //! `pub myst` is the first step of the pipeline this repository uses: it
 //! writes a `MyST` project for a document, showing every cited publet as
-//! `Title [TAG] -- identifier` so a reader can both read the name and
+//! `Title [TAG] — identifier` so a reader can both read the name and
 //! check the identity, which a name alone cannot give them.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -389,6 +389,14 @@ pub(crate) struct Names {
 }
 
 impl Names {
+    /// Read the lock at `path`, with the drafts recorded in the workspace
+    /// beside it laid over it, and the parents' objects a corpus imports.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message if there is neither a lock nor a drafts file, or
+    /// if the lock is not JSON. A drafts file that cannot be read is
+    /// ignored.
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
         let drafts = path
             .parent()
@@ -471,6 +479,13 @@ impl Names {
         }
     }
 
+    /// The identifier `target` names: `target` itself when it starts with
+    /// `pub:`, otherwise what the lock records for that slug.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message if the lock has no such slug, or if the text is
+    /// not an identifier.
     pub(crate) fn resolve(&self, target: &str) -> Result<Cid, String> {
         let text = if target.starts_with("pub:") {
             target
@@ -499,13 +514,17 @@ impl Names {
     }
 }
 
+/// What rendering reads from: the objects, and the names the lock gives
+/// them.
 pub(crate) struct Ctx<'a> {
+    /// Every object held.
     pub(crate) graph: &'a Graph,
+    /// The lock's slugs, for labels and for resolving targets.
     pub(crate) names: &'a Names,
 }
 
 impl Ctx<'_> {
-    /// `Title [TAG] -- identifier` for a publet, `slug -- identifier` for
+    /// `Title [TAG] — identifier` for a publet, `slug — identifier` for
     /// anything else the lock names, the bare identifier otherwise. The
     /// name is never shown without the identifier: a name can be captured
     /// and the identifier cannot (Section 9.1).
@@ -592,6 +611,7 @@ impl Ctx<'_> {
         }
     }
 
+    /// The prose claim at `cid`, if it is one.
     pub(crate) fn claim(&self, cid: &Cid) -> Option<&ProseClaim> {
         self.graph.prose_claim(cid)
     }
@@ -661,6 +681,8 @@ struct Step {
     tools: BTreeSet<String>,
 }
 
+/// A render pipeline as read from its publet: its steps in order, the
+/// programs they run, and the repository files they use.
 pub(crate) struct Pipeline {
     /// The environment the pipeline runs in, if it cites one: the head of
     /// the lineage its `Environment` section names.
@@ -1063,6 +1085,9 @@ fn commands_of(step: &ProseClaim) -> Result<Vec<CommandSpec>, String> {
 /// Version requirements (`^X.Y`, `X.Y+`, a prefix): the generic matcher.
 pub(crate) use publet_algorithms::version::satisfies;
 
+/// A table cell as text: a text cell as written, an integer in decimal,
+/// a quantity as `name value` pairs joined by `, `, and any other cell as
+/// the empty string.
 pub(crate) fn cell_text(cell: &publet_graph::Cell) -> String {
     match cell {
         publet_graph::Cell::Text(t) => t.clone(),
@@ -1150,11 +1175,17 @@ fn epoch_of(graph: &Graph, doc: &Cid) -> u64 {
 /// A rendering being pinned: what was rendered, by which method, into
 /// which outputs, with which tools, and the final output kept as a blob.
 pub(crate) struct Rendering {
+    /// The document version rendered.
     pub(crate) doc: Cid,
+    /// The pipeline's procedural claim that rendered it.
     pub(crate) method: Cid,
+    /// Each output's path and the identifier of its bytes.
     pub(crate) outputs: Vec<(String, String)>,
+    /// Each program run, and the version its check reported.
     pub(crate) tools: Vec<(String, String)>,
+    /// The final output, kept as a blob.
     pub(crate) blob: Cid,
+    /// The final output's size in bytes.
     pub(crate) size: u64,
 }
 
@@ -1238,12 +1269,19 @@ pub(crate) fn rendering_objects(
 
 /// A pinned rendering, read back from the graph.
 pub(crate) struct Pinned {
+    /// The `settled` annotation that pins it.
     pub(crate) settled: Cid,
+    /// The document version rendered.
     pub(crate) doc: Cid,
+    /// The pipeline's procedural claim that rendered it.
     pub(crate) method: Cid,
+    /// When the annotation was created.
     pub(crate) created: String,
+    /// Each output's path and the identifier of its bytes.
     pub(crate) outputs: Vec<(String, String)>,
+    /// Each program run, and the version its check reported.
     pub(crate) tools: Vec<(String, String)>,
+    /// The kept output, if the annotation names one.
     pub(crate) blob: Option<Cid>,
 }
 

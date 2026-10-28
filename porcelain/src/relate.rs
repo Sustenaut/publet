@@ -1,8 +1,7 @@
 //! `pub relate`: author a relation between two objects.
 //!
-//! Relations are the edges, and until now nothing in the toolchain could
-//! write one: the graph read nine object kinds and the porcelain composed
-//! two. A store of claims with no relations is a list, not a graph.
+//! Relations are the edges. A store of claims with no relations is a list,
+//! not a graph.
 //!
 //! Anyone may relate any two objects (R6), including objects they did not
 //! author. What the command will not do is write an edge that makes the

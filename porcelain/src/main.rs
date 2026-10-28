@@ -9,10 +9,12 @@
 )]
 //! `pub`: the human-facing command.
 //!
-//! Local-first by default (R16). Every command says which mode it used,
-//! because the privacy properties of reading a replica are real and a
-//! reader who does not know which mode they are in cannot know whether they
-//! have them.
+//! Local-first by default (R16). Only `pub sync` contacts a peer. Every
+//! other command works from the local workspace, or from files named on
+//! its command line. `pub read` and `pub why` say in their output that
+//! they read locally, and `pub sync` says what its request disclosed. The
+//! privacy properties of reading a replica are real, and a reader who does
+//! not know which mode they are in cannot know whether they have them.
 
 mod annotate;
 mod build;
@@ -40,7 +42,7 @@ const EXIT_VIOLATION: u8 = 1;
 const EXIT_USAGE: u8 = 2;
 
 fn usage() -> ExitCode {
-    eprintln!("usage: pub <command> [options]");
+    eprintln!("usage: pub <command> [options], or pub --version");
     eprintln!();
     eprintln!("  init                 create a workspace here");
     eprintln!("  sync                 fetch a domain from a peer by delta");
@@ -54,7 +56,7 @@ fn usage() -> ExitCode {
     eprintln!("  build [DIR]          compile named publet sources (in a corpus: drafts only)");
     eprintln!("  publish SLUG...|--all  sign, export, and record drafts; pin their renderings");
     eprintln!("  render SLUG|CID      check, then run, the render pipeline a publet names");
-    eprintln!("  corpus init|status|upgrade|map   a corpus, its parents, and its network");
+    eprintln!("  corpus init|status|upgrade|map|renderings   a corpus, its parents, its network");
     eprintln!("  delegate --to=KEY    authorize another key to continue this key's lineages");
     eprintln!("  env build|status|path SLUG   provision the pinned toolchain a pipeline runs in");
     eprintln!("  myst SLUG|CID        write a MyST project for a document");
@@ -63,8 +65,8 @@ fn usage() -> ExitCode {
     eprintln!("  annotate             say something about an object without touching it");
     eprintln!("  sign                 generate a signing key, rotate it, or sign a stored object");
     eprintln!("  policy               author a policy object and set it as the workspace's");
-    eprintln!("  propose CID...       submit objects, recording what they were composed against");
-    eprintln!("  witness DOMAIN       record the log root you observed");
+    eprintln!("  propose CID...       report what has moved under objects since their basis");
+    eprintln!("  witness DOMAIN       print a domain's generation and log root, to publish");
     eprintln!(
         "  domain               author a domain's manifest, snapshot, and genesis generation"
     );
