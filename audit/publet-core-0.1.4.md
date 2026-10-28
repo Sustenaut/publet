@@ -2,7 +2,7 @@
 package: publet-core
 version: 0.1.4
 standard: bc3c5b6eeba4757b5d96bc00be2d0a1d3221bef89072b06a271c2b28e2205e34
-blocking: 1
+blocking: 0
 date: 2026-10-28
 auditor: Claude Code, following the rust-crate-quality agent (pubkit 0.14.0)
 ---
@@ -13,45 +13,44 @@ This report was produced in a Claude Code session by following the
 rust-crate-quality agent's definition and the Rust crate standard exactly as
 pubkit v0.14.0 ships them (`plugins/rust-crate-quality/`). The agent itself was
 not installed on the machine. The audit covers `main` at `f2071fc`, which is
-publet-core 0.1.3 plus the move to ed25519-dalek 3 and sha2 0.11 (#61). The
-version to release is 0.1.4 (`pubrel next --package publet-core`). Nothing was
-edited except this file, which should be committed with the release's changes.
+publet-core 0.1.3 plus the move to ed25519-dalek 3 and sha2 0.11 (#61), with
+the documentation fixes listed under "Resolved on this branch" (#62). The
+version to release is 0.1.4 (`pubrel next --package publet-core`). This file
+should be committed with the release's changes.
 
 ## Blocks a release
 
-1. **Section 7 (`SECURITY.md`, judged): a false claim.**
-   `crates/publet-core/SECURITY.md:86`, the same file as the root `SECURITY.md`,
-   ships in the package and renders as `_documentation::security`. It says
-   "Advisory checks run when the code changes, not on a schedule". But
-   `.github/workflows/nightly.yml` runs `cargo deny` and `cargo vet` (`audit`,
-   `required: deny vet`) and OSV (`osv`) every day at 03:23 UTC
-   (`schedule: [{ cron: '23 3 * * *' }]`). The standard counts a false claim in
-   the docs as blocking. The fix is documentation only: drop that bullet from
-   "What is not yet done", and say under "What is checked" that the advisory
-   checks also run nightly. Because the file changes, `crates/publet-core`
-   changes, so record it with `pubrel add --package publet-core internal ...`
-   (and for publet-algorithms, whose copy is the same file).
+None.
 
 ## Falls short of the standard
 
-2. **Section 2, `# Errors` (`src/sig.rs:146`).** `verify` says only "Returns
-   [`SigError`] describing which check failed." The standard asks for exactly
-   when each error happens. `verify` returns `PurposeMismatch` when the purposes
-   differ (checked first, before any cryptography), `PurposeContainsNul`,
-   `MalformedKey` (not 32 bytes, or not a valid point), `MalformedSignature`
-   (not 64 bytes) and `BadSignature`. It never returns `UnknownAlgorithm` or
-   `MalformedSecretKey`.
-3. **Section 2, hidden setup (`src/sig.rs:153`).** In `verify`'s example,
-   `seed` comes from a hidden line (`# let seed = [7u8; 32];`), so a reader
-   can't tell where the visible `&seed` comes from. The crate root's example
-   shows the same line visibly.
-4. **Section 1.6, Related crates (`src/lib.rs:153`).** The `cid` row gives no
-   version checked. It is at 0.11.3 on crates.io today.
-5. **Section 7, `SECURITY.md:36-39`.** It lists the audit sets imported as
-   "Mozilla, Google, the Bytecode Alliance, Zcash, ISRG or Embark Studios", but
-   `supply-chain/config.toml` also imports `pubunit`. That set covers none of
-   publet-core's own dependencies, but the sentence describes the repository's
-   `cargo vet`.
+None.
+
+## Resolved on this branch
+
+The first pass of this audit, on `f2071fc`, found one blocking finding and
+four that fell short. The fixes are documentation only, and they are recorded
+with `pubrel add` as `internal` for publet-core, publet-algorithms and
+publet-cli. This report describes the tree with those fixes.
+
+1. **Was blocking: section 7, a false claim in `SECURITY.md`.** The file
+   ships in publet-core and renders as `_documentation::security`. It said
+   advisory checks ran only when code changed. `nightly.yml` runs
+   `cargo deny`, `cargo vet` and OSV every day at 03:23 UTC. It now says so.
+   It also lists OSV-Scanner among the checks run on every pull request and
+   push to `main` (`pr.yml` and `main.yml` both have the `osv` job).
+2. **Section 2, `# Errors` (`src/sig.rs`, `verify`).** It now lists each
+   error, the order the checks run in, and when each one is returned.
+   `MalformedKey` covering a non-point is checked against ed25519-dalek
+   3.0.0's `VerifyingKey::from_bytes`, which fails on point decompression.
+3. **Section 2, hidden setup (`src/sig.rs`, `verify`'s example).** `seed`
+   is now a visible line.
+4. **Section 1.6 (`src/lib.rs`, Related crates).** The `cid` row names
+   0.11.3. Its claim was checked by running it: `cid` 0.11.3 parses
+   `bafkrei...` as version 1 with codec `0x55`, and refuses
+   `pub:sha2-256:...` ("Failed to parse multihash").
+5. **Section 7 (`SECURITY.md`, `cargo vet`).** The imported audit sets now
+   include `pubunit`, as `supply-chain/config.toml` has it.
 
 ## Worth considering
 
@@ -63,7 +62,8 @@ edited except this file, which should be committed with the release's changes.
    acceptance rule applies. It is ed25519-dalek's `Verifier::verify`
    (cofactorless check, as RFC 8032 allows), not `VerifyingKey::verify_strict`,
    which also rejects small-order public keys and `R` values (the group-element
-   malleability check, per ed25519-dalek 3.0.0's docs). For a protocol whose signatures are evidence, this is
+   malleability check, per ed25519-dalek 3.0.0's docs). For a protocol whose
+   signatures are evidence, this is
    worth one sentence, or a decision to use `verify_strict`. That decision is
    a code change for a person to make.
 8. **Section 3, test vectors (`testdata/canonical.json`).** Its source is
@@ -72,7 +72,7 @@ edited except this file, which should be committed with the release's changes.
    property tests partly compensate. A second encoder (for example, Python
    `cbor2` in canonical mode, with Section 4.1's key order) would make it
    independent.
-9. **Section 7, `SECURITY.md:60`.** "fuzzed on every change": the CI skips
+9. **Section 7, `SECURITY.md:65`.** "fuzzed on every change": the CI skips
    fuzzing on a pull request that touches no Rust code, Cargo files, `fuzz/` or
    workflow files (RS-FUZZ-02). "on every change to the code" would be exact.
 10. **Section 1.6.** minicbor 2.3.1 is out. The row says 2.3.0, which is the
@@ -111,10 +111,13 @@ edited except this file, which should be committed with the release's changes.
   this crate's canonical objects" and "admits floats, tags and non-text keys"
   both hold.
 - `serde_cbor` 0.11.2 is unmaintained: RUSTSEC-2021-0127.
-- The `cid` row is checked against the crate's documented text form, not by
-  running it.
+- `cid` 0.11.3: run as described under item 4 above.
 
 ## Checks run
+
+All were run on `f2071fc`. After the documentation fixes, every one was run
+again except `make msrv` and `make vectors-check`, since no code and no test
+vectors changed. All pass both times.
 
 | Check | Result |
 |---|---|
