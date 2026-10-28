@@ -143,14 +143,24 @@ pub fn signing_message(purpose: &str, target_bytes: &[u8]) -> Result<Vec<u8>, Si
 ///
 /// # Errors
 ///
-/// Returns [`SigError`] describing which check failed.
+/// Fails only if one of these checks fails, in this order:
+///
+/// - [`SigError::PurposeMismatch`] if `found_purpose` is not
+///   `expected_purpose`. No cryptography is done.
+/// - [`SigError::PurposeContainsNul`] if the purpose contains `0x00`.
+/// - [`SigError::MalformedKey`] if `public_key` is not 32 bytes, or is not
+///   the encoding of a curve point.
+/// - [`SigError::MalformedSignature`] if `signature` is not 64 bytes.
+/// - [`SigError::BadSignature`] if the signature does not verify over
+///   [`signing_message`]`(found_purpose, target_bytes)`.
 ///
 /// # Example
 ///
 /// ```
 /// use publet_core::{SigAlg, SigError, sign, verify, verifying_key};
 ///
-/// # let seed = [7u8; 32];
+/// // A real seed comes from a random source; this crate needs no RNG.
+/// let seed = [7u8; 32];
 /// let public = verifying_key(SigAlg::Ed25519, &seed)?;
 /// let signature = sign(SigAlg::Ed25519, &seed, "authored", b"object")?;
 ///
