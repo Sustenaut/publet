@@ -939,10 +939,10 @@ Reframing a concept, by moving a boundary line or narrowing it, is a new
 version of it (`supersedes`), so the code keeps one lineage.
 
 Evidence, data and references reach a concept rather than one another:
-an extract claim is placed under a concept by a `classifies` annotation
-naming it (Section 7.1), with any condition on membership in the
-annotation's scope, and a calculation pooling values of a concept lists
-the concept in `depends`. Which values a calculation may pool is then
+an extract claim (Section 5.9.8) is placed under a concept by a
+`classifies` annotation naming it (Section 7.1), with any condition on
+membership in the annotation's scope, and a calculation pooling values
+of a concept lists the concept in `depends`. Which values a calculation may pool is then
 the set of claims classified under the concept, and disputing a
 membership, a boundary, or the pooling is disputing one object each.
 Moving a concept to another code is future work (Appendix B).
@@ -1224,13 +1224,21 @@ on, and see it change as annotations arrive. The convention is, in order:
    `undetermined`, a `verdict` denying it, or a `disputes` relation
    targeting it that no `resolution` settles, unless its author has
    retracted it (Section 6);
-2. **estimate** when its column's measure describes uncertainty or
+2. **lead** when it is an extract (Section 5.9.8) with a `cites` cell and
+   no `derived-from` relation from it to an extract of the primary
+   source: the value is another study's, repeated, and the study it came
+   from has not been read;
+3. **to-verify** when it is an extract that no `verdict` with
+   `aspect: "provenance"` and `finding: "affirm"`, signed by a key
+   declaring `principal: "human"` (Section 10.3), affirms: nobody has yet
+   opened the page and seen the value on it;
+4. **estimate** when its column's measure describes uncertainty or
    variation, such as a three-point estimate, or the column names no
    measure, so that no certainty is stated;
-3. **confirmed** when its measure describes an exact value and its
+5. **confirmed** when its measure describes an exact value and its
    evidence includes a `measurement`, `statement`, `quote` or
    `derivation`;
-4. **to-verify** otherwise: an exact value that nothing measured, stated,
+6. **to-verify** otherwise: an exact value that nothing measured, stated,
    quoted or derived.
 
 A viewpoint MAY weigh these differently: which keys' assessments count is
@@ -1249,6 +1257,129 @@ Nothing annotates it, so `place.site.tallinn.basement.floor_area` is
 three-point estimate and the fact an **estimate**; and if a visitor filed
 a dispute measuring 46 m², the fact would be **to-verify** until a
 resolution settled it, with no field of any object changed.
+
+#### 5.9.8 Sources and Extracts
+
+*Non-normative.* A usage pattern for values read from papers, datasets
+and database releases, so that a value an estimate pools can be followed
+back to the page it was printed on. It adds no field and no object type:
+three kinds of claim carry it, as Sections 5.5, 5.8 and 5.9 already define
+them.
+
+**Source record.** One `archival` claim per paper, dataset or release.
+Its `data` is a table of one row giving the bibliographic record:
+
+| Column | Holds |
+|---|---|
+| `doi` | the DOI, or null where there is none |
+| `url` | the address read, where there is no DOI or it is not the one read |
+| `citation` | the reference as a reader would cite it |
+| `version` | the version read: version of record, accepted manuscript, a dataset's release |
+| `source type` | `primary`, `secondary`, `review` or `dataset` |
+| `licence` | the licence the copy read carries, such as `CC BY 4.0` |
+| `file_sha256` | the SHA-256 of the file read, in lowercase hexadecimal |
+| `file` | where an open-licence copy of that file may be fetched, or null |
+
+Its `source` evidence is `kind: "external"`, `ref` the DOI (or the
+address), and `revision` the version read. The file's hash makes the copy
+checkable without the protocol holding it: anyone with a file of the same
+SHA-256 has the same pages. Where the licence permits redistribution the
+file can also be a blob (Section 4.7); where it does not, the record keeps
+the hash and the file stays with whoever holds a copy.
+
+**Studied system.** A singular (Section 5.9.6) for the thing a source
+measured, such as one rooftop farm. Its `class` is the narrowest subject
+concept that fits it, `part_of` names the country or region singular, and
+`location`, if given, is a coarse cell. Many values in one paper are about
+one system, and a second paper on the same system names the same
+singular.
+
+**Extract.** One `attributive` claim per value the source prints:
+"Diehl and Cheng (2025) report that the farm's pump uses 26.4 kWh per
+day." Its `data` is a table of one row with an about column naming the
+studied system and one value column with `unit`, `kind` and `measure`.
+The value column names no `concept`: the extract records what was measured
+in the source's own terms, and which concept it measures is decided by a
+`classifies` annotation (Section 5.9.1), which can be proposed by triage
+(`groups-under`, Section 7.4), signed later by a reviewer, and disputed
+without touching the extract. Its evidence is one `source` entry of
+`kind: "claim"` naming the source record, which therefore also appears in
+`depends` (Section 5.5), with
+
+- `locator` saying where the value is printed, as semicolon-separated parts
+  from broadest to narrowest: `p 5; table 4; row "Electricity"`,
+  `p 7; fig 5; bar "Pump"`, `p 3; sec 3.2; para 2`. `p` is the page's
+  index in the file, counting from 1, not the number printed on it, so
+  that it holds for every copy with the record's `file_sha256` and serves
+  as a `#page=` fragment on the file's address; and
+- `note` holding the sentence or table cell the value was read from,
+  quoted in at most 25 words.
+
+An extract carries only what is printed. Converting units, multiplying
+two printed values or undoing an allocation is a calculation (Section
+5.9.5) over extracts, not another extract. Being `attributive`, an extract
+is true when the source says what it reports, so the two questions a
+reader has are two objects:
+
+- *Was it read right?* A `verdict` on the extract with
+  `aspect: "provenance"` (Section 5.2): a person opens the page and
+  affirms or denies.
+- *Is the source right?* A separate claim, ordinarily `formal`, that lists
+  the extracts it compares in `depends`: "six fans at 35 W for 24 h use
+  5.04 kWh per day, not the 0.84 kWh printed". An estimate pooling one of
+  those values cites the check, and its own rule decides whether to widen
+  or drop the value.
+
+Where the extracts are drafted by a model, the key that signs them is one
+declaring `principal: "automated"` with the `is-automated` attestation
+(Sections 7.4, 10.3), so a viewpoint discounts the reading until a
+person's provenance verdict affirms it.
+
+**Measures.** A single number with no uncertainty stated is given under a
+measure that says so rather than as an exact value: the printed figure
+says what the authors reported, not that it is exact. Two measures
+(Section 5.9.1) serve most extracts:
+
+| Measure | `describes` | Parameters, each of type `quantity` |
+|---|---|---|
+| reported value | `uncertainty` | `value`, the number as printed |
+| read from figure | `uncertainty` | `value`, the value read off the chart; `half_width`, half the width of the band the reading could lie in |
+
+A value read off a chart uses "read from figure", so it is never shown as
+more precise than the eye that read it. Where the source states a mean
+and standard deviation, a range or percentiles, the extract uses the
+measure that holds them.
+
+**Leads.** A figure the source repeats from another study carries a
+`cites` column, a text cell giving the cited reference as printed. It is a
+**lead** until a `derived-from` relation (Section 6) from it to an extract
+of the primary source records where it came from, which a `quoted-from`
+triage finding (Section 7.4) may propose. An estimate uses the primary
+extract where one exists and flags the lead where none does.
+
+**Scope.** What the source's value holds under goes in the extract's
+`scope`: the system boundary and the conditions the authors state, such
+as "natural-gas grid, production only", in `domain`. A scenario the
+source models, such as rooftop solar supplying the farm, is its own
+`definitional` claim, cited in `scope.conditions` by every extract under
+it, so that its values share one object.
+
+**Fit is not in the extract.** How well a value from one system stands
+for another -- a rooftop farm in Singapore for a kitchen shelf in Tallinn
+-- depends on the use. It is a `normative` claim made by the estimate that
+pools the value, per use, and never a field of the extract.
+
+*Example.* Diehl and Cheng (2025) is one source record, of source type
+`primary`, licence CC BY 4.0, with its PDF's hash. The rooftop farm it
+studies is a singular. The pump's daily electricity is an extract: about
+the farm, `{ value: "26.4" }` in `kW.h/d` under "reported value", with
+locator `p 5; sec 2.2; para 3` and the quoted sentence in `note`. Its
+status is **to-verify** until a person affirms the reading, then
+**estimate**. The fans' energy is three extracts -- the count, the power,
+the energy per day -- and one `formal` check claim depending on them
+showing they disagree. The paper's figure for conventionally grown basil
+flown in from the United States, quoted from other studies, carries a
+`cites` cell and is a **lead**.
 
 ---
 
@@ -3176,6 +3307,13 @@ A **path key**, such as `place.site.tallinn.basement.floor_area`, finds a
 fact by the names of the singular's class, the chain of singulars it is
 part of, and the concept; it is computed from the claims held, never
 registered (Section 5.9.6).
+
+**Extract** — an `attributive` claim that a source prints one value: a
+table of one row about the studied system, with its unit, kind and
+measure but no concept, and a `source` entry naming the source's
+`archival` **source record** with a locator and a short quote. A
+`classifies` annotation places it under a concept; a person's provenance
+verdict confirms the reading (Section 5.9.8).
 
 **PDC** — the Extended Publet Decimal Classification: the UDC Summary's
 classes under their own codes, extended by narrower classes whose codes
