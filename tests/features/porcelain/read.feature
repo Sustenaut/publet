@@ -25,6 +25,11 @@ Feature: An assertion is shown with the scope it was made under
     When I read the annotation
     Then its kind, target, and value fields are shown
 
+  Scenario: A provenance verdict on an attributive claim carries its aspect in the body
+    Given a workspace with an attributive claim and a provenance verdict on it
+    When I read the annotation
+    Then its kind and aspect are shown, and the finding in its value
+
   Scenario: An object file is read without any workspace, under the identifier its bytes hash to
     Given an object file holding the cohort claim, named for its identifier
     When I read the object file from a directory with no workspace
