@@ -99,6 +99,10 @@
     {
       "category": "internal",
       "change": "A golden test composes the Tallinn fixtures under a fixed author and time and compares every identifier with tests/golden/tallinn.json, so a change to the bytes pub compose writes for the same input, which would re-mint every gathered fact, fails CI unless it is made on purpose (PUBLET_UPDATE_GOLDEN=1)"
+    },
+    {
+      "category": "fixed",
+      "change": "pub annotate writes --aspect into the annotation's body, where spec Section 7 puts it and the graph reads it, not into value; a provenance verdict on an attributive or archival claim is no longer refused, and pub read shows an annotation's aspect"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
