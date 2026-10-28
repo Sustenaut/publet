@@ -1222,7 +1222,8 @@ on, and see it change as annotations arrive. The convention is, in order:
 1. **to-verify** when the value is null, or an annotation leaves the claim
    open: an `assessment` finding it `unsupported`, `refuted` or
    `undetermined`, a `verdict` denying it, or a `disputes` relation
-   targeting it that no `resolution` settles;
+   targeting it that no `resolution` settles, unless its author has
+   retracted it (Section 6);
 2. **estimate** when its column's measure describes uncertainty or
    variation, such as a three-point estimate, or the column names no
    measure, so that no certainty is stated;

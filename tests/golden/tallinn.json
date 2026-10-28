@@ -1,0 +1,17 @@
+{
+  "comment": "Bytes for the same input must not drift between pub versions.",
+  "author": "pub:sha2-256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "objects": {
+    "area_kind": "pub:sha2-256:2tx56mc4haftptutpa5cd67td6g6eqzs7d5so6nz73q5efqtvoma",
+    "basement": "pub:sha2-256:5unocijs4p4qhisycedgwrqzlzw7mhhi5sktpqw7c6orz5xc5ywa",
+    "exact": "pub:sha2-256:fkabdmeei6j7e6hao3psdvumqekcbfxlhada3mw3pew6ptvhha5q",
+    "fact": "pub:sha2-256:ebxhsdewd5zli7zoyrast4dgdpjb5eebuytj24yu5lwqtnvntisa",
+    "floor_area": "pub:sha2-256:axo6exx6f4ykwens5wzyoer2ozloxgd5orpvyajcb37jbnrv3x3a",
+    "method": "pub:sha2-256:ivskyee4rgctkmz6zc3zmzddgfhk7j4wcmulxthcqfcyfpbg33cq",
+    "place": "pub:sha2-256:xu6aijyw6t2fqjzxyktidvo46nybcycujxj2yhvtohhwcmamdi4a",
+    "site": "pub:sha2-256:zpxb2yjunlvpubveuwxjl2eeav4l5znef52s6vbalaliv2h6oxuq",
+    "statement": "pub:sha2-256:4barzytytn7xkc6p7adwvihqkmne4ii2yfd6agujj4s5yqzqo6sa",
+    "tallinn": "pub:sha2-256:yz6bzffsiwox6nqsu62ba6ggekhhvutzqzdgofyvjfs6habnuw2a",
+    "ucum": "pub:sha2-256:hmarexwotwwqeqx6pg5mxqwz67aiqybztpsqrvpq2qrfqu2wbega"
+  }
+}

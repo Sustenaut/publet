@@ -238,7 +238,8 @@ fn roles(graph: &Graph, cid: &Cid) -> Vec<String> {
 
 /// How many annotations leave the claim open (Section 5.9.7): assessments
 /// finding it unsupported, refuted or undetermined, verdicts denying it,
-/// and disputes of it that no resolution settles.
+/// and disputes of it that no resolution settles. One its author has
+/// retracted no longer does: the check it asked for was made.
 fn open_annotations(graph: &Graph, cid: &Cid) -> usize {
     let field = |a: &publet_graph::Annotation, key: &str| -> Option<String> {
         graph
@@ -252,6 +253,7 @@ fn open_annotations(graph: &Graph, cid: &Cid) -> usize {
     let judged = graph
         .annotations_of(cid)
         .into_iter()
+        .filter(|a| !graph.is_retracted(a.cid()))
         .filter(|a| match a.kind() {
             "assessment" => matches!(
                 field(a, "verdict").as_deref(),
@@ -265,6 +267,7 @@ fn open_annotations(graph: &Graph, cid: &Cid) -> usize {
         .incoming(RelationKind::Disputes, cid)
         .iter()
         .filter_map(|d| d.parse::<Cid>().ok())
+        .filter(|d| !graph.is_retracted(d))
         .filter(|d| {
             graph
                 .annotations_of(d)

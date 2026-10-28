@@ -10,10 +10,14 @@ from __future__ import annotations
 
 import json
 
+import os
+from pathlib import Path
+
 from pytest_bdd import given, parsers, scenarios, then, when
 
 scenarios("../features/conformance/singulars.feature")
 scenarios("../features/porcelain/get.feature")
+scenarios("../features/porcelain/golden.feature")
 
 UCUM = {"sort": "system", "name": "UCUM", "version": "2.2"}
 AREA_KIND = {"sort": "kind", "name": "area", "dimension": {"m": 2}, "units": ["m2"]}
@@ -96,7 +100,26 @@ def _compose_fact(runner, ctx, data, *extra: str):
 
 @given("a workspace with the Tallinn basement", target_fixture="ctx")
 def tallinn_basement(runner):
+    return _tallinn(runner)
+
+
+# The author a golden workspace composes as: any fixed identifier will do,
+# since composing does not sign.
+GOLDEN_AUTHOR = "pub:sha2-256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+GOLDEN = Path(__file__).resolve().parent.parent / "golden" / "tallinn.json"
+
+
+@given("a workspace authored by a fixed key with the Tallinn basement", target_fixture="ctx")
+def golden_tallinn(runner):
+    return _tallinn(runner, author=GOLDEN_AUTHOR)
+
+
+def _tallinn(runner, author=None):
     assert runner.run("pub", "init").code == 0
+    if author:
+        config = runner.cwd / ".publet" / "config"
+        config.write_text("".join(f"author={author}\n" if line.startswith("author=") else line + "\n"
+                                  for line in config.read_text().splitlines()))
     s = {}
     s["ucum"] = _defined(runner, "ucum", "UCUM: the Unified Code for Units of Measure, version 2.2.", UCUM)
     s["area_kind"] = _defined(runner, "area_kind", "area: the size of a surface.", AREA_KIND, s["ucum"])
@@ -159,6 +182,40 @@ def ceiling_estimate(runner, ctx):
                      f"--depends={s['ucum']}", f"--depends={height}",
                      f"--data={_write(runner, 'ceiling.json', data)}")
     assert out.code == 0, out.stderr
+
+
+@given("an assessment leaving the floor area fact undetermined")
+def undetermined(runner, ctx):
+    out = runner.run("pub", "annotate", "--kind=assessment", f"--target={ctx['s']['fact']}",
+                     "--verdict=undetermined", "--grounds=The owner's figure is to be measured again.",
+                     "--scope=unconditional")
+    assert out.code == 0, out.stderr
+    ctx["s"]["assessment"] = out.stdout.split()[0]
+
+
+@given("its author retracts the assessment")
+def retract_assessment(runner, ctx):
+    why = _compose(runner, "--class=normative", "--scope=unconditional",
+                   "--content=The basement was measured again and the owner's figure stands.")
+    out = runner.run("pub", "relate", "--scope=unconditional", "--kind=retracts",
+                     f"--from={why}", f"--to={ctx['s']['assessment']}")
+    assert out.code == 0, out.stderr
+
+
+@then("each object composed has the identifier committed for it")
+def golden(ctx):
+    """Bytes for the same input must not drift between pub versions: a
+    change here re-mints every fact gathered with an earlier pub. When a
+    change is deliberate, rerun with PUBLET_UPDATE_GOLDEN=1 and say why in
+    the changelog."""
+    got = {name: cid for name, cid in sorted(ctx["s"].items())}
+    if os.environ.get("PUBLET_UPDATE_GOLDEN"):
+        GOLDEN.parent.mkdir(exist_ok=True)
+        GOLDEN.write_text(json.dumps({"comment": golden.__doc__.split(":")[0] + ".", "author": GOLDEN_AUTHOR,
+                                      "objects": got}, indent=2) + "\n")
+    expected = json.loads(GOLDEN.read_text())["objects"]
+    changed = {k: (expected.get(k), v) for k, v in got.items() if expected.get(k) != v}
+    assert not changed, f"composed bytes changed for the same input: {changed}"
 
 
 @given("a dispute of the floor area fact")

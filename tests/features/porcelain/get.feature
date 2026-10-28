@@ -92,3 +92,10 @@ Feature: pub get finds the current value of a fact by its path key
     When I get "place.shed"
     Then it fails
     And stderr mentions "nothing held here answers"
+
+  Scenario: A retracted assessment no longer leaves the figure open
+    Given an assessment leaving the floor area fact undetermined
+    And its author retracts the assessment
+    When I get "place.site.tallinn.basement.floor_area"
+    Then it succeeds
+    And it prints "status    confirmed"
