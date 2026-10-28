@@ -105,6 +105,10 @@
       "change": "pub annotate writes --aspect into the annotation's body, where spec Section 7 puts it and the graph reads it, not into value; a provenance verdict on an attributive or archival claim is no longer refused, and pub read shows an annotation's aspect"
     },
     {
+      "category": "fixed",
+      "change": "pub --version names its version from publet-cli's own vX.Y.Z tags only, so a publet-core or publet-algorithms tag on the same commit no longer makes a release build call itself unreleased"
+    },
+    {
       "category": "internal",
       "change": "Documentation: the README has a runnable example, the commands main.rs dispatches, exit codes and an MSRV policy; usage text and module docs no longer claim what the code does not do; SECURITY.md says which untrusted-input code is fuzzed (audit/publet-cli-0.2.2.md)"
     }
