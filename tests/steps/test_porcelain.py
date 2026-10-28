@@ -322,6 +322,15 @@ def compose_compound(pub):
     )
 
 
+@then("it exits 2 and lists the commands, with pub --version")
+def usage_listed(result):
+    body = text_of(result)
+    assert result.returncode == 2, body
+    assert "usage: pub <command> [options], or pub --version" in body, body
+    for command in ("corpus init|status|upgrade|map|renderings", "propose CID...", "witness DOMAIN"):
+        assert command in body, body
+
+
 @then("a workspace exists")
 def workspace_exists(pub):
     assert (Path(pub.cwd) / ".publet" / "objects.redb").exists()

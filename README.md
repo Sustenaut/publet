@@ -142,14 +142,35 @@ a directory-backed command such as `pub-ls`.
 
 ## The `pub` command
 
+`pub` composes claims in a local workspace and shows what they rest on.
+Here a claim is written, read back with its scope, and evaluated under the
+workspace's policy:
+
 ```sh
-pub init                    # create a workspace here
+mkdir demo && cd demo
+pub init
+claim=$(pub compose --class=formal \
+  --content="Every finite group of prime order is cyclic." \
+  --scope="Finite groups, as defined in any standard algebra text.")
+pub read "$claim"   # last line: [local] read from your replica; nothing was disclosed
+pub why "$claim"    # result undetermined: nobody your policy weighs has evaluated it
+```
+
+Leave out `--scope` and `pub compose` refuses the claim, says why, and exits
+with status 1.
+
+The commands:
+
+```sh
+pub init [--peer=URL]       # create a workspace here
 pub sync --domain=CID       # fetch a domain from a peer by delta
 pub read CID                # the assertion, with the scope it was made under
 pub why CID                 # its standing, and every component of it
+pub get PATH [--dir=DIR]    # the current value of a fact, by its path key
 pub compose --class=... --content=... --scope=... [--data=FILE] [--source=REF]
-pub revise CID [--data=FILE] [--source=REF]   # next version + supersedes, or nothing if unchanged
+pub document --title=... --section=... --item=CID ...   # a document, from flags
 pub doc MANIFEST.json       # a document, from a JSON manifest; items may carry a `view`
+pub revise CID [--data=FILE] [--source=REF]   # next version + supersedes, or nothing if unchanged
 pub build [DIR] [--sign]    # compile named publet sources (in a corpus: unsigned drafts only)
 pub render SLUG [--check]   # run the render pipeline a publet names, once it checks out
 pub publish SLUG... | --all # sign, export, and record drafts; pin their accepted renderings
@@ -161,13 +182,26 @@ pub corpus map [--format=mermaid|dot|json] # the publet network across corpora
 pub corpus renderings [--prune]           # pinned renderings; drop inactive kept outputs
 pub env build|status|path SLUG            # provision the toolchain a pipeline runs in
 pub delegate --to=KEY                     # let another key continue this key's lineages
-pub propose CID             # submit, recording what it was composed against
-pub witness DOMAIN          # the log root you observed
+pub relate --kind=... --from=CID --to=CID --scope=...      # a relation between two objects
+pub annotate --kind=... --target=CID --scope=...           # say something about an object
+pub sign --generate-key --principal=... | --rotate --principal=... | --purpose=... --target=CID
+pub policy --root=CID[:WEIGHT]...                          # author a policy, and adopt it
+pub domain --dir=DIR --label=... --bound=BYTES             # a domain's manifest and genesis generation
+pub propose CID... [--basis=N]   # what has moved under these objects since the basis
+pub witness DOMAIN          # the generation and log root you hold, to publish
+pub --version               # the release this build is, or that it is unreleased
 ```
 
-Local-first by default, and **every command says which mode it used**. The
-privacy properties of reading a replica are real, and a reader who does not
-know which mode they are in cannot know whether they have them.
+Local-first by default: only `pub sync` contacts a peer. Every other
+command works from the local workspace, or from files named on its command
+line. `pub read` and `pub why` say in their output that they read locally,
+and `pub sync` says what its request disclosed. The privacy properties of
+reading a replica are real, and a reader who does not know which mode they
+are in cannot know whether they have them.
+
+`pub` exits with status 0 when a command succeeds and 1 when it refuses or
+fails, with the reason on stderr. Run with no command, or with `--help`, it
+prints its commands to stderr and exits with status 2.
 
 `pub why` never reduces a standing to a badge. It shows the weights, the
 divergence factor, the threshold, the reproduction counts against the
@@ -254,8 +288,10 @@ directory, for using the same tools by hand. A container image pinned by
 digest is noted as a future way to provide an environment -- for a deployed
 service -- and is not built.
 
-`pub propose` records the generation it was composed against and reports the
-three ways that can be stale: the target already has another successor, a
+`pub propose` takes the generation the objects were composed against
+(`--basis=N`, by default the head generation the workspace holds), and
+reports the three ways that can be stale. It sends and stores nothing. The
+three ways: the target already has another successor, a
 dependency has been superseded, or a dispute answers a resolved question.
 None of them is a refusal. Nothing here is overwritten, so a stale basis
 cannot clobber anything -- it is disclosed, not enforced.
@@ -289,11 +325,16 @@ recorded for that crate and for `publet-cli`, which compiles it in:
 
 The version follows mechanically from what changed since the last release:
 
-| Category | Meaning | Bump |
-|---|---|---|
-| `changed`, `removed` | an already-published interface changed: commands, flags, output, exit codes, file formats, object shapes | major |
-| `added` | a new feature | minor |
-| `fixed`, `security` | the same functionality | patch |
+| Category | Meaning | From 1.0.0 | Below 1.0.0 |
+|---|---|---|---|
+| `changed`, `removed` | an already-published interface changed: commands, flags, output, exit codes, file formats, object shapes | major | minor |
+| `added` | a new feature | minor | patch |
+| `fixed`, `security` | the same functionality | patch | patch |
+| `internal` | code changed, and nothing users run did | none | none |
+
+This is Cargo's convention. Below 1.0.0, `y` in `0.y.z` is the breaking
+part, so an addition takes `0.2.1` to `0.2.2`, and a change to an
+interface takes it to `0.3.0`.
 
 Every pull request that changes code adds a row to
 `corpus/publets/pkg.publet-cli/unreleased.json` -- unpublished workshop
@@ -319,10 +360,36 @@ published on crates.io:
 cargo install --locked --git https://github.com/schryer/publet --tag v0.2.0 publet-cli
 ```
 
+That installs `pub`. Each plumbing command is a package of its own under
+`bin/`, named as the command is (`pub-sync`, `pub-verify`, ...), and is
+installed the same way with its name in place of `publet-cli`.
+
 `pub --version` prints `pub X.Y.Z` and the package publet's identifier only
 for a clean build at that release's tag; any other build reports itself as
 unreleased, so a render pipeline requiring a released `pub` (`requires
 ^0.1`) cannot be satisfied by a development build.
+
+**What a release promises.** The interface a version number speaks for is:
+
+- the commands and their flags, listed above and in each plumbing
+  command's usage message;
+- exit codes: `pub`'s are given under "The `pub` command", and each
+  plumbing command's are the `EXIT_*` constants at the top of its
+  `bin/*/src/main.rs`;
+- output meant for scripts: `pub read --json`, `pub corpus map
+  --format=json`, the files `pub bundle` writes, and what the plumbing
+  commands print to stdout;
+- the files read and written: `.publet/config`, `corpus.json`,
+  `publet.json` sources, document manifests, `publets.lock` and
+  `corpus.lock`.
+
+A change to any of them is recorded as `changed` or `removed`.
+
+**Minimum Rust version.** `pub` and the plumbing commands need Rust 1.98 or
+later, the workspace's `rust-version`. `rust-toolchain.toml` pins 1.98.1,
+so cargo uses that in this tree unless a toolchain is named. The minimum
+may rise in a release that bumps the second number of the version (`y` in
+`x.y.z` and in `0.y.z`), and never in one that bumps only the third.
 
 ## Serving and syncing
 
@@ -338,8 +405,10 @@ transfer at the cost of learning what the reader has been working with,
 which forfeits most of what local-first operation provides. The route table
 is the conformance surface, and a test asserts over it.
 
-Every object received is verified against its own identifier before it is
-stored, so a peer serving altered bytes is caught on arrival. `--proxy=URL`
+Each object received is stored under the identifier of its bytes, so a
+peer serving altered bytes cannot pass them off as the object they alter:
+they have an identifier of their own. `pub-sync` does not check the objects
+received against the domain's generation records. `--proxy=URL`
 routes through an anonymizing transport: which domains a reader follows is
 visible to whoever serves them, and a proxy is what separates that from who
 they are.

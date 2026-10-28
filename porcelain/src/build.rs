@@ -135,13 +135,24 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 
 /// What one build of a tree of sources needs.
 pub(crate) struct Tree<'a> {
+    /// The directory searched for `publet.json` sources.
     pub(crate) dir: &'a Path,
+    /// The directory the lock is in. Each entry's `source` is written
+    /// relative to it.
     pub(crate) lock_dir: &'a Path,
+    /// The workspace directory, whose key signs when `sign` is set.
     pub(crate) here: &'a Path,
+    /// The `author` written into every object built.
     pub(crate) author: &'a str,
+    /// The store whose objects the build reads. Nothing is written to it.
     pub(crate) store: &'a Store,
+    /// The lock as last written, which says what each slug was built as.
     pub(crate) lock: &'a Lock,
+    /// Resolves `alias:slug` against a corpus's parents. `None` outside a
+    /// corpus.
     pub(crate) importer: Option<&'a crate::corpus::Importer>,
+    /// Whether to sign every object built that the author has not signed
+    /// yet (`pub build --sign`).
     pub(crate) sign: bool,
     /// Whether to file each publet's tag. A draft build does not: a tag
     /// names a published thing.
@@ -150,16 +161,22 @@ pub(crate) struct Tree<'a> {
 
 /// What one build of a tree produced, before anything is stored.
 pub(crate) struct Built {
+    /// The objects to store, with their identifiers, in the order built.
     pub(crate) pending: Vec<(Cid, Vec<u8>)>,
     /// Every object a changed publet consists of -- its new versions, their
     /// `supersedes` edges, its tags -- whether new to the store or already
     /// held from an earlier draft, with the node it belongs to.
     pub(crate) owned: Vec<(Cid, String)>,
+    /// One row per line `pub build` prints: what it is about (a slug, a
+    /// tag, a count of signatures), its status (`new`, `revised`,
+    /// `unchanged`, `signed`, `tagged` or `retracted`), and an identifier.
     pub(crate) report: Vec<(String, &'static str, String)>,
+    /// The lock to write once `pending` is stored.
     pub(crate) lock: Lock,
 }
 
 impl Built {
+    /// Print `report` to stdout, one row per line.
     pub(crate) fn report_lines(&self) {
         for (id, status, cid) in &self.report {
             println!("{status:<9} {id}  {cid}");
@@ -605,27 +622,44 @@ fn topological(nodes: &BTreeMap<String, Node>) -> Result<Vec<String>, String> {
 
 // ------------------------------------------------------------------- lock
 
+/// One row of the lock: a publet, or a claim inside one, and what it was
+/// built as.
 #[derive(Clone)]
 pub(crate) struct LockEntry {
+    /// The slug: `tool.typst`, or `tool.typst#identity` for a claim inside
+    /// a publet.
     pub(crate) slug: String,
+    /// `doc` for a publet's document, `claim` for a claim it bundles.
     pub(crate) kind: String,
+    /// The identifier the slug was last built as.
     pub(crate) cid: String,
+    /// The first version of the slug's lineage. A tag is filed on it.
     pub(crate) genesis: String,
+    /// The publet's Section 9.1 citation tag, if it has one.
     pub(crate) tag: Option<String>,
     /// Where the publet's source lives, relative to the lock.
     pub(crate) source: Option<String>,
+    /// The slugs this one refers to.
     pub(crate) deps: Vec<String>,
 }
 
 /// `publets.lock` (or a corpus's `corpus.lock`): slug to identifier, as
 /// last built, and for a corpus what it is pinned to.
 pub(crate) struct Lock {
+    /// The rows, by slug.
     pub(crate) entries: BTreeMap<String, LockEntry>,
     /// A corpus's own section, owned by `corpus.rs` and kept verbatim here.
     pub(crate) corpus: Option<serde_json::Value>,
 }
 
 impl Lock {
+    /// Read the lock at `path`. A missing file is an empty lock: nothing
+    /// has been built yet.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message if the file is not JSON, or has no `publets` list,
+    /// or a row lacks `slug`, `kind`, `cid` or `genesis`.
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
         if !path.exists() {
             return Ok(Self {
@@ -672,8 +706,6 @@ impl Lock {
         })
     }
 
-    /// Sorted by slug, keys sorted, one trailing newline: two builds of one
-    /// tree write identical bytes, so the lock diffs only where the tree did.
     /// Sorted by slug, one row per line in a fixed field order -- the slug
     /// first, because it is what a person scans for -- and one trailing
     /// newline: two builds of one tree write identical bytes, so the lock
@@ -716,6 +748,11 @@ impl Lock {
         ))
     }
 
+    /// Write the lock to `path`, laid out as `render` describes.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message if the file cannot be written.
     pub(crate) fn write(&self, path: &Path) -> Result<(), String> {
         std::fs::write(path, self.render()?)
             .map_err(|e| format!("cannot write {}: {e}", path.display()))

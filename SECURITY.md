@@ -62,9 +62,11 @@ missing or unsigned.
 **In the code:** every crate in the workspace forbids `unsafe`
 (`unsafe_code = "forbid"` in `Cargo.toml`).
 
-**Fuzzing:** the code that reads untrusted input is fuzzed on every change
-(`fuzz/`): the canonical CBOR decoder, object parsing, identifier parsing,
-Merkle log proof checking, and signature checking. Each run first replays
+**Fuzzing:** these parts of the code that read untrusted input are fuzzed
+on every change (`fuzz/`): the canonical CBOR decoder, object parsing,
+identifier parsing, Merkle log proof checking, and signature checking. The
+wire format `pub sync` and `pub-sync` read from a peer
+(`publet_net::wire::unpack`) has no fuzz target yet. Each run first replays
 every input that once found a bug (`fuzz/regressions/`). Fuzzing found
 four bugs before the first crates.io release, all fixed with regression
 tests:
