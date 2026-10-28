@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*", "bin/*", "porcelain"]
 
 [workspace.package]
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 rust-version = "1.98"
 license = "Apache-2.0"
@@ -14,15 +14,15 @@ publet-core = { path = "crates/publet-core", version = "0.1.4" }
 # Generic algorithms, publet-agnostic: depends on no crate in this
 # workspace (tools/check-deps.py). Versioned on its own track.
 publet-algorithms = { path = "crates/publet-algorithms", version = "0.2.2" }
-publet-graph = { path = "crates/publet-graph", version = "0.2.1" }
-publet-lint = { path = "crates/publet-lint", version = "0.2.1" }
-publet-eval = { path = "crates/publet-eval", version = "0.2.1" }
-publet-domain = { path = "crates/publet-domain", version = "0.2.1" }
-publet-store = { path = "crates/publet-store", version = "0.2.1" }
-publet-net = { path = "crates/publet-net", version = "0.2.1" }
-publet-settle = { path = "crates/publet-settle", version = "0.2.1" }
+publet-graph = { path = "crates/publet-graph", version = "0.2.2" }
+publet-lint = { path = "crates/publet-lint", version = "0.2.2" }
+publet-eval = { path = "crates/publet-eval", version = "0.2.2" }
+publet-domain = { path = "crates/publet-domain", version = "0.2.2" }
+publet-store = { path = "crates/publet-store", version = "0.2.2" }
+publet-net = { path = "crates/publet-net", version = "0.2.2" }
+publet-settle = { path = "crates/publet-settle", version = "0.2.2" }
 thiserror = "2"
-publet-quantity = { path = "crates/publet-quantity", version = "0.2.1" }
+publet-quantity = { path = "crates/publet-quantity", version = "0.2.2" }
 # Units, kinds and exact conversion (Section 5.9), at a pinned release.
 pubunit = "=0.1.0"
 serde_json = "1"
