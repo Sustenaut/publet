@@ -76,7 +76,7 @@ impl Membership {
     /// ```
     /// use publet_algorithms::membership::Membership;
     ///
-    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
     /// assert_eq!(members.members(), ["apple", "cherry", "plum"]);
     /// ```
     #[must_use]
@@ -91,7 +91,7 @@ impl Membership {
     /// ```
     /// use publet_algorithms::membership::Membership;
     ///
-    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
     /// assert_eq!(members.len(), 3);
     /// ```
     #[must_use]
@@ -122,12 +122,19 @@ impl Membership {
 
     /// The membership root for this generation.
     ///
+    /// It is [`crate::log::root`] over the members' leaf hashes, in sorted
+    /// order.
+    ///
+    /// # Complexity
+    ///
+    /// O(n) hashes for `n` members, recomputed on every call.
+    ///
     /// # Example
     ///
     /// ```
     /// use publet_algorithms::membership::Membership;
     ///
-    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
     /// let more = Membership::new(["apple", "cherry", "plum", "quince"].map(String::from));
     /// assert_ne!(members.root(), more.root());
     /// ```
@@ -138,12 +145,17 @@ impl Membership {
 
     /// Prove that `member` is present or absent.
     ///
+    /// # Complexity
+    ///
+    /// O(n) hashes for `n` members: every member is leaf-hashed, then up to
+    /// two audit paths are built with [`crate::log::inclusion_proof`].
+    ///
     /// # Example
     ///
     /// ```
     /// use publet_algorithms::membership::{Membership, Proof, verify};
     ///
-    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
     /// let root = members.root();
     ///
     /// let present = members.prove("cherry");
@@ -194,12 +206,17 @@ impl Membership {
 /// Omitting the adjacency check would let a prover skip over the very
 /// member whose absence is being claimed.
 ///
+/// # Complexity
+///
+/// One or two [`crate::log::verify_inclusion`] checks: at most 128 node
+/// hashes, whatever size the proof claims.
+///
 /// # Example
 ///
 /// ```
 /// use publet_algorithms::membership::{Membership, verify};
 ///
-/// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+/// let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
 /// let root = members.root();
 /// let proof = members.prove("banana");
 /// assert!(verify("banana", &proof, &root));

@@ -5,7 +5,7 @@ fixed-point arithmetic, deterministic trust propagation, graph traversals,
 version requirements, and the H3 cell hierarchy.
 
 None of them knows anything about publet. Nodes are strings, hashes are
-32-byte arrays and weights are [`Fixed6`]; a caller with richer identifiers
+32-byte arrays and weights are [`Fixed6`]. A caller with richer identifiers
 converts at its own boundary. Here is an entry proved to be in a log, by
 someone holding only the log's root:
 
@@ -106,7 +106,7 @@ publet's. The crate depends on no other publet crate, and the workspace
 checks that mechanically (`tools/check-deps.py`), so no content identifier,
 signed object or specification type can reach it. Its only dependency is
 `sha2`. The code began inside publet and was extracted after an audit for
-coupling to publet's types; that audit's rule is now the dependency check.
+coupling to publet's types. That audit's rule is now the dependency check.
 
 **Why exactness.** Results that decide whether a claim stands must come out
 the same for everyone who computes them. Floating point cannot promise that:
@@ -129,7 +129,7 @@ was checked at the version shown.
 | [`rust_decimal`](https://crates.io/crates/rust_decimal) 1.43.0 | Decimal arithmetic | Deterministic, but with different precision and rounding from [`Fixed6`]. Switching would change every propagation result. |
 | [`h3o`](https://crates.io/crates/h3o) 0.11.0 | A Rust port of H3, geometry included | Converting coordinates to cells needs floating point, which this crate has none of, and [`h3`] needs only the identifier hierarchy, a few dozen lines with no dependency. Use `h3o` to find the cell of a coordinate. |
 | [`h3ron`](https://crates.io/crates/h3ron) 0.18.0 | Bindings to H3's C library | Unsafe code and a C build, for the same few dozen lines. |
-| [`semver`](https://crates.io/crates/semver) 1.0.28 | Cargo's flavour of semantic versioning | Use it for release arithmetic on strict `MAJOR.MINOR.PATCH` versions, as pubrel does; this crate keeps no version type of its own. [`version::satisfies`] exists because tool versions such as `0.15` aren't semver. |
+| [`semver`](https://crates.io/crates/semver) 1.0.28 | Cargo's flavour of semantic versioning | Use it for release arithmetic on strict `MAJOR.MINOR.PATCH` versions, as pubrel does. This crate keeps no version type of its own. [`version::satisfies`] exists because tool versions such as `0.15` aren't semver. |
 
 # Crate features
 
@@ -138,7 +138,7 @@ None. Everything in the crate is always available.
 # Minimum Rust version
 
 This crate requires Rust 1.85 (its `rust-version`), the first release with
-the 2024 edition; CI builds it there. The minimum may rise in a release that
+the 2024 edition. CI builds it there (`make msrv`). The minimum may rise in a release that
 bumps the minor version, and never in a patch release.
 
 # Versioning
