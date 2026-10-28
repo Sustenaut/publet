@@ -25,8 +25,13 @@ fn main() {
     let lock = root.join("corpus").join("corpus.lock");
     println!("cargo:rerun-if-changed={}", lock.display());
 
+    // Only this package's tags (`vX.Y.Z`): publet-core and publet-algorithms
+    // are tagged `<crate>-vX.Y.Z`, and on a commit carrying both, a plain
+    // `--tags` takes whichever was made last.
     let describe = Command::new("git")
-        .args(["describe", "--tags", "--dirty", "--always"])
+        .args([
+            "describe", "--tags", "--match", "v[0-9]*", "--dirty", "--always",
+        ])
         .current_dir(&root)
         .output()
         .ok()
