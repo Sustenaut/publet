@@ -103,6 +103,10 @@
     {
       "category": "fixed",
       "change": "pub annotate writes --aspect into the annotation's body, where spec Section 7 puts it and the graph reads it, not into value; a provenance verdict on an attributive or archival claim is no longer refused, and pub read shows an annotation's aspect"
+    },
+    {
+      "category": "fixed",
+      "change": "pub --version names its version from publet-cli's own vX.Y.Z tags only, so a publet-core or publet-algorithms tag on the same commit no longer makes a release build call itself unreleased"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
