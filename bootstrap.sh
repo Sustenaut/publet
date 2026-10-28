@@ -32,7 +32,11 @@ install_cargo_tool() {
     cargo install --locked "$name" --version "$version"
   fi
 }
-install_cargo_tool cargo-deny 0.18.6
+# The versions CI runs: the cargo-deny-version and cargo-vet-version
+# defaults of pubkit's job-rust-audit.yml, at the pubkit tag the workflows
+# pin. deny.toml needs cargo-deny 0.20 or later.
+install_cargo_tool cargo-deny 0.20.2
+install_cargo_tool cargo-vet 0.10.2
 
 step "Python environment"
 python3 -m venv --upgrade-deps "$VENV" >/dev/null
