@@ -198,8 +198,11 @@ def test_wiki_seed_refuses_a_path_outside(flag, monkeypatch, tmp_path):
 # vectors: the H3 cells come from the H3 library, the same on every run.
 
 
-def test_drawn_is_below_its_bound_and_the_same_each_time():
-    assert vectors.drawn("lat 0", 10) == vectors.drawn("lat 0", 10)
+def test_drawn_is_below_its_bound_and_read_from_sha_256():
+    import hashlib
+
+    digest = hashlib.sha256(b"lat 0").digest()
+    assert vectors.drawn("lat 0", 1_000) == int.from_bytes(digest[:8], "big") % 1_000
     assert all(0 <= vectors.drawn(f"x {i}", 7) < 7 for i in range(100))
 
 
