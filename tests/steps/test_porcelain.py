@@ -271,6 +271,19 @@ def workspace_with_annotation(bin_dir: Path, tmp_path: Path):
     return p
 
 
+@given("a workspace with an attributive claim and a provenance verdict on it", target_fixture="pub")
+def workspace_with_verdict(bin_dir: Path, tmp_path: Path):
+    p = Pub(bin_dir, tmp_path)
+    assert p.run("init").returncode == 0
+    a = p.run("compose", "--class=attributive", "--scope=unconditional",
+             "--content=Smith (2020) reports that the pump uses 26.4 kWh a day.").stdout.decode().strip()
+    ann = p.run("annotate", "--scope=unconditional", "--kind=verdict", f"--target={a}",
+               "--finding=affirm", "--aspect=provenance")
+    assert ann.returncode == 0, text_of(ann)
+    p.annotation = ann.stdout.decode().strip()
+    return p
+
+
 @when("I read the annotation", target_fixture="result")
 def read_annotation(pub):
     return pub.run("read", pub.annotation)
@@ -348,6 +361,14 @@ def relation_fields_shown(result):
     assert "from      " in body, body
     assert "to        " in body, body
     assert "aspect    construction" in body, body
+
+
+@then("its kind and aspect are shown, and the finding in its value")
+def verdict_fields_shown(result):
+    body = text_of(result)
+    assert "kind      verdict" in body, body
+    assert "aspect    provenance" in body, body
+    assert "finding" in body and "affirm" in body, body
 
 
 @then("its kind, target, and value fields are shown")

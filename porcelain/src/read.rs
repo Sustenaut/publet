@@ -409,6 +409,9 @@ fn print_annotation(body: &std::collections::BTreeMap<String, Value>) {
     if let Some(Value::Text(target)) = body.get("target") {
         println!("target    {target}");
     }
+    if let Some(Value::Text(aspect)) = body.get("aspect") {
+        println!("aspect    {aspect}");
+    }
     let Some(Value::Map(fields)) = body.get("value") else {
         return;
     };

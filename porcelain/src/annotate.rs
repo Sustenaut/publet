@@ -317,9 +317,6 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
                 return Err(format!("unknown finding: {finding}"));
             }
             value.insert("finding".to_owned(), Value::Text(finding));
-            if let Some(aspect) = flags.get("aspect") {
-                value.insert("aspect".to_owned(), Value::Text(aspect.clone()));
-            }
         }
         other => {
             return Err(format!(
@@ -341,14 +338,20 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .get("author")
         .ok_or("no author configured; run `pub init`")?;
 
-    let bytes = Object::builder("claim.annotation", &author)
+    // Section 7: `aspect` belongs to the annotation's body, beside `kind`
+    // and `target`, as a relation's does (Section 6) -- not to `value`. A
+    // verdict on an `attributive` or `archival` claim is checked there
+    // (Section 5.2), so one written into `value` was always refused.
+    let mut builder = Object::builder("claim.annotation", &author)
         .created(&created)
         .field("kind", Value::Text(kind_id.clone()))
         .field("target", Value::Text(target.clone()))
         .field("scope", crate::compose::scope_value(&scope))
-        .field("value", Value::Map(value))
-        .build()
-        .map_err(|e| e.to_string())?;
+        .field("value", Value::Map(value));
+    if let Some(aspect) = flags.get("aspect") {
+        builder = builder.field("aspect", Value::Text(aspect.clone()));
+    }
+    let bytes = builder.build().map_err(|e| e.to_string())?;
     let cid = Cid::of(&bytes, HashAlg::Sha2_256);
 
     crate::compose::offer_then_store(&store, &cid, &bytes, "this annotation was refused")?;
