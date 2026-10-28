@@ -14,7 +14,7 @@
 use ct_merkle::mem_backed_tree::MemoryBackedTree;
 use proptest::prelude::*;
 use publet_algorithms::log::{Hash, consistency_proof, inclusion_proof, leaf_hash, root};
-use sha2_011::Sha256;
+use sha2::Sha256;
 
 fn theirs(leaves: &[Vec<u8>]) -> MemoryBackedTree<Sha256, Vec<u8>> {
     let mut tree = MemoryBackedTree::new();

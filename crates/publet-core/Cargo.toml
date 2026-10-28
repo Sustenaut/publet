@@ -2,7 +2,7 @@
 name = "publet-core"
 description = "Objects, canonical CBOR, content identifiers, and signatures."
 # Released on a version track of its own, not the workspace's.
-version = "0.1.3"
+version = "0.1.4"
 edition.workspace = true
 # The oldest Rust this crate builds on, tested in CI (`make msrv`): the first
 # release with the 2024 edition. Not the workspace's, which is the toolchain
@@ -24,8 +24,8 @@ all-features = true
 
 [dependencies]
 thiserror.workspace = true
-sha2 = "0.10"
-ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
+sha2 = "0.11"
+ed25519-dalek = { version = "3", default-features = false }
 unicode-normalization = "0.1"
 
 [dev-dependencies]

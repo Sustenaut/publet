@@ -13,6 +13,14 @@
       "change": "SUPPLY-CHAIN.md names pubunit among the organisations whose audits are imported, since the workspace now imports pubunit's"
     },
     {
+      "category": "security",
+      "change": "sha2 0.11 replaces sha2 0.10, so block-buffer 0.10.4 (GHSA-qwgh-2vcv-g2f7) is no longer in publet-algorithms' dependency tree; the Merkle log's hashes are unchanged, and the MSRV stays 1.85"
+    },
+    {
+      "category": "internal",
+      "change": "Documentation: SECURITY.md says cargo deny, cargo vet and OSV-Scanner also run every night (it said advisory checks ran only when code changed), and names pubunit among the imported audit sets"
+    },
+    {
       "category": "added",
       "change": "The h3 module: H3 cell identifiers, validated as H3 does (mode, reserved bits, base cell, digits, and pentagons' deleted direction), with each cell's parent at a coarser resolution and whether one cell is inside another by identifier, without geometry or floating point; tested against vectors from h3-py 4.5.0"
     }

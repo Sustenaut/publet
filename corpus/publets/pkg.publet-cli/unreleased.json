@@ -53,6 +53,18 @@
       "change": "pub's HTTPS connections (pub sync, pub serve) no longer trust the distrusted emSign ECC Root CA - G3 or certificate paths through its distrusted intermediates: rustls-webpki 0.103.16, webpki-roots 1.0.10 and webpki-root-certs 1.0.10 (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383)"
     },
     {
+      "category": "security",
+      "change": "tokio 1.54.1 fixes RUSTSEC-2026-0386 and quinn-proto 0.11.19 fixes RUSTSEC-2026-0338, -0340 and -0343 in pub's network client and server (pub sync, pub serve); their cargo vet exemptions move to the fixed versions"
+    },
+    {
+      "category": "security",
+      "change": "pub no longer builds block-buffer 0.10.4 (GHSA-qwgh-2vcv-g2f7): publet-core moves to ed25519-dalek 3 and sha2 0.11, and publet-algorithms to sha2 0.11"
+    },
+    {
+      "category": "internal",
+      "change": "Documentation: SECURITY.md says cargo deny, cargo vet and OSV-Scanner also run every night, and names pubunit among the imported audit sets; publet-core's verify documents each error it returns"
+    },
+    {
       "category": "added",
       "change": "Singulars (spec Section 5.9.1 and 5.9.6): a definitional claim may define one particular thing with defines.sort singular, a name, the PDC code of its class, and optionally part_of, the singular it is part of, and location.h3, the H3 cell it is in; its class must have a subject concept in depends, part_of must name a singular and be in depends, and a singular has no term, so two of one name are never a divergence"
     },

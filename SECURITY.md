@@ -34,10 +34,15 @@ version of the package that needs it.
   in `deny.toml` with the reason. It also restricts dependencies to crates.io
   and to permissive licences (`deny.toml`).
 - `cargo vet`. Every dependency must be covered by an audit imported from
-  Mozilla, Google, the Bytecode Alliance, Zcash, ISRG or Embark Studios, by
-  a publisher those organisations trust, or by an exemption that records the
-  evidence that does exist (`supply-chain/`).
+  Mozilla, Google, the Bytecode Alliance, Zcash, ISRG, Embark Studios or
+  this project's `pubunit` repository, by a trusted publisher, or by an
+  exemption that records the evidence that does exist (`supply-chain/`).
+- OSV-Scanner, over every committed lockfile, against the OSV database.
 - A check that each published crate's `SUPPLY-CHAIN.md` is current.
+
+**Every night, CI runs** `cargo deny check`, `cargo vet` and OSV-Scanner
+again on `main`, so an advisory published after a change is reported the
+next day.
 
 **In each published crate:** `SUPPLY-CHAIN.md` lists every dependency, says
 whether it runs code at build time, and says how its code is vouched for. It
@@ -83,5 +88,3 @@ implementations. Two other implementations are compared in the tests too:
 
 - Not every dependency of the published crates has an audit. The exemptions,
   and the evidence for each, are listed in each crate's `SUPPLY-CHAIN.md`.
-- Advisory checks run when the code changes, not on a schedule, so an
-  advisory published after a release is caught by the next run of CI.

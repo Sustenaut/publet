@@ -1,8 +1,17 @@
 {
   "kind": "rust",
+  "ci": {
+    "cron": "23 3 * * *",
+    "with": {"gates": "guard-floats guard-deps guard-rules guard-msrv", "test-args": "--workspace --all-features",
+             "apt-packages": "jq", "functional": "guard-eval conformance coverage-check script-tests",
+             "cross-test-args": "--workspace --all-features"},
+    "release": {"pubrel": "0.5.4"}
+  },
   "bin": "publet",
   "published": [
     "publet-core",
     "publet-algorithms"
-  ]
+  ],
+  "protect": {"checks": ["ci / passed", "release / release"]},
+  "security": {"sonar": {"args": "-Dsonar.coverage.exclusions=tests/**"}}
 }
