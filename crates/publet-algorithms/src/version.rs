@@ -12,12 +12,12 @@
 ///
 /// - `^X.Y`, compatible, as Cargo reads a caret requirement: not below
 ///   `X.Y`, and the same up to its first non-zero part. `^1.2` admits
-///   `1.9.0` but not `2.0.0`; `^0.1` admits `0.1.9` but not `0.2.0`;
-///   `^0.0.3` admits only `0.0.3`;
+///   `1.9.0` but not `2.0.0`. `^0.1` admits `0.1.9` but not `0.2.0`.
+///   `^0.0.3` admits only `0.0.3`.
 /// - `X.Y+`, a minimum: any version not below it, compared numerically
-///   part by part;
+///   part by part.
 /// - a prefix at a dot boundary: `0.15` admits `0.15` and `0.15.2`, not
-///   `0.150`;
+///   `0.150`.
 /// - empty, which anything satisfies.
 ///
 /// A version or requirement with a part that is not a number satisfies

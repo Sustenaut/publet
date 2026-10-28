@@ -97,11 +97,18 @@ impl Fixed6 {
     ///
     /// The multiplication happens before the division and in `i128`, so
     /// precision is not lost to an intermediate rounding that a different
-    /// implementation might place elsewhere.
+    /// implementation might place elsewhere. The product saturates at
+    /// `i128`'s bounds rather than wrapping.
     ///
     /// Returns [`Self::ZERO`] when `denominator` is zero, which is the
     /// arithmetic identity this layer wants: a key that confers no weight
     /// at all confers none to anyone.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `denominator` is `Fixed6::from_scaled(-1)` and the scaled
+    /// product of `self` and `numerator` is at or below `i128::MIN`: the
+    /// quotient does not fit in `i128`.
     ///
     /// # Example
     ///
@@ -127,6 +134,9 @@ impl Fixed6 {
 
     /// `self * other`, truncating toward zero.
     ///
+    /// The product saturates at `i128`'s bounds before it is rescaled,
+    /// rather than wrapping.
+    ///
     /// # Example
     ///
     /// ```
@@ -142,7 +152,15 @@ impl Fixed6 {
 
     /// `self / other`, truncating toward zero.
     ///
-    /// Returns [`Self::ZERO`] when `other` is zero.
+    /// Returns [`Self::ZERO`] when `other` is zero. `self`, scaled up by
+    /// [`SCALE`] before the division, saturates at `i128`'s bounds rather
+    /// than wrapping.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `other` is `Fixed6::from_scaled(-1)` and
+    /// `self.to_scaled()` is below `i128::MIN / SCALE`: the quotient does not
+    /// fit in `i128`.
     ///
     /// # Example
     ///
@@ -196,8 +214,10 @@ impl Fixed6 {
     /// Computes `self * 2^(-numerator/denominator)` by applying whole
     /// halvings and then a linear interpolation of the remainder. Exact
     /// exponentiation would need a transcendental function, which cannot be
-    /// made bit-identical across platforms; this approximation is fully
-    /// specified by integer operations and therefore can.
+    /// made bit-identical across platforms. This approximation is fully
+    /// specified by integer operations, so it can be.
+    ///
+    /// Returns `self` unchanged when `denominator` is zero.
     ///
     /// # Example
     ///

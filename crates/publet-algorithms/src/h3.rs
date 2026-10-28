@@ -23,11 +23,12 @@
 //! use publet_algorithms::h3::Cell;
 //!
 //! // A resolution-10 cell in Tallinn, and the resolution-7 cell it is in.
-//! let cell: Cell = "8a089b1a2177fff".parse().unwrap();
+//! let cell: Cell = "8a089b1a2177fff".parse()?;
 //! let district = cell.parent(7).unwrap();
 //! assert_eq!(district.to_string(), "87089b1a2ffffff");
 //! assert!(district.contains(&cell));
 //! assert!(!cell.contains(&district));
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 use std::fmt;
@@ -85,7 +86,8 @@ impl Cell {
     ///
     /// # Errors
     ///
-    /// Returns [`CellError::NotACell`] if the bits do not name a valid cell.
+    /// Fails only with [`CellError::NotACell`], and only if the bits do not
+    /// name a valid cell: see that variant for each reason.
     ///
     /// # Example
     ///
@@ -130,8 +132,9 @@ impl Cell {
     /// ```
     /// use publet_algorithms::h3::Cell;
     ///
-    /// let cell: Cell = "8009fffffffffff".parse().unwrap();
+    /// let cell: Cell = "8009fffffffffff".parse()?;
     /// assert_eq!(cell.bits(), 0x8009_ffff_ffff_fff);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn bits(self) -> u64 {
@@ -145,8 +148,9 @@ impl Cell {
     /// ```
     /// use publet_algorithms::h3::Cell;
     ///
-    /// let cell: Cell = "8a089b1a2177fff".parse().unwrap();
+    /// let cell: Cell = "8a089b1a2177fff".parse()?;
     /// assert_eq!(cell.resolution(), 10);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn resolution(self) -> u8 {
@@ -154,20 +158,21 @@ impl Cell {
         u8::try_from((self.0 >> 52) & 0xf).unwrap_or(MAX_RESOLUTION)
     }
 
-    /// The cell at `resolution` this cell is in, by identifier; the cell
-    /// itself at its own resolution. `None` for a resolution finer than the
-    /// cell's.
+    /// The cell at `resolution` this cell is in, by identifier. At its own
+    /// resolution, that is the cell itself. `None` for a resolution finer
+    /// than the cell's.
     ///
     /// # Example
     ///
     /// ```
     /// use publet_algorithms::h3::Cell;
     ///
-    /// let cell: Cell = "8a089b1a2177fff".parse().unwrap();
+    /// let cell: Cell = "8a089b1a2177fff".parse()?;
     /// assert_eq!(cell.parent(5).unwrap().to_string(), "85089b1bfffffff");
     /// assert_eq!(cell.parent(0).unwrap().to_string(), "8009fffffffffff");
     /// assert_eq!(cell.parent(10), Some(cell));
     /// assert_eq!(cell.parent(11), None);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn parent(self, resolution: u8) -> Option<Self> {
@@ -191,11 +196,12 @@ impl Cell {
     /// ```
     /// use publet_algorithms::h3::Cell;
     ///
-    /// let city: Cell = "85089b1bfffffff".parse().unwrap();
-    /// let street: Cell = "8a089b1a2177fff".parse().unwrap();
+    /// let city: Cell = "85089b1bfffffff".parse()?;
+    /// let street: Cell = "8a089b1a2177fff".parse()?;
     /// assert!(city.contains(&street));
     /// assert!(city.contains(&city));
     /// assert!(!street.contains(&city));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn contains(&self, other: &Self) -> bool {
@@ -209,10 +215,11 @@ impl Cell {
     /// ```
     /// use publet_algorithms::h3::Cell;
     ///
-    /// let pentagon: Cell = "8009fffffffffff".parse().unwrap();
+    /// let pentagon: Cell = "8009fffffffffff".parse()?;
     /// assert!(pentagon.is_pentagon());
-    /// let hexagon: Cell = "8a089b1a2177fff".parse().unwrap();
+    /// let hexagon: Cell = "8a089b1a2177fff".parse()?;
     /// assert!(!hexagon.is_pentagon());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn is_pentagon(self) -> bool {

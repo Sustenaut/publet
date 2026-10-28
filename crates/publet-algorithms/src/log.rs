@@ -97,6 +97,10 @@ fn split_len(n: usize) -> usize {
 
 /// Merkle Tree Hash over `leaves`, already leaf-hashed.
 ///
+/// # Complexity
+///
+/// One [`node_hash`] per interior node: `leaves.len() - 1` of them.
+///
 /// # Example
 ///
 /// ```
@@ -123,12 +127,21 @@ pub fn root(leaves: &[Hash]) -> Hash {
 
 /// Audit path proving `index` is in a tree of `leaves.len()` leaves.
 ///
+/// The path runs from the leaf upward, as RFC 6962 section 2.1.1 defines
+/// it. It is empty when `index` is not below `leaves.len()`, and when the
+/// tree has one leaf.
+///
+/// # Complexity
+///
+/// O(n) hashes for `n` leaves: each sibling subtree's root is recomputed
+/// from its leaves. The path holds at most ⌈log₂ n⌉ hashes.
+///
 /// # Example
 ///
 /// ```
 /// use publet_algorithms::log::{Hash, inclusion_proof, leaf_hash, root, verify_inclusion};
 ///
-/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
 /// let path = inclusion_proof(&leaves, 2);
 /// assert!(verify_inclusion(&leaves[2], 2, leaves.len() as u64, &path, &root(&leaves)));
 /// ```
@@ -191,12 +204,21 @@ enum Side {
 /// larger than this machine's `usize`. A 32-bit or `wasm32` verifier
 /// checks a proof for a log of any size.
 ///
+/// Returns `false` when `index` is not below `size`, and when `path` is not
+/// exactly as long as an audit path in a tree of `size` leaves.
+///
+/// # Complexity
+///
+/// One [`node_hash`] per hash in `path`, at most 64. The path's length is
+/// checked against `size` before any hashing, so a path of the wrong length
+/// is rejected unhashed.
+///
 /// # Example
 ///
 /// ```
 /// use publet_algorithms::log::{Hash, inclusion_proof, leaf_hash, root, verify_inclusion};
 ///
-/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
 /// let head = root(&leaves);
 /// let path = inclusion_proof(&leaves, 1);
 /// assert!(verify_inclusion(&leaves[1], 1, 3, &path, &head));
@@ -246,12 +268,21 @@ pub fn verify_inclusion(
 
 /// Proof that a tree of `m` leaves is a prefix of one of `leaves.len()`.
 ///
+/// This is RFC 6962 section 2.1.2's `PROOF(m, D[n])`. It is empty when `m`
+/// is 0, when `m` equals `leaves.len()`, and when `m` is larger: a proof
+/// with nothing in it is all [`verify_consistency`] accepts for the first
+/// two.
+///
+/// # Complexity
+///
+/// O(n) hashes for `n` leaves, as for [`inclusion_proof`].
+///
 /// # Example
 ///
 /// ```
 /// use publet_algorithms::log::{Hash, consistency_proof, leaf_hash, root, verify_consistency};
 ///
-/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
 /// // The first two entries form a log that the three-entry log extends.
 /// let proof = consistency_proof(&leaves, 2);
 /// assert!(verify_consistency(2, 3, &root(&leaves[..2]), &root(&leaves), &proof));
@@ -335,19 +366,24 @@ fn chain_border_right(seed: Hash, path: &[Hash]) -> Hash {
 ///
 /// This is the reconstruction of RFC 6962 section 2.1.2: the proof is split
 /// into an inner and a border part, each folded in turn, yielding both roots
-/// from one path. Getting it wrong is not visible in ordinary use -- proofs
-/// would simply always fail, or worse, always pass -- so the round-trip
-/// tests exercise every `(m, n)` pair rather than a sample.
+/// from one path. A mistake here is not visible in ordinary use. Proofs
+/// would always fail, or worse, always pass. So the round-trip tests
+/// exercise every `(m, n)` pair with `n` up to 48, rather than a sample.
 ///
 /// The sizes are `u64` on every target, for the reason
 /// [`verify_inclusion`]'s are.
+///
+/// # Complexity
+///
+/// O(log n) node hashes. The proof's length is checked against `m` and `n`
+/// before any hashing, so a proof of the wrong length is rejected unhashed.
 ///
 /// # Example
 ///
 /// ```
 /// use publet_algorithms::log::{Hash, consistency_proof, leaf_hash, root, verify_consistency};
 ///
-/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
 /// let old = root(&leaves[..2]);
 /// let proof = consistency_proof(&leaves, 2);
 /// assert!(verify_consistency(2, 3, &old, &root(&leaves), &proof));

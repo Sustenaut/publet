@@ -16,13 +16,13 @@
 //!   implementations that stop at different points produce different
 //!   numbers, and reproducibility depends on them producing the same ones.
 //! * **Ordered traversal.** Every map here is a [`BTreeMap`]. A `HashMap`
-//!   would make the accumulation order depend on a hash seed, and floating
-//!   point would make that visible; integers hide it, which is worse,
+//!   would make the accumulation order depend on a hash seed. Floating
+//!   point would make that visible. Integers hide it, which is worse,
 //!   because the divergence would surface only on a value near a threshold.
 //!
 //! Nodes are plain `String` labels. A caller whose graph is keyed by
 //! something richer -- a content identifier, a database row, a URL --
-//! converts to and from `String` at its own boundary; nothing here needs to
+//! converts to and from `String` at its own boundary. Nothing here needs to
 //! know what the label means, only that two equal labels are the same node.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -75,7 +75,23 @@ pub type Weights = BTreeMap<String, Fixed6>;
 
 /// Run the propagation to a fixed iteration count.
 ///
-/// `edges` need not be sorted; they are grouped deterministically here.
+/// `edges` need not be sorted. They are grouped deterministically here.
+///
+/// # Complexity
+///
+/// Runs exactly `params.iterations` rounds. Each round visits every seed,
+/// and every outbound edge of every node holding weight, once. A run is
+/// O(K × (S + E)) ordered-map updates for K iterations, S seeds and E
+/// distinct `(from, to)` pairs.
+///
+/// # Panics
+///
+/// Weights are normalized with [`Fixed6::mul_div`], which panics in one
+/// case: if the seed weights, or one node's outbound edge
+/// weights after decay, sum to `Fixed6::from_scaled(-1)` while one of them,
+/// scaled by [`SCALE`](crate::SCALE), is at or below `i128::MIN`.
+/// Weights that are not negative never cause it, unless decay overflows
+/// `i128` in [`Fixed6::halve_fractional`].
 ///
 /// # Example
 ///
@@ -109,6 +125,14 @@ pub fn propagate(params: &Params, roots: &[Seed], edges: &[TrustEdge]) -> Weight
 /// them. Propagating with no subject context therefore uses the unconfined
 /// edges alone: an edge declared "on Rust terminology" has not said
 /// anything about a query that is not one.
+///
+/// # Complexity
+///
+/// As [`propagate`], after one pass over `edges` to filter them.
+///
+/// # Panics
+///
+/// As [`propagate`].
 ///
 /// # Example
 ///
@@ -217,7 +241,13 @@ fn propagate_all(params: &Params, roots: &[Seed], edges: &[TrustEdge]) -> Weight
 }
 
 /// Nodes reachable from `start` within `distance` hops, over `edges`
-/// treated as undirected.
+/// treated as undirected. `start` is always included.
+///
+/// # Complexity
+///
+/// Builds an adjacency map over all of `edges`, then visits each node
+/// within reach once: O(E + V) ordered-map operations. It runs all
+/// `distance` rounds, even after a round finds nothing new.
 ///
 /// # Example
 ///
