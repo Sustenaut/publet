@@ -27,20 +27,6 @@ None.
 
 ## Falls short of the standard
 
-2. **Section 9, `pub --version` and the README's claim about it
-   (`porcelain/build.rs:28`).** The build script runs `git describe --tags`,
-   which takes the nearest tag of any package. In this checkout, `pub
-   --version` prints "pub unreleased build (publet-core-v0.1.4-19-gf60d996;
-   no release precedes it)", though v0.2.1 precedes it. Two annotated tags
-   on one commit were tried in a scratch repository: `git describe --tags`
-   gave whichever tag was created last. So if `v0.2.2` and
-   `publet-algorithms-v0.2.2` tag the same merge commit, and the second is
-   created after the first, a clean build from a clone at `v0.2.2` reports
-   itself unreleased. The README says such a build prints `pub 0.2.2`.
-   `cargo install --git --tag` is not affected: it has no tags and takes the
-   manifest version. A fix is `--match 'v[0-9]*'` in `porcelain/build.rs`.
-   That is a code change for a person to make, and it matters to this
-   release only if both packages are tagged on one commit.
 3. **Section 9, `--help` (`porcelain/src/main.rs:44-74, 113`).** `pub
    --help` prints to stderr and exits 2. The standard asks for stdout and
    exit 0. It names every command, but none of their flags. `pub compose`
@@ -82,6 +68,24 @@ None.
    remain. That is a code change.
 
 ## Resolved on this branch
+
+1b. **Fell short, resolved by #70: section 9, `pub --version` and the README's claim about it
+   (`porcelain/build.rs:28`).** The build script runs `git describe --tags`,
+   which takes the nearest tag of any package. In this checkout, `pub
+   --version` prints "pub unreleased build (publet-core-v0.1.4-19-gf60d996;
+   no release precedes it)", though v0.2.1 precedes it. Two annotated tags
+   on one commit were tried in a scratch repository: `git describe --tags`
+   gave whichever tag was created last. So if `v0.2.2` and
+   `publet-algorithms-v0.2.2` tag the same merge commit, and the second is
+   created after the first, a clean build from a clone at `v0.2.2` reports
+   itself unreleased. The README says such a build prints `pub 0.2.2`.
+   `cargo install --git --tag` is not affected: it has no tags and takes the
+   manifest version. A fix is `--match 'v[0-9]*'` in `porcelain/build.rs`.
+   That is a code change for a person to make, and it matters to this
+   release only if both packages are tagged on one commit.
+   #70 adds `--match 'v[0-9]*'` to the build script's `git describe`, so
+   only publet-cli's own tags name the version. It merges before this
+   release is prepared.
 
 1. **Was blocking: section 7, a false claim in `SECURITY.md` (line 65).** It says "the code
    that reads untrusted input is fuzzed on every change", then lists the CBOR
