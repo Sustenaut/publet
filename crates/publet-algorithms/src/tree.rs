@@ -37,7 +37,7 @@ pub enum Node {
     /// to render it), plus a set of named children, each itself a
     /// [`Node`]. Two branches with the same header and the same
     /// `(name, hash)` pairs -- regardless of child insertion order --
-    /// hash identically; that is what makes moving a method's textual
+    /// hash identically. That is what makes moving a method's textual
     /// position in a file a no-op for its parent's hash.
     Branch {
         /// The branch's own identifying bytes, hashed but never
@@ -152,10 +152,15 @@ impl Node {
         }
     }
 
-    /// The commitment: for a leaf, the hash of its content; for a
-    /// branch, a hash of its header and every child's own `hash()`,
+    /// The commitment. For a leaf, it is the hash of its content. For a
+    /// branch, it is a hash of its header and every child's own `hash()`,
     /// paired with its name and length-prefixed so no concatenation of
     /// two different `(name, hash)` sequences can ever coincide.
+    ///
+    /// # Complexity
+    ///
+    /// Hashes every node beneath this one once, on every call: nothing is
+    /// cached. The recursion is as deep as the tree.
     ///
     /// # Example
     ///

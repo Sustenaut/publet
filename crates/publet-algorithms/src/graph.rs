@@ -14,17 +14,24 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 /// Every node reachable from `start`, `start` first, in breadth-first
 /// order.
 ///
+/// # Complexity
+///
+/// Calls `next` once per node visited, and queues each neighbour it
+/// yields: O(V + E) queue operations and as many ordered-set lookups, for
+/// the V nodes and E edges it reaches.
+///
 /// # Example
 ///
 /// ```
+/// use std::collections::BTreeMap;
 /// use publet_algorithms::graph::reachable;
 ///
-/// # use std::collections::BTreeMap;
-/// # let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
-/// # let next = |n: &str| -> Vec<String> {
-/// #     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
-/// # };
-/// // a -> b, a -> c, b -> d, c -> d: breadth-first, each node once.
+/// // a -> b, a -> c, b -> d, c -> d.
+/// let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
+/// let next = |n: &str| -> Vec<String> {
+///     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
+/// };
+/// // Breadth-first, each node once.
 /// assert_eq!(reachable("a", next), ["a", "b", "c", "d"]);
 /// ```
 pub fn reachable<F, I>(start: &str, mut next: F) -> Vec<String>
@@ -45,21 +52,26 @@ where
     out
 }
 
-/// Whether `target` can be reached from `start`; a node reaches itself.
+/// Whether `target` can be reached from `start`. A node reaches itself.
 ///
 /// Adding an edge `from -> to` closes a cycle exactly when
 /// `reaches(to, from, ..)`.
 ///
+/// # Complexity
+///
+/// As [`reachable`], and it stops when it meets `target`.
+///
 /// # Example
 ///
 /// ```
+/// use std::collections::BTreeMap;
 /// use publet_algorithms::graph::reaches;
 ///
-/// # use std::collections::BTreeMap;
-/// # let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
-/// # let next = |n: &str| -> Vec<String> {
-/// #     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
-/// # };
+/// // a -> b, a -> c, b -> d, c -> d.
+/// let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
+/// let next = |n: &str| -> Vec<String> {
+///     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
+/// };
 /// assert!(reaches("a", "d", next));
 /// assert!(!reaches("d", "a", next));
 /// // Adding d -> a would close a cycle exactly when a already reaches d.
@@ -92,19 +104,26 @@ pub struct CycleThroughStart;
 ///
 /// # Errors
 ///
-/// [`CycleThroughStart`] if an edge leads back to `start`: for a relation
-/// that must be acyclic, the closure of a node on a cycle is not defined.
+/// Fails only with [`CycleThroughStart`], and only if an edge from a node
+/// reachable from `start` leads back to `start`. For a relation that must
+/// be acyclic, the closure of a node on a cycle is not defined. A cycle
+/// that does not pass through `start` is not an error.
+///
+/// # Complexity
+///
+/// As [`reachable`].
 ///
 /// # Example
 ///
 /// ```
+/// use std::collections::BTreeMap;
 /// use publet_algorithms::graph::{CycleThroughStart, closure};
 ///
-/// # use std::collections::BTreeMap;
-/// # let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
-/// # let next = |n: &str| -> Vec<String> {
-/// #     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
-/// # };
+/// // a -> b, a -> c, b -> d, c -> d.
+/// let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
+/// let next = |n: &str| -> Vec<String> {
+///     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
+/// };
 /// assert_eq!(closure("a", next).unwrap(), ["b", "c", "d"]);
 ///
 /// // With d -> a added, the closure of a would contain a itself.
@@ -139,6 +158,10 @@ where
 /// Follow `parent` from `start` until a node has none, and return that
 /// node. If the walk returns to a node it has passed, it stops there, so a
 /// cycle cannot make it run forever.
+///
+/// # Complexity
+///
+/// Calls `parent` once per distinct node on the walk.
 ///
 /// # Example
 ///
@@ -179,8 +202,16 @@ where
 ///
 /// # Errors
 ///
-/// The cycle, as the path that closes it -- `["a", "b", "a"]` -- if the
-/// dependencies form one.
+/// Fails only if the walk from `nodes` meets a cycle. The error is the
+/// first cycle the depth-first walk meets, as the path that closes it:
+/// `["a", "b", "a"]`.
+///
+/// # Complexity
+///
+/// Calls `deps` once per distinct node, and visits each dependency it
+/// yields once: O(V + E) visits and as many ordered-map lookups. The walk
+/// is recursive, so the call stack grows with the longest chain of
+/// dependencies.
 ///
 /// # Example
 ///
