@@ -31,10 +31,6 @@ audit-as-crates-io = false
 [policy.publet-core]
 audit-as-crates-io = false
 
-[[exemptions.autocfg]]
-version = "1.5.1"
-criteria = "safe-to-run"
-
 [[exemptions.aws-lc-rs]]
 version = "1.18.1"
 criteria = "safe-to-deploy"
@@ -51,18 +47,14 @@ criteria = "safe-to-deploy"
 version = "0.5.6"
 criteria = "safe-to-deploy"
 
-[[exemptions.base64ct]]
-version = "1.8.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.bitflags]]
 version = "2.13.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.block-buffer]]
 version = "0.12.1"
-criteria = "safe-to-run"
-notes = "Test-only: part of ct-merkle, publet-algorithms' RFC 6962 test oracle. Runs in this project's tests and CI; never built into the published crates."
+criteria = "safe-to-deploy"
+notes = "Ships in publet-core and publet-algorithms (via digest, for sha2 0.11 and ed25519-dalek 3); replaces 0.10.4, which has GHSA-qwgh-2vcv-g2f7. Imported audits chain to 0.10.4 (Zcash crypto-reviewed delta 0.10.3 to 0.10.4); nothing covers 0.10.4 to 0.12.1 (9 files, +964/-281). 22 unsafe uses in src. No advisory against 0.12.1. As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.bytes]]
 version = "1.12.1"
@@ -76,25 +68,6 @@ criteria = "safe-to-deploy"
 version = "1.1.0"
 criteria = "safe-to-deploy"
 
-[[exemptions.chacha20]]
-version = "0.10.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.ciborium]]
-version = "0.2.2"
-criteria = "safe-to-run"
-notes = "Test-only: part of ciborium, publet-core's CBOR test oracle. Runs in this project's tests and CI; never built into the published crates."
-
-[[exemptions.ciborium-io]]
-version = "0.2.2"
-criteria = "safe-to-run"
-notes = "Test-only: part of ciborium, publet-core's CBOR test oracle. Runs in this project's tests and CI; never built into the published crates."
-
-[[exemptions.ciborium-ll]]
-version = "0.2.2"
-criteria = "safe-to-run"
-notes = "Test-only: part of ciborium, publet-core's CBOR test oracle. Runs in this project's tests and CI; never built into the published crates."
-
 [[exemptions.cmake]]
 version = "0.1.58"
 criteria = "safe-to-deploy"
@@ -104,41 +77,18 @@ version = "4.6.8"
 criteria = "safe-to-deploy"
 
 [[exemptions.const-oid]]
-version = "0.9.6"
-criteria = "safe-to-deploy"
-
-[[exemptions.const-oid]]
 version = "0.10.2"
-criteria = "safe-to-run"
-notes = "Test-only: part of ct-merkle, publet-algorithms' RFC 6962 test oracle. Runs in this project's tests and CI; never built into the published crates."
+criteria = "safe-to-deploy"
+notes = "Ships in publet-core and publet-algorithms (via digest 0.11). No audit of any version in any cargo-vet registry set; the repo already exempts 0.9.6. Diff from 0.9.6: 20 files, +2426/-489. forbid(unsafe_code). No advisory. As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.core-foundation]]
 version = "0.10.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.cpufeatures]]
-version = "0.2.17"
-criteria = "safe-to-deploy"
-notes = "No full audit in any cargo-vet registry set as of 2026-10-05; Zcash published safe-to-deploy deltas from 0.2.2 to 0.2.14, short of this version."
-
-[[exemptions.cpufeatures]]
-version = "0.3.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.crunchy]]
-version = "0.2.4"
-criteria = "safe-to-run"
-notes = "Test-only: part of ciborium, publet-core's CBOR test oracle. Runs in this project's tests and CI; never built into the published crates."
-
-[[exemptions.crypto-common]]
-version = "0.1.7"
-criteria = "safe-to-deploy"
-notes = "Imported audits cover up to 0.1.6; the 0.1.6 to 0.1.7 diff (manifest only) awaits review by the maintainer."
-
 [[exemptions.crypto-common]]
 version = "0.2.2"
-criteria = "safe-to-run"
-notes = "Test-only: part of ct-merkle, publet-algorithms' RFC 6962 test oracle. Runs in this project's tests and CI; never built into the published crates."
+criteria = "safe-to-deploy"
+notes = "Ships in publet-core and publet-algorithms (via digest 0.11). Imported audits cover up to 0.1.6 (Zcash crypto-reviewed); nothing covers 0.1.7 to 0.2.2 (8 files, +775/-138). forbid(unsafe_code). No advisory. As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.ct-merkle]]
 version = "0.3.0"
@@ -146,9 +96,9 @@ criteria = "safe-to-run"
 notes = "Test-only: part of ct-merkle, publet-algorithms' RFC 6962 test oracle. Runs in this project's tests and CI; never built into the published crates."
 
 [[exemptions.curve25519-dalek]]
-version = "4.1.3"
+version = "5.0.0"
 criteria = "safe-to-deploy"
-notes = "Zcash published crypto-reviewed, safe-to-deploy deltas for every release from 4.1.0 to this one (4.1.3), but no registry set has a full audit of 4.1.0; Google audited 4.0.0 for undefined-behaviour risk only. As of 2026-10-05."
+notes = "Ships in publet-core (via ed25519-dalek 3). Zcash's crypto-reviewed deltas reach 4.1.3 without a full base audit; nothing covers 4.1.3 to 5.0.0 (62 files, +4031/-1157). 38 unsafe uses in src (SIMD backends) and a build.rs. No advisory against 5.0.0 (RUSTSEC-2024-0344 is fixed from 4.1.3). As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.curve25519-dalek-derive]]
 version = "0.1.1"
@@ -156,28 +106,23 @@ criteria = "safe-to-deploy"
 notes = "Google audited 0.1.0 (ub-risk-3, does-not-implement-crypto) and Zcash published a crypto-reviewed delta 0.1.0 to 0.1.1, but no registry set audits 0.1.0 as safe-to-deploy. As of 2026-10-05."
 
 [[exemptions.digest]]
-version = "0.10.7"
-criteria = "safe-to-deploy"
-notes = "Imported deltas chain from 0.9.0 to this version (Bytecode Alliance 0.9.0 to 0.10.3, Mozilla to 0.10.6, ISRG to 0.10.7), but no registry set has a full audit of 0.9.0. As of 2026-10-05."
-
-[[exemptions.digest]]
 version = "0.11.3"
-criteria = "safe-to-run"
-notes = "Test-only: part of ct-merkle, publet-algorithms' RFC 6962 test oracle. Runs in this project's tests and CI; never built into the published crates."
+criteria = "safe-to-deploy"
+notes = "Ships in publet-core and publet-algorithms (via sha2 0.11). Imported deltas chain from 0.9.0 to 0.10.7 without a full base audit; nothing covers 0.10.7 to 0.11.3 (27 files, +2206/-1248). forbid(unsafe_code). No advisory. As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.displaydoc]]
 version = "0.2.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.ed25519]]
-version = "2.2.3"
+version = "3.0.0"
 criteria = "safe-to-deploy"
-notes = "Zcash published crypto-reviewed deltas 2.2.1 to 2.2.3, but no registry set has a full audit of 2.2.1. As of 2026-10-05."
+notes = "Ships in publet-core (via ed25519-dalek 3). Zcash's crypto-reviewed deltas reach 2.2.3 without a full base audit; nothing covers 2.2.3 to 3.0.0 (12 files, +297/-327). forbid(unsafe_code). No advisory. As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.ed25519-dalek]]
-version = "2.2.0"
+version = "3.0.0"
 criteria = "safe-to-deploy"
-notes = "No audit of any version in any cargo-vet registry set as of 2026-10-05."
+notes = "Ships in publet-core, which signs and verifies with it directly. No audit of any version in any cargo-vet registry set; the repo exempted 2.2.0. Diff from 2.2.0: 18 files, +813/-293. 4 unsafe uses in src. No advisory against 3.0.0 (RUSTSEC-2022-0093 is fixed from 2.0). As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.fastrand]]
 version = "2.5.0"
@@ -195,10 +140,6 @@ criteria = "safe-to-deploy"
 version = "0.3.34"
 criteria = "safe-to-deploy"
 
-[[exemptions.futures-core]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
 [[exemptions.futures-task]]
 version = "0.3.34"
 criteria = "safe-to-deploy"
@@ -206,11 +147,6 @@ criteria = "safe-to-deploy"
 [[exemptions.futures-util]]
 version = "0.3.34"
 criteria = "safe-to-deploy"
-
-[[exemptions.generic-array]]
-version = "0.14.7"
-criteria = "safe-to-deploy"
-notes = "Google audited this version as safe-to-run (not safe-to-deploy); Mozilla and Zcash published safe-to-deploy deltas 0.14.5 to 0.14.7 without a full base audit. As of 2026-10-05."
 
 [[exemptions.getrandom]]
 version = "0.2.17"
@@ -243,8 +179,8 @@ criteria = "safe-to-deploy"
 
 [[exemptions.hybrid-array]]
 version = "0.4.15"
-criteria = "safe-to-run"
-notes = "Test-only: part of ct-merkle, publet-algorithms' RFC 6962 test oracle. Runs in this project's tests and CI; never built into the published crates."
+criteria = "safe-to-deploy"
+notes = "Ships in publet-core and publet-algorithms (via block-buffer and crypto-common, replacing generic-array). Google audited 0.4.7 for undefined-behaviour risk only (ub-risk-1); no safe-to-deploy audit of any version. 4817 lines; 43 unsafe uses in src. No advisory. As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.hyper]]
 version = "1.11.1"
@@ -367,14 +303,6 @@ criteria = "safe-to-deploy"
 version = "0.2.17"
 criteria = "safe-to-deploy"
 
-[[exemptions.pkcs8]]
-version = "0.10.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.pkg-config]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
 [[exemptions.potential_utf]]
 version = "0.1.6"
 criteria = "safe-to-deploy"
@@ -408,14 +336,6 @@ version = "0.9.5"
 criteria = "safe-to-run"
 
 [[exemptions.rand]]
-version = "0.10.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.rand_core]]
-version = "0.10.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.rand_pcg]]
 version = "0.10.2"
 criteria = "safe-to-deploy"
 
@@ -526,8 +446,13 @@ criteria = "safe-to-deploy"
 
 [[exemptions.sha2]]
 version = "0.11.0"
-criteria = "safe-to-run"
-notes = "Test-only: part of ct-merkle, publet-algorithms' RFC 6962 test oracle. Runs in this project's tests and CI; never built into the published crates."
+criteria = "safe-to-deploy"
+notes = "Ships in publet-core (content identifiers) and publet-algorithms (Merkle log). Imported audits cover 0.10.2 (ISRG) and deltas to 0.10.9; nothing covers 0.10.9 to 0.11.0 (51 files, +1885/-975). 53 unsafe uses in src (SIMD and asm backends). No advisory against 0.11.0. As of 2026-10-28. Review by 2027-01-28."
+
+[[exemptions.signature]]
+version = "3.0.0"
+criteria = "safe-to-deploy"
+notes = "Ships in publet-core (via ed25519 3). Zcash audited 2.1.0 and the delta to 2.2.0; nothing covers 2.2.0 to 3.0.0 (12 files, +649/-451). forbid(unsafe_code). No advisory. As of 2026-10-28. Review by 2027-01-28."
 
 [[exemptions.slab]]
 version = "0.4.12"
@@ -541,16 +466,8 @@ criteria = "safe-to-deploy"
 version = "0.6.5"
 criteria = "safe-to-deploy"
 
-[[exemptions.spki]]
-version = "0.7.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.stable_deref_trait]]
 version = "1.2.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.sync_wrapper]]
-version = "1.0.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.tinystr]]
@@ -594,27 +511,14 @@ criteria = "safe-to-deploy"
 version = "0.1.44"
 criteria = "safe-to-deploy"
 
-[[exemptions.tracing-core]]
-version = "0.1.36"
-criteria = "safe-to-deploy"
-
 [[exemptions.typenum]]
 version = "1.20.1"
 criteria = "safe-to-deploy"
 notes = "Mozilla and Zcash published safe-to-deploy deltas 1.15.0 to 1.17.0; nothing covers 1.17.0 to this version, and no set has a full audit. Most of the crate is generated code. As of 2026-10-05."
 
-[[exemptions.untrusted]]
-version = "0.9.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.url]]
 version = "2.5.8"
 criteria = "safe-to-deploy"
-
-[[exemptions.version_check]]
-version = "0.9.5"
-criteria = "safe-to-deploy"
-notes = "Google audited 0.9.4 as safe-to-deploy; the 0.9.4 to 0.9.5 diff (documentation only) awaits review by the maintainer."
 
 [[exemptions.walkdir]]
 version = "2.5.0"
@@ -646,10 +550,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.web-sys]]
 version = "0.3.105"
-criteria = "safe-to-deploy"
-
-[[exemptions.web-time]]
-version = "1.1.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.webpki-root-certs]]
