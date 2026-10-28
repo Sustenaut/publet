@@ -12,3 +12,8 @@ Feature: A workspace is local-first from the start
     Given an empty directory
     When I run "pub read" on any identifier
     Then it says to run "pub init"
+
+  Scenario: pub with no command lists the commands and exits as a usage error
+    Given an empty directory
+    When I run "pub"
+    Then it exits 2 and lists the commands, with pub --version
