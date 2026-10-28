@@ -11,6 +11,10 @@
     {
       "category": "internal",
       "change": "SUPPLY-CHAIN.md names pubunit among the organisations whose audits are imported, since the workspace now imports pubunit's"
+    },
+    {
+      "category": "security",
+      "change": "ed25519-dalek 3.0.0 and sha2 0.11 replace ed25519-dalek 2 and sha2 0.10, so block-buffer 0.10.4 (GHSA-qwgh-2vcv-g2f7) is no longer in publet-core's dependency tree; the public API, which takes and returns bytes, is unchanged, as are the signatures and identifiers it produces, and the MSRV stays 1.85"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
