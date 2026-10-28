@@ -150,7 +150,7 @@ trailing bytes.
 | [`minicbor`](https://crates.io/crates/minicbor) 2.3.0 | Small `no_std` CBOR codec | Lenient in the same way: it accepted the six forbidden encodings tried, reading a non-shortest integer as the plain value. |
 | [`dcbor`](https://crates.io/crates/dcbor) 0.25.2 | Deterministic CBOR | Strict, and rejects most forbidden encodings. But it orders map keys by encoded length (RFC 8949 §4.2.1), while Section 4.1 orders them by UTF-8 bytes, so it rejects this crate's canonical objects. It also admits floats, tags and non-text keys. |
 | [`serde_cbor`](https://crates.io/crates/serde_cbor) 0.11.2 | CBOR with serde | Unmaintained since 2021. |
-| [`cid`](https://crates.io/crates/cid) | IPFS content identifiers | A multiformats CID carries a version, a codec and a multibase prefix (`bafy…`). Section 4.2 defines a different text form, `pub:<algorithm>:<base32>`, so its parser and printer don't apply. |
+| [`cid`](https://crates.io/crates/cid) 0.11.3 | IPFS content identifiers | A multiformats CID carries a version, a codec and a multibase prefix (`bafy…`). Section 4.2 defines a different text form, `pub:<algorithm>:<base32>`, so its parser and printer don't apply. |
 
 What this crate builds on rather than reimplements: [`sha2`](https://crates.io/crates/sha2)
 for SHA-256, [`ed25519-dalek`](https://crates.io/crates/ed25519-dalek) for
