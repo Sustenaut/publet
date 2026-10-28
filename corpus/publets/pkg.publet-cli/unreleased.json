@@ -91,6 +91,14 @@
     {
       "category": "added",
       "change": "Spec Section 5.9.1 fixes the PDC separator: a narrower class is the code it extends, `~`, and a number, such as (1/9)~1; Section 5.9.6 documents the Sustenaut usage pattern, with places under the concept Place at UDC (1/9), so place paths begin place."
+    },
+    {
+      "category": "fixed",
+      "change": "pub get no longer counts an annotation or dispute its author has retracted as leaving a fact open (spec Section 5.9.7): withdrawing a to-verify note once the check is made changes the status it implies"
+    },
+    {
+      "category": "internal",
+      "change": "A golden test composes the Tallinn fixtures under a fixed author and time and compares every identifier with tests/golden/tallinn.json, so a change to the bytes pub compose writes for the same input, which would re-mint every gathered fact, fails CI unless it is made on purpose (PUBLET_UPDATE_GOLDEN=1)"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
