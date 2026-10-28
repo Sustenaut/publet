@@ -12,5 +12,6 @@
     "publet-core",
     "publet-algorithms"
   ],
-  "protect": {"checks": ["ci / passed", "release / release"]}
+  "protect": {"checks": ["ci / passed", "release / release"]},
+  "security": {"sonar": {"args": "-Dsonar.coverage.exclusions=tests/**"}}
 }
