@@ -36,7 +36,7 @@ pub(crate) const FILE: &str = "pub-version.txt";
 /// The environment variable that skips the check.
 pub(crate) const IGNORE: &str = "PUB_IGNORE_VERSION";
 
-const REPOSITORY: &str = "https://github.com/schryer/publet";
+const REPOSITORY: &str = "https://github.com/Sustenaut/publet";
 
 /// The most of a declaring file read: a requirement is one short line.
 pub(crate) const LIMIT: u64 = 4096;

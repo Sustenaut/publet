@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Report it privately through GitHub:
-**[report a vulnerability](https://github.com/schryer/publet/security/advisories/new)**
+**[report a vulnerability](https://github.com/Sustenaut/publet/security/advisories/new)**
 (the repository's Security tab, "Report a vulnerability"). Please don't open a
 public issue for it.
 
@@ -47,8 +47,8 @@ next day.
 **In each published crate:** `SUPPLY-CHAIN.md` lists every dependency, says
 whether it runs code at build time, and says how its code is vouched for. It
 ships in the crate package, so it describes exactly what you install. See
-[publet-core](https://github.com/schryer/publet/blob/main/crates/publet-core/SUPPLY-CHAIN.md) and
-[publet-algorithms](https://github.com/schryer/publet/blob/main/crates/publet-algorithms/SUPPLY-CHAIN.md).
+[publet-core](https://github.com/Sustenaut/publet/blob/main/crates/publet-core/SUPPLY-CHAIN.md) and
+[publet-algorithms](https://github.com/Sustenaut/publet/blob/main/crates/publet-algorithms/SUPPLY-CHAIN.md).
 
 **In every release:** the checks above run again before the release is cut,
 and the release is not cut if one fails. What ran is recorded as a `security`

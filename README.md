@@ -376,7 +376,7 @@ Install a published version -- from git, until the workspace's crates are
 published on crates.io:
 
 ```sh
-cargo install --locked --git https://github.com/schryer/publet --tag v0.2.0 publet-cli
+cargo install --locked --git https://github.com/Sustenaut/publet --tag v0.2.0 publet-cli
 ```
 
 That installs `pub`. Each plumbing command is a package of its own under

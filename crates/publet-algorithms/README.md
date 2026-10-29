@@ -1,6 +1,6 @@
 # publet-algorithms
 
-The generic algorithms the [publet](https://github.com/schryer/publet) tools
+The generic algorithms the [publet](https://github.com/Sustenaut/publet) tools
 are built on: an append-only Merkle log (RFC 6962), sorted-set membership with
 absence proofs, recursive content trees, exact fixed-point arithmetic,
 deterministic trust propagation, graph traversals, version requirements, and
