@@ -12,59 +12,59 @@ permissions:
 jobs:
   gates:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-rust-gates.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-gates.yml@v0.15.2
     with: {"gates": "guard-floats guard-deps guard-rules guard-msrv", "required": "fmt-check lint doc doc-coverage-check publish-check"}
 
   test:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-test.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-test.yml@v0.15.2
     with: {"test-args": "--workspace --all-features"}
 
   functional:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-functional.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-functional.yml@v0.15.2
     with: {"apt-packages": "jq", "functional": "guard-eval conformance coverage-check script-tests", "required": "functional vectors-check supply-chain-check"}
-    secrets: inherit
+    secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   msrv:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-msrv.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-msrv.yml@v0.15.2
 
   fuzz:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-fuzz.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-fuzz.yml@v0.15.2
 
   cross:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-cross.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-cross.yml@v0.15.2
     with: {"cross-test-args": "--workspace --all-features"}
 
   audit:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-rust-audit.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-audit.yml@v0.15.2
     with: {"required": "deny vet"}
 
   osv:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-osv.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-osv.yml@v0.15.2
 
   toolchains:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-toolchains.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-rust-toolchains.yml@v0.15.2
     with: {"test-args": "--workspace --all-features"}
 
   sonar:
     name: ci
     needs: [functional]
-    uses: schryer/pubkit/.github/workflows/job-sonar.yml@v0.14.6
+    uses: schryer/pubkit/.github/workflows/job-sonar.yml@v0.15.2
     with: {"reports": "sonar.rust.lcov.reportPaths=lcov.info sonar.python.coverage.reportPaths=*.xml"}
-    secrets: inherit
+    secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   # The one check a ruleset requires: it passes only when every job
   # above succeeded. None of them is ever skipped for not being asked for.
