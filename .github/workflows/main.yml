@@ -11,51 +11,51 @@ permissions:
 jobs:
   gates:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-rust-gates.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-gates.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
     with: {"gates": "guard-floats guard-deps guard-rules guard-msrv", "required": "fmt-check lint doc doc-coverage-check publish-check"}
 
   test:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-test.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-test.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
     with: {"test-args": "--workspace --all-features"}
 
   functional:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-functional.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-functional.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
     with: {"apt-packages": "jq", "functional": "guard-eval conformance coverage-check script-tests", "required": "functional vectors-check supply-chain-check"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   msrv:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-msrv.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-msrv.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
 
   fuzz:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-fuzz.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-fuzz.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
 
   cross:
     name: ci
     needs: [gates]
-    uses: schryer/pubkit/.github/workflows/job-rust-cross.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-cross.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
     with: {"cross-test-args": "--workspace --all-features"}
 
   audit:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-rust-audit.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-audit.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
     with: {"required": "deny vet"}
 
   osv:
     name: ci
-    uses: schryer/pubkit/.github/workflows/job-osv.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-osv.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
 
   sonar:
     name: ci
     needs: [functional]
-    uses: schryer/pubkit/.github/workflows/job-sonar.yml@v0.15.2
+    uses: Sustenaut/pubkit/.github/workflows/job-sonar.yml@44056227327a7af7f344e008fb72106b2eae4eca # v0.16.0
     with: {"reports": "sonar.rust.lcov.reportPaths=lcov.info sonar.python.coverage.reportPaths=*.xml"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
@@ -77,7 +77,7 @@ jobs:
   # main, a published version is tagged and released.
   release:
     needs: passed
-    uses: schryer/pubrel/.github/workflows/release.yml@v0.5.4
-    with: {"pubrel-version": "v0.5.4", "semver-checks-version": "0.51.0"}
+    uses: Sustenaut/pubrel/.github/workflows/release.yml@16c6c9731b3f41639d45160e8bb73d59d8562e04 # v0.5.5
+    with: {"pubrel-version": "v0.5.5", "semver-checks-version": "0.51.0"}
     permissions:
       contents: write
