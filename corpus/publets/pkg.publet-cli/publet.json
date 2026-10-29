@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "publet-cli 0.2.2 is released as v0.2.2 from commit 1ee769a56d756f65707a27e4621704e023e2844d.",
+      "content": "publet-cli 0.2.3 is released as v0.2.3 from commit 4f38921f47bb6da58a0e85157c9005544f8b2345.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pub",
-            "0.2.2",
+            "0.2.3",
             "pub --version",
-            "pub 0.2.2",
-            "v0.2.2",
-            "1ee769a56d756f65707a27e4621704e023e2844d"
+            "pub 0.2.3",
+            "v0.2.3",
+            "4f38921f47bb6da58a0e85157c9005544f8b2345"
           ]
         ]
       },
-      "scope": "the published release v0.2.2 of publet-cli",
+      "scope": "the published release v0.2.3 of publet-cli",
       "sources": [
         {
           "ref": "publet-cli",
-          "revision": "1ee769a56d756f65707a27e4621704e023e2844d"
+          "revision": "4f38921f47bb6da58a0e85157c9005544f8b2345"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "publet-cli 0.2.2 was released on 2026-10-28 from commit 1ee769a56d756f65707a27e4621704e023e2844d with these changes.",
+      "content": "publet-cli 0.2.3 was released on 2026-10-29 from commit 4f38921f47bb6da58a0e85157c9005544f8b2345 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,137 +57,29 @@
         ],
         "rows": [
           [
-            "internal",
-            "Update other crates the supply-chain audits cover"
-          ],
-          [
             "added",
-            "Quantities (spec Section 5.9): a definitional claim may carry defines, stating a units system, base dimension, unit, quantity kind or statistical measure; a column may cite unit_defs, kind and measure, each also in depends; a measured column holds quantity cells; a procedural claim may carry computes; and an empirical claim's values may be computed, naming their calculation with role derivation instead of a method"
-          ],
-          [
-            "added",
-            "pub compose takes --defines, --computes and --derivation, adds what a table's columns cite to depends, and pub read lists each column's unit definitions, kind and measure"
-          ],
-          [
-            "added",
-            "publet-quantity, the adapter to pubunit 0.1.0 (pinned, at its git tag until it is on crates.io): pub compose checks each column's unit against UCUM 2.2 and the dimension, unit and kind claims it cites, checks each quantity cell's keys and values against its measure, refuses what spec Section 5.9 refuses, and says when a unit is left unchecked because it is undefined or in another system"
-          ],
-          [
-            "added",
-            "pub bundle writes the reading data a theme turns into pages, from a workspace or a directory of objects: a JSON bundle per object at o/<CID>.json (the object decoded, what it rests on and why, its dependency closure, what cites it and how, its critiques, its lineage, its measures' parameters, and a summary of every object it mentions), one per name a definition goes by at def/<name>.json (a name two definitions share lists both), an index, and each object's canonical bytes at pub/v1/object/<CID>"
-          ],
-          [
-            "internal",
-            "pubunit 0.1.0 comes from crates.io instead of its git tag; cargo deny allows no git source again, and cargo vet trusts pubunit's publisher"
-          ],
-          [
-            "added",
-            "Concepts (spec Section 5.9.1): a definitional claim may define a concept at a required PDC code, which is its term: a subject concept such as a UDC class, a quantity concept naming the kind it narrows and a boundary of includes and excludes lines, or a relation concept relating slots, each a role bound to a quantity concept or a kind, as a product solvable for any slot or as explicit; the kinds and concepts it binds must be in depends (pub compose adds the kinds)"
-          ],
-          [
-            "added",
-            "Triage (spec Section 7.4) gains the findings groups-under and quoted-from and an optional candidate blob of unsigned draft objects, which publet-graph's Triage reads; anchors may have up to 12 stewards, and an expert group is an anchor over a PDC code's subtree (Section 9.3)"
-          ],
-          [
-            "added",
-            "A calculation's computes may carry solves (spec Section 5.9.5): the relation concept and slot it solves for, the roles it requires, and optional roles each with the claim stating its default, which must be in depends; pub compose refuses a code with no concept in depends or a role the relation has no slot for"
-          ],
-          [
-            "added",
-            "pub bundle gives each object the concepts it is classified under and the triage suggestions naming it, and each concept its PDC code, form, broader and narrower concepts, members, the calculations solving it, the concepts competing for its code, and the anchors covering it; a name with a slash, such as the PDC code 631/635, is served under a segment with an underscore (def/631_635.json), listed in the index's name_paths"
+            "A project states the pub it needs in pub-version.txt or as pub= in .publet/config; pub finds it in the current directory or a parent and, before running any command, stops with exit 2 naming the release to install when it is not met (PUB_IGNORE_VERSION=1 skips this). pub require [REQUIREMENT] checks one for scripts. An unknown command now says which release this is and how to install another."
           ],
           [
             "fixed",
-            "pub revise applies --defines and --computes, adding what they cite to depends, instead of keeping the old fields: a concept's boundary is reframed as a new version"
-          ],
-          [
-            "security",
-            "rustls 0.23.46 fixes RUSTSEC-2026-0346, -0347, -0348 and -0349 in pub's network client (pub sync, pub serve), through reqwest; its cargo vet exemption moves from 0.23.45 to 0.23.46"
-          ],
-          [
-            "security",
-            "pub's HTTPS connections (pub sync, pub serve) no longer trust the distrusted emSign ECC Root CA - G3 or certificate paths through its distrusted intermediates: rustls-webpki 0.103.16, webpki-roots 1.0.10 and webpki-root-certs 1.0.10 (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383)"
-          ],
-          [
-            "security",
-            "tokio 1.54.1 fixes RUSTSEC-2026-0386 and quinn-proto 0.11.19 fixes RUSTSEC-2026-0338, -0340 and -0343 in pub's network client and server (pub sync, pub serve); their cargo vet exemptions move to the fixed versions"
-          ],
-          [
-            "security",
-            "pub no longer builds block-buffer 0.10.4 (GHSA-qwgh-2vcv-g2f7): publet-core moves to ed25519-dalek 3 and sha2 0.11, and publet-algorithms to sha2 0.11"
-          ],
-          [
-            "internal",
-            "Documentation: SECURITY.md says cargo deny, cargo vet and OSV-Scanner also run every night, and names pubunit among the imported audit sets; publet-core's verify documents each error it returns"
-          ],
-          [
-            "added",
-            "Singulars (spec Section 5.9.1 and 5.9.6): a definitional claim may define one particular thing with defines.sort singular, a name, the PDC code of its class, and optionally part_of, the singular it is part of, and location.h3, the H3 cell it is in; its class must have a subject concept in depends, part_of must name a singular and be in depends, and a singular has no term, so two of one name are never a divergence"
-          ],
-          [
-            "added",
-            "Facts (spec Section 5.9.6): a table's about column holds the CIDs of the singulars its rows are about, each in depends (pub compose adds them, and a singular's part_of), and a column may name its quantity concept by PDC code in concept, which must have a quantity concept in depends"
-          ],
-          [
-            "added",
-            "pub get PATH finds a fact by its path key, such as place.site.tallinn.basement.floor_area, computed from the names in the claims held: the head of each matching fact lineage (or the member every anchor over it recommends) with its value, unit, measure, evidence roles, and the status they imply by the convention of spec Section 5.9.7 (confirmed, estimate or to-verify); a path whose segment is an H3 cell, such as place.87089b1a2ffffff, finds the facts about every singular located in the cell by H3's identifier hierarchy"
-          ],
-          [
-            "added",
-            "Evidence roles statement and quote (spec Section 5.5), for what someone in a position to know stated and what a supplier offered; pub compose and pub revise take --statement=REF and --quote=REF"
-          ],
-          [
-            "added",
-            "publet-graph: Graph::singulars, class_path, singular_path, singular_location, facts_about, singular_versions, lineage_heads, anchors and annotations_of, and segment, the path segment of a name"
-          ],
-          [
-            "internal",
-            "The functional suite's lock adds h3 4.5.0 for the H3 test vectors, and moves parse to 1.22.4 and pycparser to 3.12"
-          ],
-          [
-            "added",
-            "Spec Section 5.9.1 fixes the PDC separator: a narrower class is the code it extends, `~`, and a number, such as (1/9)~1; Section 5.9.6 documents the Sustenaut usage pattern, with places under the concept Place at UDC (1/9), so place paths begin place."
-          ],
-          [
-            "fixed",
-            "pub get no longer counts an annotation or dispute its author has retracted as leaving a fact open (spec Section 5.9.7): withdrawing a to-verify note once the check is made changes the status it implies"
-          ],
-          [
-            "internal",
-            "A golden test composes the Tallinn fixtures under a fixed author and time and compares every identifier with tests/golden/tallinn.json, so a change to the bytes pub compose writes for the same input, which would re-mint every gathered fact, fails CI unless it is made on purpose (PUBLET_UPDATE_GOLDEN=1)"
-          ],
-          [
-            "fixed",
-            "pub annotate writes --aspect into the annotation's body, where spec Section 7 puts it and the graph reads it, not into value; a provenance verdict on an attributive or archival claim is no longer refused, and pub read shows an annotation's aspect"
-          ],
-          [
-            "fixed",
-            "pub --version names its version from publet-cli's own vX.Y.Z tags only, so a publet-core or publet-algorithms tag on the same commit no longer makes a release build call itself unreleased"
-          ],
-          [
-            "internal",
-            "Documentation of publet-algorithms, which pub compiles in, from its 0.2.2 audit (audit/publet-algorithms-0.2.2.md)"
-          ],
-          [
-            "internal",
-            "Documentation: the README has a runnable example, the commands main.rs dispatches, exit codes and an MSRV policy; usage text and module docs no longer claim what the code does not do; SECURITY.md says which untrusted-input code is fuzzed (audit/publet-cli-0.2.2.md)"
+            "pub reads a version requirement only from a regular file, at most 4 KiB of it, skips a byte-order mark and comments after the requirement, and refuses something that is not a requirement by name, quoted, instead of reporting it as unmet; the README documents exit status 2 and the files and variable involved"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.2 of publet-cli",
+      "scope": "the published release v0.2.3 of publet-cli",
       "sources": [
         {
           "ref": "publet-cli",
-          "revision": "1ee769a56d756f65707a27e4621704e023e2844d"
+          "revision": "4f38921f47bb6da58a0e85157c9005544f8b2345"
         }
       ]
     },
     "security": {
       "class": "archival",
-      "content": "publet-cli 0.2.2 passed these security checks before release on 2026-10-28.",
+      "content": "publet-cli 0.2.3 passed these security checks before release on 2026-10-29.",
       "data": {
         "columns": [
           {
@@ -233,7 +125,7 @@
             "quality audit current",
             ".venv/bin/pubkit audit --check",
             "pubkit 0.9.1",
-            "audit/publet-cli-0.2.2.md: publet-cli 0.2.2 audited on 2026-10-28 by rust-crate-quality against the current standard (bc3c5b6eeba4); 0 findings block a release"
+            "audit/publet-cli-0.2.3.md: publet-cli 0.2.3 audited on 2026-10-29 by rust-crate-quality against the current standard (bc3c5b6eeba4); 0 findings block a release"
           ],
           [
             "fact",
@@ -254,16 +146,16 @@
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.2 of publet-cli",
+      "scope": "the published release v0.2.3 of publet-cli",
       "sources": [
         {
           "ref": "publet-cli",
-          "revision": "1ee769a56d756f65707a27e4621704e023e2844d"
+          "revision": "4f38921f47bb6da58a0e85157c9005544f8b2345"
         }
       ]
     }
   },
-  "created": "2026-10-28T00:00:00Z",
+  "created": "2026-10-29T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
