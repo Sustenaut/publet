@@ -68,8 +68,8 @@ A test claims only items of the module it tests. The files are linked below.
 
 Test files:
 
-- [`crates/publet-core/src/cid.rs`](https://github.com/schryer/publet/blob/main/crates/publet-core/src/cid.rs)
-- [`crates/publet-core/src/sig.rs`](https://github.com/schryer/publet/blob/main/crates/publet-core/src/sig.rs)
-- [`crates/publet-core/tests/canonical.rs`](https://github.com/schryer/publet/blob/main/crates/publet-core/tests/canonical.rs)
-- [`crates/publet-core/tests/properties.rs`](https://github.com/schryer/publet/blob/main/crates/publet-core/tests/properties.rs)
-- [`crates/publet-core/tests/vectors.rs`](https://github.com/schryer/publet/blob/main/crates/publet-core/tests/vectors.rs)
+- [`crates/publet-core/src/cid.rs`](https://github.com/Sustenaut/publet/blob/main/crates/publet-core/src/cid.rs)
+- [`crates/publet-core/src/sig.rs`](https://github.com/Sustenaut/publet/blob/main/crates/publet-core/src/sig.rs)
+- [`crates/publet-core/tests/canonical.rs`](https://github.com/Sustenaut/publet/blob/main/crates/publet-core/tests/canonical.rs)
+- [`crates/publet-core/tests/properties.rs`](https://github.com/Sustenaut/publet/blob/main/crates/publet-core/tests/properties.rs)
+- [`crates/publet-core/tests/vectors.rs`](https://github.com/Sustenaut/publet/blob/main/crates/publet-core/tests/vectors.rs)

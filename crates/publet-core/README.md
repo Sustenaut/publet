@@ -1,7 +1,7 @@
 # publet-core
 
 Objects, canonical serialization, content identifiers and signatures for the
-[Publet Protocol](https://github.com/schryer/publet/blob/main/spec/index.md):
+[Publet Protocol](https://github.com/Sustenaut/publet/blob/main/spec/index.md):
 the floor every other publet crate and tool builds on.
 
 Licensed under Apache-2.0.

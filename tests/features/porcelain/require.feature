@@ -11,7 +11,7 @@ Feature: A project says which pub it needs, and pub says when it is not that one
     Then it fails
     And stderr mentions "unknown command: nonesuch"
     And stderr mentions "This is pub "
-    And stderr mentions "cargo install --locked --git https://github.com/schryer/publet"
+    And stderr mentions "cargo install --locked --git https://github.com/Sustenaut/publet"
 
   Scenario: A project needing a newer pub stops it before anything runs
     Given an empty directory

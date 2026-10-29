@@ -21,7 +21,7 @@
         "name": "pub",
         "check": "pub --version"
       },
-      "install": "cargo install --locked --git https://github.com/schryer/publet --tag {tag} publet-cli"
+      "install": "cargo install --locked --git https://github.com/Sustenaut/publet --tag {tag} publet-cli"
     },
     {
       "name": "publet-core",

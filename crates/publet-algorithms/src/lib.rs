@@ -23,7 +23,7 @@ assert!(verify_inclusion(&leaves[1], 1, leaves.len() as u64, &path, &head));
 assert!(!verify_inclusion(&leaf_hash(b"forged"), 1, leaves.len() as u64, &path, &head));
 ```
 
-[publet]: https://github.com/schryer/publet
+[publet]: https://github.com/Sustenaut/publet
 
 # Overview
 
