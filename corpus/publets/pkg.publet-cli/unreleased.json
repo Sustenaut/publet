@@ -1,4 +1,9 @@
 {
-  "changes": [],
+  "changes": [
+    {
+      "category": "added",
+      "change": "A project states the pub it needs in pub-version.txt or as pub= in .publet/config; pub finds it in the current directory or a parent and, before running any command, stops with exit 2 naming the release to install when it is not met (PUB_IGNORE_VERSION=1 skips this). pub require [REQUIREMENT] checks one for scripts. An unknown command now says which release this is and how to install another."
+    }
+  ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
 }

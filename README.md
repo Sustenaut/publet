@@ -190,7 +190,19 @@ pub domain --dir=DIR --label=... --bound=BYTES             # a domain's manifest
 pub propose CID... [--basis=N]   # what has moved under these objects since the basis
 pub witness DOMAIN          # the generation and log root you hold, to publish
 pub --version               # the release this build is, or that it is unreleased
+pub require [REQUIREMENT]   # whether this pub meets a requirement (0.2.2+, ^0.2), or the one declared here
 ```
+
+**Which pub a project needs.** A project states the releases of `pub` it
+works with once: as the first line of a `pub-version.txt` (`0.2.2+`), or
+in a workspace as a `pub=` line in `.publet/config`. Before running any
+command, `pub` looks for either in the current directory and its parents,
+nearest first, and when this build does not meet it, stops with exit
+status 2, naming the requirement, where it was stated, and the `cargo
+install` line for a release that meets it. A command this release does not
+have says which release this is and how to install another. Nothing is
+fetched to decide either. `PUB_IGNORE_VERSION=1` skips the check, to try
+another release on purpose; scripts can ask with `pub require 0.2.2+`.
 
 Local-first by default: only `pub sync` contacts a peer. Every other
 command works from the local workspace, or from files named on its command
