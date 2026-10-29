@@ -31,6 +31,7 @@ mod propose;
 mod read;
 mod relate;
 mod render;
+mod requirement;
 mod revise;
 mod sign;
 mod why;
@@ -67,6 +68,7 @@ fn usage() -> ExitCode {
     eprintln!("  policy               author a policy object and set it as the workspace's");
     eprintln!("  propose CID...       report what has moved under objects since their basis");
     eprintln!("  witness DOMAIN       print a domain's generation and log root, to publish");
+    eprintln!("  require [REQ]        whether this pub meets a version requirement (0.2.2+)");
     eprintln!(
         "  domain               author a domain's manifest, snapshot, and genesis generation"
     );
@@ -80,6 +82,17 @@ async fn main() -> ExitCode {
         return usage();
     };
     let rest: Vec<String> = args.iter().skip(1).cloned().collect();
+
+    // A project states the pub it needs; say so before running anything
+    // else, so a missing command or a changed format never comes first.
+    if !matches!(
+        command,
+        "--version" | "version" | "-h" | "--help" | "help" | "require"
+    ) && let Err(message) = requirement::enforce()
+    {
+        eprintln!("{message}");
+        return ExitCode::from(EXIT_USAGE);
+    }
 
     let result = match command {
         "init" => init(&rest),
@@ -111,7 +124,17 @@ async fn main() -> ExitCode {
         "witness" => witness(&rest),
         "domain" => domain::run(&rest),
         "-h" | "--help" | "help" => return usage(),
-        other => Err(format!("unknown command: {other}")),
+        "require" => match requirement::run(&rest) {
+            Ok(()) => return ExitCode::SUCCESS,
+            Err(message) => {
+                eprintln!("{message}");
+                return ExitCode::from(EXIT_USAGE);
+            }
+        },
+        other => {
+            eprintln!("{}", requirement::unknown_command(other));
+            return ExitCode::from(EXIT_VIOLATION);
+        }
     };
 
     match result {

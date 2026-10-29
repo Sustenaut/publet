@@ -55,10 +55,12 @@ class Runner:
             pytest.skip(f"{name} is not built yet")
         return candidate
 
-    def run(self, name: str, *args: str, stdin: bytes | None = None) -> Completed:
+    def run(self, name: str, *args: str, stdin: bytes | None = None,
+            env: dict[str, str] | None = None) -> Completed:
         argv = [str(self.path_to(name)), *args]
         proc = subprocess.run(
-            argv, input=stdin, capture_output=True, cwd=self.cwd, check=False
+            argv, input=stdin, capture_output=True, cwd=self.cwd, check=False,
+            env=dict(os.environ, **env) if env else None,
         )
         return Completed(argv, proc.returncode, proc.stdout, proc.stderr)
 
