@@ -3,6 +3,10 @@
     {
       "category": "added",
       "change": "A project states the pub it needs in pub-version.txt or as pub= in .publet/config; pub finds it in the current directory or a parent and, before running any command, stops with exit 2 naming the release to install when it is not met (PUB_IGNORE_VERSION=1 skips this). pub require [REQUIREMENT] checks one for scripts. An unknown command now says which release this is and how to install another."
+    },
+    {
+      "category": "internal",
+      "change": "Move to pubkit 0.16.0 and pubrel 0.5.5, whose workflows and pins name Sustenaut/pubkit, so CI starts again after the move to the Sustenaut organization"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
