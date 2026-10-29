@@ -54,3 +54,22 @@ Feature: A project says which pub it needs, and pub says when it is not that one
     And the directory needs pub "999.0.0+"
     When I run pub with "--version"
     Then it succeeds
+
+  Scenario: Something that is not a requirement is refused by name
+    Given an empty directory
+    And the directory needs pub "latest"
+    When I run pub with "init"
+    Then it exits 2
+    And stderr mentions "which is not a version requirement"
+    When I run pub with "require latest"
+    Then it exits 2
+
+  Scenario: pub require with nothing given checks the requirement declared here, or says there is none
+    Given an empty directory
+    When I run pub with "require"
+    Then it exits 2
+    And stderr mentions "no requirement given, and none declared here"
+    Given the directory needs pub "0.1+"
+    When I run pub with "require"
+    Then it succeeds
+

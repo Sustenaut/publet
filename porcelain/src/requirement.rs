@@ -7,14 +7,22 @@
 //! - in a workspace, as a `pub=` line in `.publet/config`, beside
 //!   `author=` and `policy=`;
 //! - anywhere else, such as a repository whose scripts call `pub`, as the
-//!   first line of a `pub-version.txt` (blank lines and `#` comments are
-//!   skipped).
+//!   first line of a `pub-version.txt` (blank lines are skipped, and `#`
+//!   starts a comment, on a line of its own or after the requirement).
 //!
-//! Before any command runs, `pub` looks for either in the current directory
-//! and then each parent, nearest first, as git finds `.git`, and stops with
-//! the release to install when this build does not meet it. Nothing is
-//! fetched: the check is between the build and a file the project keeps.
-//! `PUB_IGNORE_VERSION=1` skips it, to try another release on purpose.
+//! Before any command but `--version`, `version`, `help` (`-h`, `--help`)
+//! and `require`, `pub` looks for either in the current directory and then
+//! each parent, nearest first, as git finds `.git`, and stops with exit 2
+//! and the release to install when this build does not meet it, or when
+//! what it finds is not a requirement. Nothing is fetched: the check is
+//! between the build and a file the project keeps. `PUB_IGNORE_VERSION=1`
+//! skips it, to try another release on purpose.
+//!
+//! The files are another party's input once a repository is cloned, so only
+//! regular files are read (never a FIFO or a device, which could block), at
+//! most [`LIMIT`] bytes of them, and a requirement is accepted only in the
+//! forms above: anything else is refused by name, quoted with escapes, so a
+//! file cannot write control characters to the terminal.
 
 use std::path::{Path, PathBuf};
 
@@ -30,35 +38,81 @@ pub(crate) const IGNORE: &str = "PUB_IGNORE_VERSION";
 
 const REPOSITORY: &str = "https://github.com/schryer/publet";
 
+/// The most of a declaring file read: a requirement is one short line.
+pub(crate) const LIMIT: u64 = 4096;
+
 /// This build's version.
 pub(crate) fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
+/// A declaration found: the requirement as written, the file stating it.
+pub(crate) type Declared = (String, PathBuf);
+
+/// The text of `path` if it is a regular file (a symlink to one is
+/// followed); `Ok(None)` when there is no such file or it is something else.
+fn read_regular(path: &Path) -> Result<Option<String>, String> {
+    use std::io::Read as _;
+    match std::fs::metadata(path) {
+        Ok(m) if m.is_file() => {}
+        _ => return Ok(None),
+    }
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .and_then(|f| f.take(LIMIT).read_to_end(&mut bytes))
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    let text = String::from_utf8(bytes).map_err(|_| {
+        format!(
+            "{}: not UTF-8 text, so no requirement can be read from it",
+            path.display()
+        )
+    })?;
+    Ok(Some(text.trim_start_matches('\u{feff}').to_owned()))
+}
+
+/// A line with its comment and surrounding space removed.
+fn uncommented(line: &str) -> &str {
+    line.split('#').next().unwrap_or("").trim()
+}
+
 /// The nearest requirement stated at or above `start`, and the file stating it.
-pub(crate) fn declared(start: &Path) -> Option<(String, PathBuf)> {
+///
+/// # Errors
+///
+/// Returns a message when the nearest declaring file cannot be read as text.
+pub(crate) fn declared(start: &Path) -> Result<Option<Declared>, String> {
     for dir in start.ancestors() {
         let config = dir.join(DIR).join("config");
-        if let Ok(text) = std::fs::read_to_string(&config)
+        if let Some(text) = read_regular(&config)?
             && let Some(req) = text
                 .lines()
                 .find_map(|l| l.strip_prefix("pub="))
-                .map(str::trim)
+                .map(uncommented)
                 .filter(|r| !r.is_empty())
         {
-            return Some((req.to_owned(), config));
+            return Ok(Some((req.to_owned(), config)));
         }
         let file = dir.join(FILE);
-        if let Ok(text) = std::fs::read_to_string(&file)
-            && let Some(req) = text
-                .lines()
-                .map(str::trim)
-                .find(|l| !l.is_empty() && !l.starts_with('#'))
+        if let Some(text) = read_regular(&file)?
+            && let Some(req) = text.lines().map(uncommented).find(|l| !l.is_empty())
         {
-            return Some((req.to_owned(), file));
+            return Ok(Some((req.to_owned(), file)));
         }
     }
-    None
+    Ok(None)
+}
+
+/// Whether `requirement` has a form `satisfies` reads: `X.Y.Z+`, `^X.Y`, or
+/// a version prefix such as `0.2`, of dot-separated numbers.
+pub(crate) fn well_formed(requirement: &str) -> bool {
+    let core = requirement
+        .strip_prefix('^')
+        .or_else(|| requirement.strip_suffix('+'))
+        .unwrap_or(requirement);
+    !core.is_empty()
+        && core
+            .split('.')
+            .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// Whether this build meets `requirement`, stated by `source`; if not, what
@@ -68,6 +122,13 @@ pub(crate) fn declared(start: &Path) -> Option<(String, PathBuf)> {
 ///
 /// Returns the message to print when this build does not meet it.
 pub(crate) fn check(requirement: &str, source: &str) -> Result<(), String> {
+    if !well_formed(requirement) {
+        return Err(format!(
+            "{source} states {requirement:?}, which is not a version requirement: \
+             write one such as 0.2.2+ (that release or later), ^0.2 or 0.2.\n\
+             Set {IGNORE}=1 to run this pub anyway."
+        ));
+    }
     if satisfies(version(), requirement) {
         return Ok(());
     }
@@ -109,7 +170,7 @@ pub(crate) fn enforce() -> Result<(), String> {
     let Ok(here) = std::env::current_dir() else {
         return Ok(());
     };
-    match declared(&here) {
+    match declared(&here)? {
         Some((req, source)) => check(&req, &source.display().to_string()),
         None => Ok(()),
     }
@@ -126,7 +187,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     match args {
         [] => {
             let here = std::env::current_dir().map_err(|e| e.to_string())?;
-            let (req, source) = declared(&here).ok_or(format!(
+            let (req, source) = declared(&here)?.ok_or(format!(
                 "no requirement given, and none declared here: give one (pub require 0.2.2+), \
                  or state it in {FILE} or as pub= in {DIR}/config"
             ))?;
@@ -157,11 +218,15 @@ mod tests {
         let root = std::env::temp_dir().join(format!("pub-req-{}", std::process::id()));
         let inner = root.join("a").join("b");
         std::fs::create_dir_all(inner.join(DIR)).unwrap();
-        std::fs::write(root.join(FILE), "# pub for these scripts\n\n0.2.2+\n").unwrap();
-        assert_eq!(declared(&inner).unwrap().0, "0.2.2+");
+        std::fs::write(
+            root.join(FILE),
+            "\u{feff}# pub for these scripts\n\n0.2.2+  # pinned\n",
+        )
+        .unwrap();
+        assert_eq!(declared(&inner).unwrap().unwrap().0, "0.2.2+");
         std::fs::write(inner.join(DIR).join("config"), "author=x\npub=^0.3\n").unwrap();
         std::fs::write(inner.join(FILE), "0.1+\n").unwrap();
-        let (req, source) = declared(&inner).unwrap();
+        let (req, source) = declared(&inner).unwrap().unwrap();
         assert_eq!(req, "^0.3");
         assert!(source.ends_with("config"));
         std::fs::remove_dir_all(&root).unwrap();
@@ -177,5 +242,35 @@ mod tests {
         );
         assert!(message.contains("--tag v999.0.0"), "{message}");
         assert!(install_line("^0.2").contains("<release tag>"));
+    }
+
+    #[test]
+    fn only_requirements_are_accepted_and_others_are_quoted() {
+        for good in ["0.2.2+", "^0.2", "0.2", "1"] {
+            assert!(well_formed(good), "{good}");
+        }
+        for bad in ["latest", "", "+", "^", "0..2", "0.2.x", "\u{1b}[31m0.2"] {
+            assert!(!well_formed(bad), "{bad:?}");
+        }
+        let message = check("\u{1b}[31mlatest", "pub-version.txt").unwrap_err();
+        assert!(message.contains("\\u{1b}"), "{message}");
+        assert!(!message.contains('\u{1b}'), "{message}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_fifo_or_an_oversized_file_never_blocks_the_check() {
+        let root = std::env::temp_dir().join(format!("pub-req-fifo-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let made = std::process::Command::new("mkfifo")
+            .arg(root.join(FILE))
+            .status();
+        if made.is_ok_and(|s| s.success()) {
+            assert!(declared(&root).unwrap().is_none());
+            std::fs::remove_file(root.join(FILE)).unwrap();
+        }
+        std::fs::write(root.join(FILE), format!("{}\n0.1+\n", "#".repeat(10_000))).unwrap();
+        assert!(declared(&root).unwrap().is_none());
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }
