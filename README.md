@@ -194,15 +194,19 @@ pub require [REQUIREMENT]   # whether this pub meets a requirement (0.2.2+, ^0.2
 ```
 
 **Which pub a project needs.** A project states the releases of `pub` it
-works with once: as the first line of a `pub-version.txt` (`0.2.2+`), or
-in a workspace as a `pub=` line in `.publet/config`. Before running any
-command, `pub` looks for either in the current directory and its parents,
-nearest first, and when this build does not meet it, stops with exit
-status 2, naming the requirement, where it was stated, and the `cargo
-install` line for a release that meets it. A command this release does not
-have says which release this is and how to install another. Nothing is
-fetched to decide either. `PUB_IGNORE_VERSION=1` skips the check, to try
-another release on purpose; scripts can ask with `pub require 0.2.2+`.
+works with once: as the first line of a `pub-version.txt` (`0.2.2+`;
+blank lines and `#` comments are skipped), or in a workspace as a `pub=`
+line in `.publet/config`. A requirement is `X.Y.Z+` (that release or
+later), `^X.Y` or a version prefix such as `0.2`. Before running any
+command except `--version`, `help` and `require`, `pub` looks for either
+in the current directory and its parents, nearest first. When this build
+does not meet it, or what it finds is not a requirement, `pub` stops with
+exit status 2, naming the requirement, where it was stated, and the `cargo
+install` line for a release that meets it. Only regular files are read,
+and only their first 4 KiB. A command this release does not have says
+which release this is and how to install another. Nothing is fetched to
+decide either. `PUB_IGNORE_VERSION=1` skips the check, to try another
+release on purpose. Scripts can ask with `pub require 0.2.2+`.
 
 Local-first by default: only `pub sync` contacts a peer. Every other
 command works from the local workspace, or from files named on its command
@@ -212,8 +216,11 @@ reading a replica are real, and a reader who does not know which mode they
 are in cannot know whether they have them.
 
 `pub` exits with status 0 when a command succeeds and 1 when it refuses or
-fails, with the reason on stderr. Run with no command, or with `--help`, it
-prints its commands to stderr and exits with status 2.
+fails, with the reason on stderr. It exits with status 2 when run with no
+command or with `--help`, which prints its commands to stderr; when the
+project needs another release of `pub` (above); and from `pub require`
+when the requirement is not met, is not a requirement, or none is given
+or declared.
 
 `pub why` never reduces a standing to a badge. It shows the weights, the
 divergence factor, the threshold, the reproduction counts against the
@@ -391,9 +398,10 @@ unreleased, so a render pipeline requiring a released `pub` (`requires
 - output meant for scripts: `pub read --json`, `pub corpus map
   --format=json`, the files `pub bundle` writes, and what the plumbing
   commands print to stdout;
-- the files read and written: `.publet/config`, `corpus.json`,
-  `publet.json` sources, document manifests, `publets.lock` and
-  `corpus.lock`.
+- the files read and written: `.publet/config` (with its `pub=`
+  requirement), `pub-version.txt`, `corpus.json`, `publet.json` sources,
+  document manifests, `publets.lock` and `corpus.lock`;
+- environment variables: `PUB_IGNORE_VERSION`.
 
 A change to any of them is recorded as `changed` or `removed`.
 
