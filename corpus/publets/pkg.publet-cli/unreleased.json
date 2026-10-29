@@ -1,13 +1,4 @@
 {
-  "changes": [
-    {
-      "category": "added",
-      "change": "A project states the pub it needs in pub-version.txt or as pub= in .publet/config; pub finds it in the current directory or a parent and, before running any command, stops with exit 2 naming the release to install when it is not met (PUB_IGNORE_VERSION=1 skips this). pub require [REQUIREMENT] checks one for scripts. An unknown command now says which release this is and how to install another."
-    },
-    {
-      "category": "fixed",
-      "change": "pub reads a version requirement only from a regular file, at most 4 KiB of it, skips a byte-order mark and comments after the requirement, and refuses something that is not a requirement by name, quoted, instead of reporting it as unmet; the README documents exit status 2 and the files and variable involved"
-    }
-  ],
+  "changes": [],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
 }
