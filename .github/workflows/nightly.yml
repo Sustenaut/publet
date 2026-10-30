@@ -12,57 +12,57 @@ permissions:
 jobs:
   gates:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-gates.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-gates.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
     with: {"gates": "guard-floats guard-deps guard-rules guard-msrv", "required": "fmt-check lint doc doc-coverage-check publish-check"}
 
   test:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-test.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-test.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
     with: {"test-args": "--workspace --all-features"}
 
   functional:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-functional.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-functional.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
     with: {"apt-packages": "jq", "functional": "guard-eval conformance coverage-check script-tests", "required": "functional vectors-check supply-chain-check"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   msrv:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-msrv.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-msrv.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
 
   fuzz:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-fuzz.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-fuzz.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
 
   cross:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-cross.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-cross.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
     with: {"cross-test-args": "--workspace --all-features"}
 
   audit:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-audit.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-audit.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
     with: {"required": "deny vet"}
 
   osv:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-osv.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-osv.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
 
   toolchains:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-toolchains.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-toolchains.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
     with: {"test-args": "--workspace --all-features"}
 
   sonar:
     name: ci
     needs: [functional]
-    uses: Sustenaut/pubkit/.github/workflows/job-sonar.yml@7914b2abb933747e303f5f981d8335d3704dcdb3 # v0.21.0
+    uses: Sustenaut/pubkit/.github/workflows/job-sonar.yml@1f61ab0da97be8f16c94e0de604ab183e6ac8f8e # v0.22.0
     with: {"reports": "sonar.rust.lcov.reportPaths=lcov.info sonar.python.coverage.reportPaths=*.xml", "layout": "-Dsonar.sources=crates -Dsonar.tests=tests,fuzz"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 

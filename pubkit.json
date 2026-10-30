@@ -22,11 +22,19 @@
     "checks": [
       "ci / passed",
       "release / release"
-    ]
+    ],
+    "release_app": 5529889
   },
   "security": {
     "sonar": {
       "args": "-Dsonar.coverage.exclusions=tests/**"
+    }
+  },
+  "nightly": {
+    "pins": {
+      "crates": [
+        "pubunit"
+      ]
     }
   }
 }
