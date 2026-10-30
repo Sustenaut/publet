@@ -10,7 +10,7 @@
       "cross-test-args": "--workspace --all-features"
     },
     "release": {
-      "pubrel": "0.5.5"
+      "pubrel": "0.6.1"
     }
   },
   "bin": "publet",
