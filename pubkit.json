@@ -21,7 +21,8 @@
   "protect": {
     "checks": [
       "ci / passed",
-      "release / release"
+      "release / release",
+      "integrations / scan"
     ],
     "release_app": 5529889
   },
