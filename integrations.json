@@ -1,0 +1,42 @@
+{
+  "uses": [
+    {
+      "plugin": "crates-io.publish",
+      "paths": [
+        "crates/publet-algorithms/src/lib.rs",
+        "crates/publet-core/src/lib.rs"
+      ]
+    },
+    {
+      "plugin": "github.app-token",
+      "paths": [
+        ".github/workflows/main.yml",
+        ".github/workflows/pr.yml",
+        ".github/workflows/queue.yml"
+      ]
+    },
+    {
+      "plugin": "sonarcloud.scan",
+      "paths": [
+        ".github/workflows/main.yml",
+        ".github/workflows/nightly.yml",
+        ".github/workflows/pr.yml",
+        ".github/workflows/queue.yml"
+      ]
+    }
+  ],
+  "other_hosts": [
+    {
+      "host": "dumps.wikimedia.org",
+      "reason": "A public download a developer runs by hand"
+    },
+    {
+      "host": "rustup.rs",
+      "reason": "A link in an install hint"
+    },
+    {
+      "host": "typst.app",
+      "reason": "A link to Typst's documentation in a template's description"
+    }
+  ]
+}
