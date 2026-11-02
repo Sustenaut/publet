@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "PDC families and editions: `defines` sorts `family` and `edition`, `pub bundle` name bundles pointing at a family and a code, generation records signed by the publishing key, definitions at a PDC code that change by `supersedes` and refuse disputes, support and judgement, and a load that reports and leaves out an inadmissible object instead of failing"
-}

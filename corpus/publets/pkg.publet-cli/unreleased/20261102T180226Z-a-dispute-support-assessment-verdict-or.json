@@ -1,4 +1,0 @@
-{
-  "category": "changed",
-  "change": "A dispute, support, assessment, verdict or critique aimed at a concept is now refused, as on a family or edition, where it was accepted before. A plumbing command or `pub` loading a directory or store that holds a refused verdict or similar object no longer exits 1: it leaves the object out, warns on stderr and goes on, so its stdout and exit code change. `pub publish` and, where a key is held, `pub domain` write a signature beside each generation record"
-}

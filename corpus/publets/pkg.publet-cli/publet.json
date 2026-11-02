@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "publet-cli 0.2.3 is released as v0.2.3 from commit 4f38921f47bb6da58a0e85157c9005544f8b2345.",
+      "content": "publet-cli 0.3.0 is released as v0.3.0 from commit f3a9ed2337f6c22b042a12b548ec4af046986af0.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pub",
-            "0.2.3",
+            "0.3.0",
             "pub --version",
-            "pub 0.2.3",
-            "v0.2.3",
-            "4f38921f47bb6da58a0e85157c9005544f8b2345"
+            "pub 0.3.0",
+            "v0.3.0",
+            "f3a9ed2337f6c22b042a12b548ec4af046986af0"
           ]
         ]
       },
-      "scope": "the published release v0.2.3 of publet-cli",
+      "scope": "the published release v0.3.0 of publet-cli",
       "sources": [
         {
           "ref": "publet-cli",
-          "revision": "4f38921f47bb6da58a0e85157c9005544f8b2345"
+          "revision": "f3a9ed2337f6c22b042a12b548ec4af046986af0"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "publet-cli 0.2.3 was released on 2026-10-29 from commit 4f38921f47bb6da58a0e85157c9005544f8b2345 with these changes.",
+      "content": "publet-cli 0.3.0 was released on 2026-11-02 from commit f3a9ed2337f6c22b042a12b548ec4af046986af0 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,29 +57,49 @@
         ],
         "rows": [
           [
+            "internal",
+            "The repository moved to the Sustenaut organization; its links and repository URL name Sustenaut/publet"
+          ],
+          [
+            "internal",
+            "Update other crates the supply-chain audits cover"
+          ],
+          [
+            "internal",
+            "Update other crates the supply-chain audits cover"
+          ],
+          [
             "added",
-            "A project states the pub it needs in pub-version.txt or as pub= in .publet/config; pub finds it in the current directory or a parent and, before running any command, stops with exit 2 naming the release to install when it is not met (PUB_IGNORE_VERSION=1 skips this). pub require [REQUIREMENT] checks one for scripts. An unknown command now says which release this is and how to install another."
+            "PDC families and editions: `defines` sorts `family` and `edition`, `pub bundle` name bundles pointing at a family and a code, generation records signed by the publishing key, definitions at a PDC code that change by `supersedes` and refuse disputes, support and judgement, and a load that reports and leaves out an inadmissible object instead of failing"
+          ],
+          [
+            "changed",
+            "A dispute, support, assessment, verdict or critique aimed at a concept is now refused, as on a family or edition, where it was accepted before. A plumbing command or `pub` loading a directory or store that holds a refused verdict or similar object no longer exits 1: it leaves the object out, warns on stderr and goes on, so its stdout and exit code change. `pub publish` and, where a key is held, `pub domain` write a signature beside each generation record"
           ],
           [
             "fixed",
-            "pub reads a version requirement only from a regular file, at most 4 KiB of it, skips a byte-order mark and comments after the requirement, and refuses something that is not a requirement by name, quoted, instead of reporting it as unmet; the README documents exit status 2 and the files and variable involved"
+            "A first publish or an advance too large for one generation record is now stated across several consecutive signed records, each inside the 64 KiB object limit. One record of more than about 970 members could be written but not read back, which stopped the next `pub publish` and `pub bundle --dir`"
+          ],
+          [
+            "changed",
+            "The object size limit is now 1,048,576 bytes (1 MiB), up from 65,536, for objects and for the frames of a pack. An older build refuses a larger object"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.3 of publet-cli",
+      "scope": "the published release v0.3.0 of publet-cli",
       "sources": [
         {
           "ref": "publet-cli",
-          "revision": "4f38921f47bb6da58a0e85157c9005544f8b2345"
+          "revision": "f3a9ed2337f6c22b042a12b548ec4af046986af0"
         }
       ]
     },
     "security": {
       "class": "archival",
-      "content": "publet-cli 0.2.3 passed these security checks before release on 2026-10-29.",
+      "content": "publet-cli 0.3.0 passed these security checks before release on 2026-11-02.",
       "data": {
         "columns": [
           {
@@ -111,28 +131,28 @@
             "supply-chain audits",
             "cargo vet --locked",
             "cargo-vet 0.10.2",
-            "Vetting Succeeded (68 fully audited, 4 partially audited, 157 exempted)"
+            "Vetting Succeeded (73 fully audited, 4 partially audited, 151 exempted)"
           ],
           [
             "check",
             "supply-chain reports current",
             ".venv/bin/pubkit supply-chain --check publet-core publet-algorithms",
-            "pubkit 0.9.1",
+            "pubkit 0.24.0",
             "SUPPLY-CHAIN.md current for publet-core, publet-algorithms"
           ],
           [
             "check",
             "quality audit current",
             ".venv/bin/pubkit audit --check",
-            "pubkit 0.9.1",
-            "audit/publet-cli-0.2.3.md: publet-cli 0.2.3 audited on 2026-10-29 by rust-crate-quality against the current standard (bc3c5b6eeba4); 0 findings block a release"
+            "pubkit 0.24.0",
+            "audit/publet-cli-0.3.0.md: publet-cli 0.3.0 audited on 2026-11-02 by rust-crate-quality against the current standard (bc3c5b6eeba4); 0 findings block a release"
           ],
           [
             "fact",
             "RustSec advisory database revision",
             "git -C \"$(ls -d ~/.cargo/advisory-dbs/advisory-db-*/ | head -1)\" log -1 --format='%H (%cs)'",
             "",
-            "40f5be6fb12ed93fc591bf4ab23b7d793b3f2239 (2026-10-28)"
+            "263a4d951a0867d4bddc29dddd6d59427c78f9a7 (2026-11-02)"
           ],
           [
             "fact",
@@ -146,16 +166,16 @@
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.3 of publet-cli",
+      "scope": "the published release v0.3.0 of publet-cli",
       "sources": [
         {
           "ref": "publet-cli",
-          "revision": "4f38921f47bb6da58a0e85157c9005544f8b2345"
+          "revision": "f3a9ed2337f6c22b042a12b548ec4af046986af0"
         }
       ]
     }
   },
-  "created": "2026-10-29T00:00:00Z",
+  "created": "2026-11-02T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
