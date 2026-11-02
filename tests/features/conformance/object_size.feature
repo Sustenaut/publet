@@ -4,12 +4,12 @@ Feature: Objects are bounded
   carried, so the ceiling is a property of the format rather than advice.
 
   Scenario: An object at the ceiling is accepted
-    Given canonical bytes of exactly 65536 bytes
+    Given canonical bytes of exactly 1048576 bytes
     When I run "pub-canon" with that object on stdin
     Then the exit code is 0
 
   Scenario: An object above the ceiling is refused
-    Given canonical bytes of 65537 bytes
+    Given canonical bytes of 1048577 bytes
     When I run "pub-canon" with that object on stdin
     Then the exit code is 1
     And stderr names the violated rule "object size limit"

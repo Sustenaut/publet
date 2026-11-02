@@ -130,8 +130,20 @@ fn rejects_truncated_input() {
 // covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_oversized_input() {
-    let big = vec![0u8; 64 * 1024 + 1];
+    let big = vec![0u8; 1_048_577];
     assert_eq!(rule_for(&big), "object size limit");
+}
+
+// covers: cbor::decode
+#[test]
+fn accepts_an_object_at_the_size_limit() {
+    // A byte string: a five-byte head, then the rest of the 1,048,576 bytes.
+    let body = 1_048_576_u32 - 5;
+    let mut exact = vec![0x5a];
+    exact.extend_from_slice(&body.to_be_bytes());
+    exact.resize(1_048_576, 0);
+    assert!(publet_core::cbor::decode(&exact).is_ok());
+    assert_eq!(publet_core::cbor::MAX_OBJECT_BYTES, 1_048_576);
 }
 
 // covers: CanonError::rule, cbor::decode

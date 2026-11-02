@@ -411,7 +411,8 @@ deployments.
 
 ### 4.5 Size
 
-Implementations MUST accept objects up to 64 KiB and MAY reject larger.
+Implementations MUST accept objects up to 1,048,576 bytes (1 MiB) and MAY reject
+larger.
 Images, datasets, and media are referenced by CID as opaque **blobs** and
 are not objects (Section 4.7).
 
@@ -1068,8 +1069,8 @@ special auxiliary. `top` names the top family, which has no parent to be
 keyed by. A code alone does not fix content, so an edition is what a reader
 pins. The listed families are what the edition is about, not what it
 presupposes: they stay out of its `depends`, which would otherwise repeat
-every CID and exceed the object size limit (Section 4.5), and the edition's
-checks below reach them instead. When an edition outgrows one object, it is
+every CID and double its size, and the edition's checks below reach them
+instead. When an edition outgrows one object, it is
 future work to divide it (Appendix B).
 
 `groups` are numbered flat lists of auxiliary table heads, each by its code;
@@ -2798,7 +2799,9 @@ A generation record is an object, so it MUST fit the size limit (Section 4.5).
 A change too large for one record is stated across as many consecutive records
 as it takes, each following the last by `parent` and `index`, naming the
 membership root after its own part of the change, and signed. The domain
-manifest's `snapshot` is the root after the last of them.
+manifest's `snapshot` is the root after the last of them. A publisher MAY split
+a change sooner than the limit requires: `pub` writes at most 900 members to a
+record, about 60 KB, so that a record stays cheap to fetch and check.
 
 Declaring removals rather than leaving them to be discovered is the point.
 An inclusion proof in one generation and an absence proof in the next will
@@ -2884,7 +2887,7 @@ full retrieval.
 Pack and delta streams SHOULD be compressed. Per-object delta encoding is
 not specified and is not worth its complexity here: objects are immutable
 (R1), so a revision is a new object rather than a modified one, and objects
-are capped at 64 KiB with most far smaller.
+are capped at 1 MiB with most far smaller.
 
 #### 14.3.2 What Synchronization Discloses
 
@@ -3428,6 +3431,15 @@ Neither the move nor the pointer is specified.
 family in one object. When the PDC outgrows the object size limit, an edition
 per section and a top one listing them would fit. Neither the top edition's
 shape nor how `counts` and the grow-only rule span them is specified.
+
+**B.19 Streamed verification.** An object is verified whole: its CID hashes all
+of its bytes, and a signature covers all of them (Section 4.4), so a reader
+buffers up to the object size limit (Section 4.5) before it can trust anything.
+Verifying a stream in 64 KiB chunks would need a tree hash, such as `blake3`
+(Section 4.2) with Bao's verified streaming, so that each chunk is checked
+against the root as it arrives, with the signature over that root checked before
+the stream is trusted. Neither the chunking nor when a signature is checked is
+specified.
 
 ---
 

@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "The object size limit, `cbor::MAX_OBJECT_BYTES`, is now 1,048,576 bytes (1 MiB), up from 65,536, so `cbor::decode` accepts larger objects"
+}

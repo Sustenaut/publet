@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "The object size limit is now 1,048,576 bytes (1 MiB), up from 65,536, for objects and for the frames of a pack. An older build refuses a larger object"
+}
