@@ -5,7 +5,7 @@ standard: bc3c5b6eeba4757b5d96bc00be2d0a1d3221bef89072b06a271c2b28e2205e34
 blocking: 0
 date: 2026-11-02
 auditor: rust-crate-quality
-commit: 8ad5cee19615e191d4b44c112554e0345bf246a4, with this branch's changes on top (see below)
+commit: 3a824afea25293ebe33bdd0b008eddbc81c1b880
 last-release: v0.2.3
 ---
 
@@ -16,11 +16,13 @@ publet-cli is a command-line tool (binary only), so section 9 applies. It is
 installed from git and is not on crates.io. The changes since v0.2.3 are
 publet #90 (PDC families and editions, the rule that definitions at a PDC code
 are changed and not debated, a load that leaves out inadmissible objects, and
-signed generation records), plus internal updates to the supply-chain audits.
+signed generation records), #92 (a change too large for one generation record is
+stated across several), #93 (the object size limit goes to 1,048,576 bytes), plus
+internal updates to the supply-chain audits.
 No file under `bin/` changed, but every plumbing command that loads objects
 changes behaviour through `publet_graph::load`.
 
-The auditor wrote #90, so its review of that change is not independent. A
+The auditor wrote #90, #92 and #93, so its review of them is not independent. A
 second reader of `crates/publet-graph/src/edition.rs` and `load.rs` would add
 something this report cannot.
 
@@ -79,6 +81,19 @@ finding 1, as in the 0.2.2 and 0.2.3 audits.
 
 ## Worth considering
 
+16. **Section 4, parsing cost at the new limit.** #93 raises what a reader must be
+    able to decode from 64 KiB to 1 MiB. The decoder builds a tree of values, so a
+    hostile 1 MiB object could take about 30 MB to decode. This is reasoned, not
+    measured. The limit is still a fixed bound, and the owner chose this size.
+17. **Section 9, this release's own generation record is unsigned.** `pubrel
+    prepare` requires a released `pub` below 0.3.0, and those do not sign one. The
+    first signed record comes with the first release cut by `pub` 0.3.0, which
+    needs pubrel to admit that version.
+18. **Signatures are not verified by readers.** #90 writes signatures on generation
+    records and only a test checks them, so they do not yet do what Section 14.1.1
+    says they are for. A search found signatures verified by `pub render`, key
+    rotation and `pub-sign` only. A spec and code change is planned after this
+    release.
 9. **Section 4, a load still fails whole on an unreadable object.** #90 leaves
    out objects inadmissible given others, but a family of the wrong shape, a
    cycle-closing edge or a bad anchor from another key still makes
@@ -111,6 +126,11 @@ finding 1, as in the 0.2.2 and 0.2.3 audits.
   dispute on a concept, accepted by 0.2.3, is refused; `pub publish` writes a
   signature into `objects/`. This branch records `changed`, so the version is
   0.3.0.
+- **R0. #92, a fault found while building the PDC.** A generation record of more
+  than about 970 members was written but could not be read back, which stopped the
+  next `pub publish` and `pub bundle --dir`. It was recorded as `fixed`. `pub`
+  now writes at most 900 members to a record. Tested with scenarios and with a
+  throwaway-key PDC publish of 573 families and an edition.
 - **R2. Fell short: the README did not name the new behaviour.** The exit-code
   paragraph now says what creating and reading such an object do.
 
@@ -156,6 +176,7 @@ Run with `target/debug/pub` and plumbing built from this tree:
   `warning: dropped <CID>: ...` and exits 0.
 - `pub-ls --dir=vectors/families/reject-family-code-twice` exits 1.
 - `pub --help`: 1840 bytes on stderr, exit 2.
+- `cbor::decode` and a pack frame each accept 1,048,576 bytes and refuse 1,048,577.
 - crates.io has publet-core 0.1.4 and publet-algorithms 0.2.1, and no
   publet-graph.
 - `git diff v0.2.3 -- bin` is empty.
@@ -170,8 +191,8 @@ Run with `target/debug/pub` and plumbing built from this tree:
 | `cargo clippy -p publet-cli --all-targets` | pass, by `pubkit audit prepare` |
 | `cargo clippy -p publet-cli -- -W clippy::missing_docs_in_private_items` | 0 undocumented private items, by `pubkit audit prepare` |
 | `cargo test -p publet-cli` | pass, 44 tests |
-| `make check` at #90's last commit, `b089851` | pass, 519 functional scenarios |
-| `conformance/verify-suite.sh` at `b089851` | pass, every break detected |
+| `make check` at #93's last commit, `3c2de23` | pass, 522 functional scenarios |
+| `conformance/verify-suite.sh` at `3c2de23` | pass, every break detected |
 | `cargo publish --dry-run --locked -p publet-cli` | fails, see finding 1 |
 | `cargo +1.98 check --locked -p publet-cli` (MSRV) | pass, by `pubkit audit prepare` |
 | `make vectors-check`, `make supply-chain-check`, `make deny`, `make vet` | pass, by `pubkit audit prepare` |
