@@ -72,6 +72,42 @@ pub enum GraphError {
         lineage: String,
     },
 
+    /// An edition disagrees with the families it lists, or with an edition
+    /// it supersedes (Section 5.9.1).
+    #[error("edition {edition} is refused: {reason} (Section 5.9.1)")]
+    EditionDisagrees {
+        /// The edition.
+        edition: String,
+        /// What it disagrees about.
+        reason: String,
+    },
+
+    /// A relation or annotation argued about, or judged, a definition at a
+    /// PDC code, which is changed and not debated (R6, Section 5.9.1).
+    #[error(
+        "a `{kind}` cannot target {target}: a definition at a PDC code is a \
+         stipulation, changed by a new version and never debated (R6, Section 5.9.1)"
+    )]
+    StipulationDebated {
+        /// The relation or annotation kind.
+        kind: String,
+        /// The concept, family or edition.
+        target: String,
+    },
+
+    /// A `classifies` annotation placed something under a family without
+    /// naming one of its classes (Section 5.9.1).
+    #[error(
+        "a `classifies` annotation under the family {family} must name one of \
+         its codes in `aspect`, found {found:?} (Section 5.9.1)"
+    )]
+    ClassifiedUnderNoClass {
+        /// The family.
+        family: String,
+        /// The aspect the annotation named.
+        found: Option<String>,
+    },
+
     /// A `source` evidence entry named a claim the citing claim does not
     /// list in `depends` (Section 5.5).
     #[error(

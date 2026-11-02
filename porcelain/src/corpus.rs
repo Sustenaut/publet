@@ -406,10 +406,13 @@ fn read_members(objects: &Path, members: &BTreeSet<String>) -> Result<Vec<(Cid, 
 
 /// Every object file in `objects/`, keyed by identifier, and which of them
 /// are members: everything but the domain's own manifest and generation
-/// records, which describe the membership rather than belong to it.
+/// records and the records' signatures, which describe the membership rather
+/// than belong to it (Section 14.1.1).
 fn scan_objects(objects: &Path) -> Result<(BTreeSet<String>, u64), String> {
     let mut members = BTreeSet::new();
     let mut size = 0;
+    let mut generations = BTreeSet::new();
+    let mut signatures: Vec<(String, u64, String)> = Vec::new();
     let Ok(entries) = std::fs::read_dir(objects) else {
         return Ok((members, 0));
     };
@@ -424,13 +427,59 @@ fn scan_objects(objects: &Path) -> Result<(BTreeSet<String>, u64), String> {
             .map_err(|e| format!("{}: {e}", path.display()))?
             .verify(&cid)
             .map_err(|e| format!("{}: {e}", path.display()))?;
-        if matches!(object.object().kind(), "domain" | "generation") {
-            continue;
+        match object.object().kind() {
+            "domain" => continue,
+            "generation" => {
+                generations.insert(cid.to_string());
+                continue;
+            }
+            "sig" => {
+                if let Some(target) = object
+                    .object()
+                    .body()
+                    .get("target")
+                    .and_then(Value::as_text)
+                {
+                    signatures.push((cid.to_string(), bytes.len() as u64, target.to_owned()));
+                    continue;
+                }
+            }
+            _ => {}
         }
         size += bytes.len() as u64;
         members.insert(cid.to_string());
     }
+    for (cid, length, target) in signatures {
+        if !generations.contains(&target) {
+            size += length;
+            members.insert(cid);
+        }
+    }
     Ok((members, size))
+}
+
+/// A generation record and its signature by the publishing key, written
+/// together so that no record leaves unsigned (Section 14.1.1). The signature
+/// is made first: a missing key leaves nothing behind.
+fn write_generation(
+    cfg: &Config,
+    author: &str,
+    created: &str,
+    cid: &Cid,
+    bytes: &[u8],
+) -> Result<(), String> {
+    let (sig, sig_bytes) = crate::sign::signature(
+        &cfg.root,
+        author,
+        created,
+        crate::build::PURPOSE,
+        cid,
+        bytes,
+    )?;
+    let objects = cfg.objects();
+    std::fs::create_dir_all(&objects).map_err(|e| e.to_string())?;
+    std::fs::write(objects.join(file_name(cid)), bytes).map_err(|e| e.to_string())?;
+    std::fs::write(objects.join(file_name(&sig)), sig_bytes).map_err(|e| e.to_string())
 }
 
 /// Advance the corpus's generation if its membership changed. Returns the
@@ -498,7 +547,7 @@ fn advance(cfg: &Config, author: &str, meta: &mut Meta) -> Result<Option<(u64, C
                 &publet_algorithms::membership::Membership::new(listed.clone()),
             )
             .map_err(|e| e.to_string())?;
-            std::fs::write(objects.join(file_name(&cid)), &bytes).map_err(|e| e.to_string())?;
+            write_generation(cfg, author, &created, &cid, &bytes)?;
             (index + 1, cid)
         }
     } else {
@@ -507,8 +556,8 @@ fn advance(cfg: &Config, author: &str, meta: &mut Meta) -> Result<Option<(u64, C
                 author, &cfg.label, cfg.bound, &created, &listed, size,
             )?;
             std::fs::create_dir_all(&objects).map_err(|e| e.to_string())?;
+            write_generation(cfg, author, &created, &cid, &gbytes)?;
             std::fs::write(objects.join(file_name(&domain)), &dbytes).map_err(|e| e.to_string())?;
-            std::fs::write(objects.join(file_name(&cid)), &gbytes).map_err(|e| e.to_string())?;
             meta.domain = Some(domain.to_string());
             (0, cid)
         }
@@ -1296,6 +1345,22 @@ fn references(object: &Object) -> Vec<String> {
                 for i in items {
                     text(i.get("ref"));
                     text(i.get("at"));
+                }
+            }
+        }
+    }
+    // An edition reaches its families though they stay out of its `depends`
+    // (Section 5.9.1): what is copied must read as it did where it came from.
+    if let Some(defines) = body.get("defines")
+        && defines.get("sort").and_then(Value::as_text) == Some("edition")
+    {
+        text(defines.get("top"));
+        if let Some(Value::Map(sections)) = defines.get("sections") {
+            for section in sections.values() {
+                if let Value::Map(families) = section {
+                    for family in families.values() {
+                        text(Some(family));
+                    }
                 }
             }
         }

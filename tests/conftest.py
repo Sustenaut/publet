@@ -163,6 +163,15 @@ def load_fails(runner, store):
     store["last"] = out
 
 
+@then("the load leaves out one object and reports it")
+def load_drops_one(result, store):
+    # Section 5.2: one inadmissible object does not stop the rest loading.
+    assert result.code == 0, result.stderr
+    held = len(list(store["dir"].glob("*.cbor")))
+    assert len(result.stdout.split()) == held - 1, result.stdout
+    assert "warning: dropped" in result.stderr, result.stderr
+
+
 @then("loading the store succeeds")
 def load_succeeds(runner, store):
     out = runner.run("pub-ls", f"--dir={store['dir']}")

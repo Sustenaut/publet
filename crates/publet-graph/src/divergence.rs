@@ -178,8 +178,8 @@ fn definitional_terms(graph: &Graph, cid: &Cid) -> Result<BTreeMap<String, Cid>,
         let Some(object) = graph.object(&dep) else {
             continue;
         };
-        if let Some(term) = claim.term(object) {
-            out.insert(term, dep);
+        for term in claim.terms(object) {
+            out.insert(term, dep.clone());
         }
     }
     Ok(out)

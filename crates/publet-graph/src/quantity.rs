@@ -10,7 +10,7 @@
 //! a question for a units system, which this crate does not carry: it reads
 //! shapes, and leaves the arithmetic to an adapter.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use publet_algorithms::h3::Cell;
 use publet_core::{Cid, cbor::Value};
@@ -85,6 +85,86 @@ pub enum Definition {
         /// The H3 cell it is in.
         location: Option<Cell>,
     },
+    /// The classes directly under one class, defined together.
+    Family(Family),
+    /// One release of the PDC: its families by CID, and the auxiliary
+    /// groups and groupings they use.
+    Edition(Edition),
+}
+
+/// What a `family` defines (Section 5.9.1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Family {
+    /// The code of the class these are directly under. Absent only for the
+    /// single top family.
+    pub parent: Option<String>,
+    /// The number of the one auxiliary grouping these classes may use.
+    pub grouping: u64,
+    /// Its classes, in source order.
+    pub members: Vec<Member>,
+    /// The special auxiliaries that start in this family.
+    pub auxiliaries: Vec<Member>,
+}
+
+impl Family {
+    /// Every class it defines: its members, then its auxiliaries.
+    pub fn classes(&self) -> impl Iterator<Item = &Member> {
+        self.members.iter().chain(&self.auxiliaries)
+    }
+}
+
+/// One class in a family: a concept without `sort`, and whether it heads a
+/// family of its own.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Member {
+    /// The PDC code it is defined at. This is one of the family's terms.
+    pub pdc: String,
+    /// The class's name, for a reader.
+    pub name: String,
+    /// What it includes and excludes. Required of a quantity concept.
+    pub boundary: Option<Boundary>,
+    /// Which form of concept it is.
+    pub form: ConceptForm,
+    /// Whether a family lists this class as its parent.
+    pub children: bool,
+}
+
+/// The three sections of an edition, in the order they are counted.
+pub const EDITION_SECTIONS: [&str; 3] = ["main", "common-auxiliaries", "special-auxiliaries"];
+
+/// What an `edition` states (Section 5.9.1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Edition {
+    /// The top family, which has no parent to be keyed by.
+    pub top: Cid,
+    /// Each section's families by parent code, in [`EDITION_SECTIONS`] order.
+    pub sections: [BTreeMap<String, Cid>; 3],
+    /// Auxiliary table heads, by group number.
+    pub groups: BTreeMap<u64, BTreeSet<String>>,
+    /// Group numbers, by grouping number.
+    pub groupings: BTreeMap<u64, BTreeSet<u64>>,
+    /// The size stated for each section, in [`EDITION_SECTIONS`] order.
+    pub counts: [Tally; 3],
+    /// The size stated for the whole edition, the top family included.
+    pub total: Tally,
+}
+
+impl Edition {
+    /// Every family it lists, the top one first.
+    pub fn families(&self) -> impl Iterator<Item = &Cid> {
+        std::iter::once(&self.top).chain(self.sections.iter().flat_map(BTreeMap::values))
+    }
+}
+
+/// How much of the classification a section or an edition holds.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Tally {
+    /// Families listed.
+    pub families: u64,
+    /// The members they define.
+    pub classes: u64,
+    /// The auxiliaries they define.
+    pub auxiliaries: u64,
 }
 
 /// The three forms of concept (Section 5.9.1).
@@ -101,6 +181,24 @@ pub enum ConceptForm {
     },
     /// A relation between quantity slots, solvable for a slot.
     Relation(ConceptRelation),
+}
+
+impl ConceptForm {
+    /// The kinds this form cites, each with the field citing it.
+    fn cited(&self) -> Vec<(&'static str, &Cid)> {
+        match self {
+            Self::Subject => Vec::new(),
+            Self::Quantity { kind } => vec![("defines.kind", kind)],
+            Self::Relation(r) => r
+                .slots
+                .iter()
+                .filter_map(|s| match &s.binds {
+                    Binding::Kind(kind) => Some(("defines.relation.slots.kind", kind)),
+                    Binding::Concept(_) => None,
+                })
+                .collect(),
+        }
+    }
 }
 
 /// A relation concept's relation (Section 5.9.1). Unit-free: a slot's unit
@@ -240,9 +338,9 @@ pub struct Boundary {
 
 impl Definition {
     /// The name the definition goes by: its `symbol` or `name`, or a
-    /// concept's PDC code. This is `term(D)` for Section 9.2, except for a
-    /// singular, which defines a thing rather than a term and has none
-    /// (Section 5.9.6): its name is returned for a reader.
+    /// concept's PDC code. This is `term(D)` for Section 9.2, except for
+    /// what [`Definition::terms`] says otherwise: a singular's name, a
+    /// family's parent code, and an edition's sort are returned for a reader.
     #[must_use]
     pub fn term(&self) -> &str {
         match self {
@@ -252,6 +350,37 @@ impl Definition {
             | Self::Singular { name, .. } => name,
             Self::Dimension { symbol } | Self::Unit { symbol, .. } => symbol,
             Self::Concept { pdc, .. } => pdc,
+            Self::Family(family) => family.parent.as_deref().unwrap_or("top family"),
+            Self::Edition(_) => "edition",
+        }
+    }
+
+    /// `term(D)` for Section 9.2: one term for most definitions, one per
+    /// code for a family, and none for a singular, which defines a thing,
+    /// or an edition, which lists definitions.
+    #[must_use]
+    pub fn terms(&self) -> Vec<&str> {
+        match self {
+            Self::Singular { .. } | Self::Edition(_) => Vec::new(),
+            Self::Family(family) => family.classes().map(|m| m.pdc.as_str()).collect(),
+            _ => vec![self.term()],
+        }
+    }
+
+    /// The concepts this definition defines, as (code, name, form): a
+    /// concept itself, or each of a family's classes. A field naming a code
+    /// finds its concept through this, whichever claim defines it.
+    #[must_use]
+    pub fn concepts(&self) -> Vec<(&str, &str, &ConceptForm)> {
+        match self {
+            Self::Concept {
+                pdc, name, form, ..
+            } => vec![(pdc, name, form)],
+            Self::Family(family) => family
+                .classes()
+                .map(|m| (m.pdc.as_str(), m.name.as_str(), &m.form))
+                .collect(),
+            _ => Vec::new(),
         }
     }
 
@@ -261,21 +390,8 @@ impl Definition {
     #[must_use]
     pub fn cited(&self) -> Vec<(&'static str, &Cid)> {
         match self {
-            Self::Concept {
-                form: ConceptForm::Quantity { kind },
-                ..
-            } => vec![("defines.kind", kind)],
-            Self::Concept {
-                form: ConceptForm::Relation(r),
-                ..
-            } => r
-                .slots
-                .iter()
-                .filter_map(|s| match &s.binds {
-                    Binding::Kind(kind) => Some(("defines.relation.slots.kind", kind)),
-                    Binding::Concept(_) => None,
-                })
-                .collect(),
+            Self::Concept { form, .. } => form.cited(),
+            Self::Family(family) => family.classes().flat_map(|m| m.form.cited()).collect(),
             Self::Singular {
                 part_of: Some(whole),
                 ..
@@ -295,6 +411,8 @@ impl Definition {
             Self::Measure { .. } => "measure",
             Self::Concept { .. } => "concept",
             Self::Singular { .. } => "singular",
+            Self::Family(_) => "family",
+            Self::Edition(_) => "edition",
         }
     }
 
@@ -302,13 +420,14 @@ impl Definition {
     ///
     /// # Errors
     ///
-    /// Returns [`GraphError::BadField`] if `sort` is not one of the seven,
+    /// Returns [`GraphError::BadField`] if `sort` is not one of the nine,
     /// a field is missing or ill-typed, a symbol is not `{...}` or
     /// `[...]`, a value is not a decimal string, an exponent is not an
     /// integer, a measure has no parameters or repeats one, or a concept
     /// has no PDC code or a boundary line that is not a non-empty string,
     /// or a singular has no name or class, a `part_of` that is not a CID,
-    /// or a `location` whose `h3` is not an H3 cell identifier.
+    /// or a `location` whose `h3` is not an H3 cell identifier, or a family
+    /// or an edition breaks a rule that can be checked on it alone.
     pub fn from_value(value: &Value) -> Result<Self, GraphError> {
         let Value::Map(_) = value else {
             return Err(bad("defines", "a map with a `sort`"));
@@ -369,28 +488,7 @@ impl Definition {
                 parameters: parameters(value.get("parameters"))?,
             }),
             "concept" => {
-                let pdc = required_text(value, "pdc", "defines.pdc")?;
-                let name = required_text(value, "name", "defines.name")?;
-                let bounds = value
-                    .get("boundary")
-                    .map(|b| boundary(Some(b)))
-                    .transpose()?;
-                let form = match (value.get("kind"), value.get("relation")) {
-                    (Some(kind), None) => ConceptForm::Quantity {
-                        kind: cid(kind, "defines.kind", "the CID of a kind definition")?,
-                    },
-                    (None, Some(r)) => ConceptForm::Relation(relation(r)?),
-                    (None, None) => ConceptForm::Subject,
-                    (Some(_), Some(_)) => {
-                        return Err(bad(
-                            "defines",
-                            "a concept with a `kind` or a `relation`, not both",
-                        ));
-                    }
-                };
-                if bounds.is_none() && matches!(form, ConceptForm::Quantity { .. }) {
-                    return Err(bad("defines.boundary", "a boundary on a quantity concept"));
-                }
+                let (pdc, name, bounds, form) = concept(value)?;
                 Ok(Self::Concept {
                     pdc,
                     name,
@@ -399,9 +497,12 @@ impl Definition {
                 })
             }
             "singular" => singular(value),
+            "family" => family(value).map(Self::Family),
+            "edition" => edition(value).map(Self::Edition),
             _ => Err(bad(
                 "defines.sort",
-                "`system`, `dimension`, `unit`, `kind`, `measure`, `concept`, or `singular`",
+                "`system`, `dimension`, `unit`, `kind`, `measure`, `concept`, `singular`, \
+                 `family`, or `edition`",
             )),
         }
     }
@@ -519,6 +620,267 @@ pub(crate) fn is_decimal(text: &str) -> bool {
     !whole.is_empty()
         && whole.bytes().all(|b| b.is_ascii_digit())
         && fraction.is_none_or(|f| !f.is_empty() && f.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// The fields a concept and a family's member share: code, name, boundary
+/// and form.
+fn concept(value: &Value) -> Result<(String, String, Option<Boundary>, ConceptForm), GraphError> {
+    let pdc = required_text(value, "pdc", "defines.pdc")?;
+    let name = required_text(value, "name", "defines.name")?;
+    let bounds = value
+        .get("boundary")
+        .map(|b| boundary(Some(b)))
+        .transpose()?;
+    let form = match (value.get("kind"), value.get("relation")) {
+        (Some(kind), None) => ConceptForm::Quantity {
+            kind: cid(kind, "defines.kind", "the CID of a kind definition")?,
+        },
+        (None, Some(r)) => ConceptForm::Relation(relation(r)?),
+        (None, None) => ConceptForm::Subject,
+        (Some(_), Some(_)) => {
+            return Err(bad(
+                "defines",
+                "a concept with a `kind` or a `relation`, not both",
+            ));
+        }
+    };
+    if bounds.is_none() && matches!(form, ConceptForm::Quantity { .. }) {
+        return Err(bad("defines.boundary", "a boundary on a quantity concept"));
+    }
+    Ok((pdc, name, bounds, form))
+}
+
+/// A family's fields, and the rules that can be checked on it alone
+/// (Section 5.9.1).
+fn family(value: &Value) -> Result<Family, GraphError> {
+    let parent = value
+        .get("parent")
+        .map(|p| {
+            p.as_text()
+                .filter(|t| !t.is_empty())
+                .map(ToOwned::to_owned)
+                .ok_or(bad("defines.parent", "a PDC code"))
+        })
+        .transpose()?;
+    let Some(grouping) = value.get("grouping").and_then(Value::as_uint) else {
+        return Err(bad("defines.grouping", "an unsigned integer"));
+    };
+    let Some(Value::Array(members)) = value.get("members") else {
+        return Err(bad("defines.members", "an array of classes"));
+    };
+    let members = members.iter().map(member).collect::<Result<Vec<_>, _>>()?;
+    let auxiliaries = match value.get("auxiliaries") {
+        None => Vec::new(),
+        Some(Value::Array(items)) if !items.is_empty() => {
+            items.iter().map(member).collect::<Result<Vec<_>, _>>()?
+        }
+        Some(_) => {
+            return Err(bad(
+                "defines.auxiliaries",
+                "a non-empty array of classes, or absent",
+            ));
+        }
+    };
+    let family = Family {
+        parent,
+        grouping,
+        members,
+        auxiliaries,
+    };
+    if family.classes().next().is_none() {
+        return Err(bad("defines.members", "at least one class"));
+    }
+    let mut seen = BTreeSet::new();
+    for class in family.classes() {
+        if !seen.insert(class.pdc.as_str()) {
+            return Err(bad(
+                "defines.members",
+                "each code once across `members` and `auxiliaries`",
+            ));
+        }
+    }
+    if family
+        .parent
+        .as_ref()
+        .is_some_and(|p| seen.contains(p.as_str()))
+    {
+        return Err(bad(
+            "defines.parent",
+            "a code that is not one of the family's own classes",
+        ));
+    }
+    Ok(family)
+}
+
+/// One class in a family: a concept without `sort`, and `children: true`
+/// when it heads a family of its own.
+fn member(value: &Value) -> Result<Member, GraphError> {
+    let Value::Map(_) = value else {
+        return Err(bad(
+            "defines.members",
+            "maps, each a concept without `sort`",
+        ));
+    };
+    if value.get("sort").is_some() {
+        return Err(bad("defines.members", "concepts without `sort`"));
+    }
+    let children = match value.get("children") {
+        None => false,
+        Some(Value::Bool(true)) => true,
+        Some(_) => return Err(bad("defines.members.children", "`true`, or absent")),
+    };
+    let (pdc, name, boundary, form) = concept(value)?;
+    Ok(Member {
+        pdc,
+        name,
+        boundary,
+        form,
+        children,
+    })
+}
+
+/// An edition's fields, and the rules that can be checked on it alone
+/// (Section 5.9.1). What its families must agree with is the graph's to
+/// check, with the families in hand.
+fn edition(value: &Value) -> Result<Edition, GraphError> {
+    let top = cid(
+        value.get("top").unwrap_or(&Value::Null),
+        "defines.top",
+        "the CID of the top family",
+    )?;
+    let Some(Value::Map(_)) = value.get("sections") else {
+        return Err(bad("defines.sections", "a map of the three sections"));
+    };
+    let mut sections: [BTreeMap<String, Cid>; 3] = Default::default();
+    let mut parents = BTreeSet::new();
+    let mut listed = BTreeSet::from([top.to_string()]);
+    for (section, out) in EDITION_SECTIONS.iter().zip(&mut sections) {
+        let Some(Value::Map(entries)) = value.get("sections").and_then(|s| s.get(section)) else {
+            return Err(bad(
+                "defines.sections",
+                "`main`, `common-auxiliaries` and `special-auxiliaries`, each a map from parent code to CID",
+            ));
+        };
+        for (parent, family) in entries {
+            let family = cid(family, "defines.sections", "the CID of a family")?;
+            if parent.is_empty() || !parents.insert(parent.clone()) {
+                return Err(bad("defines.sections", "each parent code once"));
+            }
+            if !listed.insert(family.to_string()) {
+                return Err(bad("defines.sections", "each family once"));
+            }
+            out.insert(parent.clone(), family);
+        }
+    }
+    let groups = numbered(value.get("groups"), "defines.groups", "heads", |head| {
+        head.as_text()
+            .filter(|t| !t.is_empty())
+            .map(ToOwned::to_owned)
+    })?;
+    if groups.values().any(BTreeSet::is_empty) {
+        return Err(bad("defines.groups", "at least one head in each group"));
+    }
+    let groupings = numbered(value.get("groupings"), "defines.groupings", "groups", |g| {
+        g.as_uint()
+    })?;
+    if groupings
+        .values()
+        .any(|set| set.iter().any(|g| !groups.contains_key(g)))
+    {
+        return Err(bad(
+            "defines.groupings",
+            "group numbers the edition defines",
+        ));
+    }
+    let Some(stated @ Value::Map(_)) = value.get("counts") else {
+        return Err(bad("defines.counts", "a map of tallies and counts"));
+    };
+    let mut counts = [Tally::default(); 3];
+    for (section, out) in EDITION_SECTIONS.iter().zip(&mut counts) {
+        *out = tally(stated.get(section))?;
+    }
+    let total = tally(stated.get("total"))?;
+    let count = |key: &str| stated.get(key).and_then(Value::as_uint);
+    let lengths = |items: usize| u64::try_from(items).ok();
+    if count("groups") != lengths(groups.len()) || count("groupings") != lengths(groupings.len()) {
+        return Err(bad(
+            "defines.counts",
+            "`groups` and `groupings` counting what the edition defines",
+        ));
+    }
+    for (stated, listed) in counts.iter().zip(&sections) {
+        if lengths(listed.len()) != Some(stated.families) {
+            return Err(bad(
+                "defines.counts",
+                "`families` counting what each section lists",
+            ));
+        }
+    }
+    let sum = counts.iter().map(|c| c.families).sum::<u64>();
+    if total.families != sum + 1 {
+        return Err(bad(
+            "defines.counts",
+            "a `total` of `families` that is every section's and the top family",
+        ));
+    }
+    Ok(Edition {
+        top,
+        sections,
+        groups,
+        groupings,
+        counts,
+        total,
+    })
+}
+
+/// A numbered list: `[ { number, <key>: [ <item>, ... ] }, ... ]`, each
+/// number and each item within one number used once.
+fn numbered<T: Ord>(
+    value: Option<&Value>,
+    field: &'static str,
+    key: &str,
+    read: impl Fn(&Value) -> Option<T>,
+) -> Result<BTreeMap<u64, BTreeSet<T>>, GraphError> {
+    let Some(Value::Array(entries)) = value else {
+        return Err(bad(field, "an array of numbered entries"));
+    };
+    let mut out = BTreeMap::new();
+    for entry in entries {
+        let Some(number) = entry.get("number").and_then(Value::as_uint) else {
+            return Err(bad(field, "entries with an unsigned `number`"));
+        };
+        let Some(Value::Array(items)) = entry.get(key) else {
+            return Err(bad(field, "entries listing their contents"));
+        };
+        let mut set = BTreeSet::new();
+        for item in items {
+            let item = read(item).ok_or(bad(field, "entries of the right type"))?;
+            if !set.insert(item) {
+                return Err(bad(field, "each entry naming each thing once"));
+            }
+        }
+        if out.insert(number, set).is_some() {
+            return Err(bad(field, "each number once"));
+        }
+    }
+    Ok(out)
+}
+
+fn tally(value: Option<&Value>) -> Result<Tally, GraphError> {
+    let count = |key: &str| {
+        value
+            .and_then(|v| v.get(key))
+            .and_then(Value::as_uint)
+            .ok_or(bad(
+                "defines.counts",
+                "tallies of `families`, `classes` and `auxiliaries`",
+            ))
+    };
+    Ok(Tally {
+        families: count("families")?,
+        classes: count("classes")?,
+        auxiliaries: count("auxiliaries")?,
+    })
 }
 
 /// A singular's fields (Section 5.9.1).
@@ -1221,5 +1583,120 @@ mod tests {
             ])
             .is_err()
         );
+    }
+
+    fn class(pdc: &str) -> Value {
+        map(vec![("pdc", text(pdc)), ("name", text("a class"))])
+    }
+
+    fn family_of(parent: &str, members: Vec<Value>) -> Value {
+        map(vec![
+            ("sort", text("family")),
+            ("parent", text(parent)),
+            ("grouping", Value::Uint(1)),
+            ("members", Value::Array(members)),
+        ])
+    }
+
+    #[test]
+    fn a_family_goes_by_one_term_per_class() {
+        let d = Definition::from_value(&family_of("63", vec![class("631"), class("632")])).unwrap();
+        assert_eq!(d.sort(), "family");
+        assert_eq!(d.terms(), vec!["631", "632"]);
+        assert_eq!(d.term(), "63");
+        assert_eq!(d.concepts().len(), 2);
+    }
+
+    #[test]
+    fn a_family_may_not_define_a_code_twice_or_its_own_parent() {
+        for (parent, codes) in [("63", ["631", "631"]), ("631", ["631", "632"])] {
+            let members = codes.iter().map(|c| class(c)).collect();
+            assert!(Definition::from_value(&family_of(parent, members)).is_err());
+        }
+    }
+
+    #[test]
+    fn a_family_cites_what_its_quantity_members_narrow() {
+        let member = map(vec![
+            ("pdc", text("69~1")),
+            ("name", text("floor area")),
+            ("kind", text(KIND)),
+            (
+                "boundary",
+                map(vec![
+                    ("includes", Value::Array(vec![text("Floor")])),
+                    ("excludes", Value::Array(Vec::new())),
+                ]),
+            ),
+        ]);
+        let d = Definition::from_value(&family_of("69", vec![member])).unwrap();
+        let cited: Vec<String> = d.cited().iter().map(|(_, c)| c.to_string()).collect();
+        assert_eq!(cited, vec![KIND.to_owned()]);
+    }
+
+    fn numbered_entry(key: &str, number: u64, items: Vec<Value>) -> Value {
+        map(vec![
+            ("number", Value::Uint(number)),
+            (key, Value::Array(items)),
+        ])
+    }
+
+    fn tally_of(families: u64) -> Value {
+        map(vec![
+            ("families", Value::Uint(families)),
+            ("classes", Value::Uint(0)),
+            ("auxiliaries", Value::Uint(0)),
+        ])
+    }
+
+    fn edition_with(groupings: Vec<Value>, total: u64) -> Value {
+        let empty = || map(Vec::new());
+        map(vec![
+            ("sort", text("edition")),
+            ("top", text(KIND)),
+            (
+                "sections",
+                map(vec![
+                    ("main", empty()),
+                    ("common-auxiliaries", empty()),
+                    ("special-auxiliaries", empty()),
+                ]),
+            ),
+            (
+                "groups",
+                Value::Array(vec![numbered_entry("heads", 1, vec![text("(1/9)")])]),
+            ),
+            ("groupings", Value::Array(groupings)),
+            (
+                "counts",
+                map(vec![
+                    ("main", tally_of(0)),
+                    ("common-auxiliaries", tally_of(0)),
+                    ("special-auxiliaries", tally_of(0)),
+                    ("total", tally_of(total)),
+                    ("groups", Value::Uint(1)),
+                    ("groupings", Value::Uint(1)),
+                ]),
+            ),
+        ])
+    }
+
+    #[test]
+    fn an_edition_defines_no_term_and_lists_its_top_family() {
+        let groupings = vec![numbered_entry("groups", 1, vec![Value::Uint(1)])];
+        let d = Definition::from_value(&edition_with(groupings, 1)).unwrap();
+        assert!(d.terms().is_empty());
+        let Definition::Edition(edition) = d else {
+            panic!("not an edition");
+        };
+        assert_eq!(edition.families().count(), 1);
+    }
+
+    #[test]
+    fn an_edition_must_define_the_groups_its_groupings_name_and_count_the_top_family() {
+        let undefined = vec![numbered_entry("groups", 1, vec![Value::Uint(9)])];
+        assert!(Definition::from_value(&edition_with(undefined, 1)).is_err());
+        let groupings = vec![numbered_entry("groups", 1, vec![Value::Uint(1)])];
+        assert!(Definition::from_value(&edition_with(groupings, 0)).is_err());
     }
 }

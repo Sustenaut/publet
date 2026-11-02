@@ -1140,3 +1140,33 @@ fn rotations_chain_and_forged_signatures_do_not_count() {
     assert_eq!(g.rotated_from(&k4), None, "a forged signature");
     assert!(!g.continues_key(&k1, &k4));
 }
+
+/// Section 5.2: a load reports an inadmissible object and goes on, where
+/// `insert` and `validate`, which authoring uses, refuse it.
+#[test]
+fn a_load_leaves_out_what_authoring_refuses() {
+    let ka = author("K_a");
+    let (p, pb) = claim(
+        &ka,
+        "2026-09-12T10:00:00Z",
+        "definitional",
+        "term: a meaning",
+        &[],
+    );
+    let (v, vb) = verdict(&ka, &p, None);
+
+    let graph =
+        publet_graph::load::from_objects(vec![(p.clone(), pb.clone()), (v.clone(), vb.clone())])
+            .unwrap();
+    assert!(graph.object(&p).is_some(), "the rest loads");
+    assert!(graph.object(&v).is_none(), "the verdict is left out");
+    let left_out: Vec<&Cid> = graph.dropped().iter().map(|d| &d.cid).collect();
+    assert_eq!(left_out, vec![&v]);
+
+    let mut strict = Graph::new();
+    add(&mut strict, &p, &pb).unwrap();
+    assert!(
+        add(&mut strict, &v, &vb).is_err(),
+        "insert still refuses it"
+    );
+}

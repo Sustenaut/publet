@@ -145,10 +145,9 @@ fn concepts_in_closure(graph: &Graph, cid: &Cid) -> Vec<(String, String)> {
     closure.push(cid.clone());
     closure
         .iter()
-        .filter_map(|c| match graph.prose_claim(c)?.defines()? {
-            Definition::Concept { pdc, name, .. } => Some((pdc.clone(), name.clone())),
-            _ => None,
-        })
+        .filter_map(|c| graph.prose_claim(c)?.defines())
+        .flat_map(Definition::concepts)
+        .map(|(pdc, name, _)| (pdc.to_owned(), name.to_owned()))
         .collect()
 }
 
@@ -264,15 +263,10 @@ impl Graph {
             let concepts: Vec<(String, String)> = claim
                 .depends()
                 .iter()
-                .filter_map(|d| match self.prose_claim(d)?.defines()? {
-                    Definition::Concept {
-                        pdc,
-                        name,
-                        form: ConceptForm::Quantity { .. },
-                        ..
-                    } => Some((pdc.clone(), name.clone())),
-                    _ => None,
-                })
+                .filter_map(|d| self.prose_claim(d)?.defines())
+                .flat_map(Definition::concepts)
+                .filter(|(_, _, form)| matches!(form, ConceptForm::Quantity { .. }))
+                .map(|(pdc, name, _)| (pdc.to_owned(), name.to_owned()))
                 .collect();
             for (row, thing) in about {
                 if !singulars.contains(&thing) {

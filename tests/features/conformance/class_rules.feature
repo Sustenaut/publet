@@ -7,7 +7,7 @@ Feature: Verdicts respect claim classes
     Given a "<class>" publet
     And a verdict annotation targeting it with no aspect
     When I load the store
-    Then loading the store fails
+    Then the load leaves out one object and reports it
     And stderr mentions "not truth-apt"
 
     Examples:
@@ -20,7 +20,7 @@ Feature: Verdicts respect claim classes
     Given a "<class>" publet
     And a verdict annotation targeting it with aspect "effect-size"
     When I load the store
-    Then loading the store fails
+    Then the load leaves out one object and reports it
     And stderr mentions "provenance"
 
     Examples:
