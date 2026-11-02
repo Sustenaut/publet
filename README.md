@@ -222,6 +222,12 @@ project needs another release of `pub` (above); and from `pub require`
 when the requirement is not met, is not a requirement, or none is given
 or declared.
 
+A command that creates an object refuses one the specification calls
+inadmissible, such as a dispute on a PDC concept, family or edition, with
+status 1. A command that reads objects others may have written leaves such an
+object out, prints `warning: dropped <CID>: <reason>` to stderr, and goes on
+with status 0 (specification Section 5.2).
+
 `pub why` never reduces a standing to a badge. It shows the weights, the
 divergence factor, the threshold, the reproduction counts against the
 replication floor, and a sentence naming which rule produced the outcome --
