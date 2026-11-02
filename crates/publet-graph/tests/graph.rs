@@ -1160,8 +1160,8 @@ fn a_load_leaves_out_what_authoring_refuses() {
             .unwrap();
     assert!(graph.object(&p).is_some(), "the rest loads");
     assert!(graph.object(&v).is_none(), "the verdict is left out");
-    assert_eq!(graph.dropped().len(), 1);
-    assert_eq!(graph.dropped()[0].cid, v);
+    let left_out: Vec<&Cid> = graph.dropped().iter().map(|d| &d.cid).collect();
+    assert_eq!(left_out, vec![&v]);
 
     let mut strict = Graph::new();
     add(&mut strict, &p, &pb).unwrap();
