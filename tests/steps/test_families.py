@@ -959,6 +959,7 @@ def _bundles_of_cached(runner, corpus):
     return lambda cid: json.loads((bundles / "o" / f"{cid}.json").read_text())
 
 
+# `pub` keeps each record to 900 members, far inside the 1 MiB object limit.
 OBJECT_LIMIT = 64 * 1024
 
 

@@ -67,7 +67,7 @@ Feature: Families are bundled for a theme, one bundle per family and per code
     And the signature is not a member of the generation
 
   @must-14.1.1 @must-4.5
-  Scenario: A first publish too large for one record is stated across several
+  Scenario: A first publish of more than a record holds is stated across several
     Given a corpus with a key and a publet of 600 claims
     When I publish it
     Then the corpus has 2 generation records, each inside the object size limit and signed
@@ -77,7 +77,7 @@ Feature: Families are bundled for a theme, one bundle per family and per code
     Then the generation is one past where it was
 
   @must-14.1.1 @must-4.5
-  Scenario: Advancing by a change too large for one record is stated across several
+  Scenario: Advancing by more than a record holds is stated across several
     Given a corpus with a key and one publet
     When I publish it
     And I add 600 claims to the publet and publish it

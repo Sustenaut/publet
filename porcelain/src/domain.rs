@@ -97,8 +97,8 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
 }
 
 /// Most members one generation record lists. An identifier takes 67 bytes in
-/// `added`, so this keeps a record well inside the object size limit (Section
-/// 4.5) with room for its header.
+/// `added`, so a record stays about 60 KB: well inside the object size limit
+/// (Section 4.5), and cheap to fetch and check (Section 14.1.1).
 const MAX_ADDED_PER_RECORD: usize = 900;
 
 /// The manifest and the genesis generation records, with their CIDs and the

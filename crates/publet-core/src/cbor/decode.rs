@@ -12,7 +12,7 @@ use super::Value;
 use crate::CanonError;
 
 /// Maximum object size, from Section 4.5.
-pub const MAX_OBJECT_BYTES: usize = 64 * 1024;
+pub const MAX_OBJECT_BYTES: usize = 1024 * 1024;
 
 /// Default nesting limit.
 ///

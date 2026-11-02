@@ -7,8 +7,8 @@
 
 use thiserror::Error;
 
-/// Largest frame accepted, matching the object ceiling of Section 4.5.
-const MAX_FRAME: usize = 64 * 1024;
+/// Largest frame accepted: the object ceiling of Section 4.5.
+const MAX_FRAME: usize = publet_core::cbor::MAX_OBJECT_BYTES;
 
 /// Why a stream could not be read.
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
@@ -69,4 +69,22 @@ pub fn unpack(bytes: &[u8]) -> Result<Vec<Vec<u8>>, WireError> {
         cursor += size;
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_frame_at_the_object_ceiling_is_read_and_one_above_is_refused() {
+        let at = vec![0u8; 1_048_576];
+        let unpacked = unpack(&pack(std::slice::from_ref(&at))).unwrap();
+        assert_eq!(unpacked, vec![at]);
+
+        let above = pack(&[vec![0u8; 1_048_577]]);
+        assert_eq!(
+            unpack(&above),
+            Err(WireError::FrameTooLarge { size: 1_048_577 })
+        );
+    }
 }
