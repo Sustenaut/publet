@@ -302,7 +302,8 @@ impl ProseClaim {
         &self.depends
     }
 
-    /// The term a `definitional` claim defines.
+    /// The terms a `definitional` claim defines: one, or for a family one
+    /// per code.
     ///
     /// Section 9.2 refers to `term(D)` without saying how it is obtained.
     /// This implementation reads `ext["term"]` when present, and otherwise
@@ -315,35 +316,36 @@ impl ProseClaim {
     ///
     /// A parenthesized qualifier is dropped, so `quantum (adj., physics)`
     /// and `quantum (n.)` yield the same term and are therefore comparable
-    /// -- which is the point of the computation. Returns `None` for classes
-    /// other than `definitional`, and for a singular (Section 5.9.6).
+    /// -- which is the point of the computation. Returns nothing for classes
+    /// other than `definitional`, and for a singular (Section 5.9.6) or an
+    /// edition (Section 5.9.1).
     #[must_use]
-    pub fn term(&self, object: &Object) -> Option<String> {
+    pub fn terms(&self, object: &Object) -> Vec<String> {
         if self.class != Class::Definitional {
-            return None;
+            return Vec::new();
         }
         // Section 5.9.1: a definition carrying `defines` goes by its own
-        // symbol or name.
+        // symbol, name or codes. A singular defines a thing, not a term, so
+        // two basements of one name are two things rather than a divergence.
         if let Some(d) = &self.defines {
-            // Section 5.9.6: a singular defines a thing, not a term, so two
-            // basements of one name are two things rather than a divergence.
-            if matches!(d, Definition::Singular { .. }) {
-                return None;
-            }
-            return Some(d.term().trim().to_lowercase());
+            return d
+                .terms()
+                .into_iter()
+                .map(|t| t.trim().to_lowercase())
+                .collect();
         }
         if let Some(ext) = object.ext()
             && let Some(Value::Text(t)) = ext.get("term")
         {
-            return Some(t.trim().to_lowercase());
+            return vec![t.trim().to_lowercase()];
         }
-        let head = self.content.split(':').next()?;
+        let head = self.content.split(':').next().unwrap_or_default();
         let without_qualifier = head.split('(').next().unwrap_or(head);
         let trimmed = without_qualifier.trim();
         if trimmed.is_empty() {
-            None
+            Vec::new()
         } else {
-            Some(trimmed.to_lowercase())
+            vec![trimmed.to_lowercase()]
         }
     }
 }

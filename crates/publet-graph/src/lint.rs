@@ -32,10 +32,11 @@ pub fn check_in(graph: &Graph, claim: &ProseClaim) -> Vec<Finding> {
     // would make the two circular, and R5 forbids that for good reason.
     let own = graph
         .object(claim.cid())
-        .and_then(|object| claim.term(object));
+        .map(|object| claim.terms(object))
+        .unwrap_or_default();
     let terms: Vec<Term<'_>> = contested
         .iter()
-        .filter(|(word, _)| own.as_deref() != Some(word.as_str()))
+        .filter(|(word, _)| !own.contains(word))
         .map(|(word, defining)| Term {
             word,
             declared: declared.contains(defining),
@@ -72,8 +73,8 @@ fn contested_terms(graph: &Graph) -> Vec<(String, Cid)> {
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if let Some(term) = claim.term(object) {
-            out.push((term, cid));
+        for term in claim.terms(object) {
+            out.push((term, cid.clone()));
         }
     }
     out.sort_by(|a, b| a.0.cmp(&b.0));

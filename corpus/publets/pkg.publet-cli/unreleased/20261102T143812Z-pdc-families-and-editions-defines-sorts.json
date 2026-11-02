@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "PDC families and editions: `defines` sorts `family` and `edition`, `pub bundle` name bundles pointing at a family and a code, and generation records signed by the publishing key"
+}

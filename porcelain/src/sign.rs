@@ -339,6 +339,11 @@ fn read_key_file(path: &std::path::Path) -> Result<[u8; 32], String> {
         .ok_or_else(|| format!("{} is malformed", path.display()))
 }
 
+/// Whether this workspace holds a secret key to sign with.
+pub(crate) fn has_key(here: &std::path::Path) -> bool {
+    key_path(here).exists()
+}
+
 /// A detached `sig` object (Section 4.4) over `target_bytes`, made with
 /// this workspace's secret key, not yet stored.
 ///

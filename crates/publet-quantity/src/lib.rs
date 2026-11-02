@@ -261,6 +261,7 @@ pub fn check(graph: &Graph, claim: &ProseClaim) -> Vec<Problem> {
     let mut problems = Vec::new();
     check_concepts(graph, claim, &mut problems);
     check_singulars(graph, claim, &mut problems);
+    check_edition_held(graph, claim, &mut problems);
     let Some(Data::Table { columns, rows }) = claim.data() else {
         return problems;
     };
@@ -328,15 +329,17 @@ pub fn check(graph: &Graph, claim: &ProseClaim) -> Vec<Problem> {
 /// against the concept claims in `depends` (Sections 5.9.1 and 5.9.5).
 fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>) {
     let mut named: Vec<(&str, &'static str)> = Vec::new();
-    if let Some(Definition::Concept {
-        form: ConceptForm::Relation(r),
-        ..
-    }) = claim.defines()
-    {
-        named.extend(r.slots.iter().filter_map(|s| match &s.binds {
-            Binding::Concept(code) => Some((code.as_str(), "quantity")),
-            Binding::Kind(_) => None,
-        }));
+    let own = claim
+        .defines()
+        .map(Definition::concepts)
+        .unwrap_or_default();
+    for (_, _, form) in &own {
+        if let ConceptForm::Relation(r) = form {
+            named.extend(r.slots.iter().filter_map(|s| match &s.binds {
+                Binding::Concept(code) => Some((code.as_str(), "quantity")),
+                Binding::Kind(_) => None,
+            }));
+        }
     }
     if let Some(Definition::Singular { class, .. }) = claim.defines() {
         named.push((class.as_str(), "subject"));
@@ -356,7 +359,12 @@ fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>
         return;
     }
     let mut unheld = false;
+    // A family's member may bind another member of that family (Section
+    // 5.9.1); a lone concept is not its own slot's concept.
     let mut held: Vec<(&str, &ConceptForm)> = Vec::new();
+    if matches!(claim.defines(), Some(Definition::Family(_))) {
+        held.extend(own.iter().map(|(pdc, _, form)| (*pdc, *form)));
+    }
     for dep in claim.depends() {
         let Some(c) = graph.prose_claim(dep) else {
             unheld = true;
@@ -365,8 +373,8 @@ fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>
             });
             continue;
         };
-        if let Some(Definition::Concept { pdc, form, .. }) = c.defines() {
-            held.push((pdc.as_str(), form));
+        if let Some(d) = c.defines() {
+            held.extend(d.concepts().into_iter().map(|(pdc, _, form)| (pdc, form)));
         }
     }
     for (code, expected) in named {
@@ -415,6 +423,22 @@ fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>
                 });
             }
         }
+    }
+}
+
+/// Say which of an edition's families are not held: the graph refuses an
+/// edition its families disagree with, and what it cannot see is unchecked,
+/// never passed (Section 5.9.1).
+fn check_edition_held(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>) {
+    if let Some(Definition::Edition(edition)) = claim.defines() {
+        problems.extend(
+            edition
+                .families()
+                .filter(|family| graph.prose_claim(family).is_none())
+                .map(|family| Problem::Unavailable {
+                    cid: family.to_string(),
+                }),
+        );
     }
 }
 

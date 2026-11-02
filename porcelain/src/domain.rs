@@ -259,12 +259,30 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     }
 
     let built = build_objects(&author, &a, &members, size)?;
-    for (cid, bytes) in [&built.domain, &built.generation] {
+    // Section 14.1.1: the publishing key signs the record in the same step.
+    // A workspace with no key yet has only a placeholder `author`, which
+    // nothing could be signed as; that is said below.
+    let signature = if crate::sign::has_key(&here) {
+        let (cid, bytes) = &built.generation;
+        Some(crate::sign::signature(
+            &here,
+            &author,
+            &a.created,
+            crate::build::PURPOSE,
+            cid,
+            bytes,
+        )?)
+    } else {
+        None
+    };
+    let mut written = vec![&built.domain, &built.generation];
+    written.extend(&signature);
+    for (cid, bytes) in &written {
         let name = format!("{}.cbor", cid.to_string().replace(':', "_"));
         std::fs::write(a.dir.join(name), bytes).map_err(|e| e.to_string())?;
     }
 
-    println!("wrote 2 objects into {}", a.dir.display());
+    println!("wrote {} objects into {}", written.len(), a.dir.display());
     println!();
     let closed_under_desc = std::iter::once("depends")
         .chain(a.also.iter().map(|k| k.id()))
@@ -277,6 +295,12 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     );
     println!("generation  {}", built.generation.0);
     println!("  index 0 (genesis), {} added, 0 removed", members.len());
+    match &signature {
+        Some((cid, _)) => println!("  signed    {cid}"),
+        None => {
+            println!("  unsigned: this workspace has no key; `pub sign --generate-key` makes one");
+        }
+    }
     println!();
     println!(
         "snapshot    {}  ({} member(s), root {})",

@@ -3,7 +3,8 @@
 //! A host shows publets through a theme of its choosing; the theme decides
 //! how a page looks, and this command decides nothing about that. It
 //! writes, for a set of objects, one JSON bundle per page a theme may want
-//! -- one per object and one per name a definition goes by -- holding
+//! -- one per object, so one per family, and one per name a definition goes
+//! by, so one per code a family defines, pointing at the family -- holding
 //! everything that page needs: the object decoded, what it rests on and
 //! what cites it, its critiques and its lineage, and a short summary of
 //! every other object it mentions. A theme reads one bundle per page and
@@ -23,7 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use publet_core::{Cid, Object, cbor::Value};
-use publet_graph::{ConceptForm, Data, Definition, Graph, Lineage, ProseClaim};
+use publet_graph::{ConceptForm, Data, Definition, Family, Graph, Lineage, ProseClaim};
 use serde_json::{Value as Json, json};
 
 use crate::workspace::Workspace;
@@ -129,7 +130,8 @@ struct Bundles<'g> {
     cids: Vec<Cid>,
     /// Each name a definition goes by, and the definitions going by it.
     terms: BTreeMap<String, Vec<Cid>>,
-    /// The name each definition goes by.
+    /// The name each definition goes by. A family goes by one per class, so
+    /// it has none here; its classes are in `families`.
     term_of: BTreeMap<String, String>,
     /// What cites each object, and how.
     cited_by: BTreeMap<String, BTreeSet<(String, String)>>,
@@ -137,6 +139,13 @@ struct Bundles<'g> {
     classifications: Vec<(String, String, String)>,
     /// Each concept by CID: its PDC code and form (Section 5.9.1).
     concepts: BTreeMap<String, (String, &'static str)>,
+    /// The class each `classifies` annotation under a family names, by
+    /// annotation (Section 5.9.1).
+    classes_named: BTreeMap<String, String>,
+    /// The families defining each code, by CID.
+    families: BTreeMap<String, BTreeSet<String>>,
+    /// The families under each code, by CID.
+    families_under: BTreeMap<String, BTreeSet<String>>,
     /// The calculations solving each relation concept, by PDC code (Section 5.9.5).
     solvers: BTreeMap<String, Vec<String>>,
     /// Triage annotations by each object they name, as target or ref (Section 7.4).
@@ -167,7 +176,12 @@ impl<'g> Bundles<'g> {
                 );
                 continue;
             }
-            term_of.insert(cid.to_string(), term.clone());
+            if !matches!(
+                graph.prose_claim(&cid).and_then(ProseClaim::defines),
+                Some(Definition::Family(_))
+            ) {
+                term_of.insert(cid.to_string(), term.clone());
+            }
             terms.entry(term).or_default().push(cid);
         }
 
@@ -186,6 +200,9 @@ impl<'g> Bundles<'g> {
         let Scan {
             classifications,
             concepts,
+            classes_named,
+            families,
+            families_under,
             solvers,
             suggestions,
         } = scan(graph, &cids);
@@ -200,6 +217,9 @@ impl<'g> Bundles<'g> {
             cited_by,
             classifications,
             concepts,
+            classes_named,
+            families,
+            families_under,
             solvers,
             suggestions,
         }
@@ -287,7 +307,10 @@ impl<'g> Bundles<'g> {
             .filter(|(_, member, _)| *member == text)
             .map(|(by, _, subject)| {
                 mentioned.insert(subject.clone());
-                json!({ "concept": subject, "by": by })
+                match self.classes_named.get(by) {
+                    Some(code) => json!({ "concept": subject, "code": code, "by": by }),
+                    None => json!({ "concept": subject, "by": by }),
+                }
             })
             .collect();
         let suggestions: Vec<String> = self
@@ -297,6 +320,13 @@ impl<'g> Bundles<'g> {
             .unwrap_or_default();
         mentioned.extend(suggestions.iter().cloned());
         let concept = self.concept(cid, &mut mentioned);
+        let family = claim
+            .and_then(ProseClaim::defines)
+            .and_then(|d| match d {
+                Definition::Family(family) => Some(self.family(cid, family, &mut mentioned)),
+                _ => None,
+            })
+            .unwrap_or(Json::Null);
         mentioned.remove(&text);
 
         json!({
@@ -315,6 +345,7 @@ impl<'g> Bundles<'g> {
             "classified_under": classified_under,
             "suggestions": suggestions,
             "concept": concept,
+            "family": family,
             "related": self.related(&mentioned),
         })
     }
@@ -384,6 +415,10 @@ impl<'g> Bundles<'g> {
                 })
             })
             .collect();
+        let mut competing = competing;
+        for family in self.families.get(pdc).into_iter().flatten() {
+            competing.push(family.clone());
+        }
         for list in [&broader, &solved_by, &competing] {
             mentioned.extend(list.iter().cloned());
         }
@@ -413,14 +448,154 @@ impl<'g> Bundles<'g> {
         })
     }
 
+    /// For a family (Section 5.9.1): its parent and grouping, each class with
+    /// what is placed under it and what competes for its code, the families
+    /// above and below, and the anchors (expert groups) covering it.
+    fn family(&self, cid: &Cid, family: &Family, mentioned: &mut BTreeSet<String>) -> Json {
+        let text = cid.to_string();
+        let defining = |code: &str| -> Vec<String> {
+            self.families
+                .get(code)
+                .into_iter()
+                .flatten()
+                .cloned()
+                .collect()
+        };
+        let parent = family.parent.as_deref();
+        let auxiliary: BTreeSet<&str> = family.auxiliaries.iter().map(|m| m.pdc.as_str()).collect();
+        let classes: Vec<Json> = family
+            .classes()
+            .map(|class| {
+                let code = class.pdc.as_str();
+                let others = |c: &String| *c != text;
+                let mut competing: Vec<String> =
+                    defining(code).into_iter().filter(others).collect();
+                competing.extend(
+                    self.concepts
+                        .iter()
+                        .filter(|(_, (pdc, _))| pdc == code)
+                        .map(|(c, _)| c.clone()),
+                );
+                let narrower: Vec<String> = self
+                    .families_under
+                    .get(code)
+                    .into_iter()
+                    .flatten()
+                    .cloned()
+                    .collect();
+                let members: Vec<Json> = self
+                    .classifications
+                    .iter()
+                    .filter(|(by, _, subject)| {
+                        *subject == text
+                            && self.classes_named.get(by).map(String::as_str) == Some(code)
+                    })
+                    .map(|(by, member, _)| {
+                        mentioned.insert(by.clone());
+                        mentioned.insert(member.clone());
+                        json!({ "cid": member, "by": by })
+                    })
+                    .collect();
+                mentioned.extend(competing.iter().cloned());
+                mentioned.extend(narrower.iter().cloned());
+                json!({
+                    "pdc": code,
+                    "name": class.name,
+                    "form": form_of(&class.form),
+                    "auxiliary": auxiliary.contains(code),
+                    "children": class.children,
+                    "narrower": narrower,
+                    "members": members,
+                    "competing": competing,
+                })
+            })
+            .collect();
+        let broader = parent.map(defining).unwrap_or_default();
+        mentioned.extend(broader.iter().cloned());
+
+        let anchors = self.family_anchors(cid, &broader, mentioned);
+        json!({
+            "parent": parent,
+            "grouping": family.grouping,
+            "classes": classes,
+            "broader": broader,
+            "anchors": anchors,
+        })
+    }
+
+    /// The anchors covering a family: on its lineage or that of a family
+    /// above it, at any depth, found by walking `parent` codes (Section 9.3).
+    fn family_anchors(
+        &self,
+        cid: &Cid,
+        broader: &[String],
+        mentioned: &mut BTreeSet<String>,
+    ) -> Vec<Json> {
+        let text = cid.to_string();
+        let defining = |code: &str| -> Vec<String> {
+            self.families
+                .get(code)
+                .into_iter()
+                .flatten()
+                .cloned()
+                .collect()
+        };
+        let genesis = |c: &Cid| {
+            self.graph
+                .lineage(c, Lineage::Authoritative)
+                .genesis
+                .to_string()
+        };
+        let mut covered: BTreeMap<String, String> = BTreeMap::from([(genesis(cid), text.clone())]);
+        let mut frontier = broader.to_vec();
+        while let Some(next) = frontier.pop() {
+            let Ok(c) = next.parse::<Cid>() else {
+                continue;
+            };
+            if covered.contains_key(&genesis(&c)) {
+                continue;
+            }
+            covered.insert(genesis(&c), next);
+            if let Some(Definition::Family(above)) =
+                self.graph.prose_claim(&c).and_then(ProseClaim::defines)
+                && let Some(code) = &above.parent
+            {
+                frontier.extend(defining(code));
+            }
+        }
+        self
+            .graph
+            .anchors()
+            .filter_map(|a| {
+                covered.get(&a.lineage().to_string()).map(|over| {
+                    mentioned.insert(over.clone());
+                    json!({
+                        "cid": a.cid().to_string(),
+                        "over": over,
+                        "stewards": a.stewards().iter().map(ToString::to_string).collect::<Vec<_>>(),
+                        "threshold": a.threshold(),
+                    })
+                })
+            })
+            .collect()
+    }
+
     fn name_bundle(&self, term: &str, cids: &[Cid]) -> Json {
         let mentioned: BTreeSet<String> = cids.iter().map(ToString::to_string).collect();
+        let classes: Vec<Json> = self
+            .families
+            .get(term)
+            .into_iter()
+            .flatten()
+            .map(|family| json!({ "family": family, "code": term }))
+            .collect();
         json!({
             "bundle": VERSION,
             "name": term,
             "segment": segment(term),
             "address": self.address(term),
             "definitions": cids.iter().map(ToString::to_string).collect::<Vec<_>>(),
+            "classes": classes,
             "related": self.related(&mentioned),
         })
     }
@@ -550,6 +725,14 @@ fn cites(graph: &Graph, cid: &Cid, object: &Object) -> Vec<(String, String)> {
             };
             out.push((how, target));
         }
+        // An edition's families stay out of its `depends` (Section 5.9.1).
+        if let Some(Definition::Edition(edition)) = claim.defines() {
+            out.extend(
+                edition
+                    .families()
+                    .map(|family| ("listed in edition".to_owned(), family.to_string())),
+            );
+        }
     }
     let mut add = |how: String, v: Option<&Value>| {
         if let Some(t) = v.and_then(Value::as_text)
@@ -607,27 +790,51 @@ type Pairs = Vec<(String, String)>;
 struct Scan {
     classifications: Vec<(String, String, String)>,
     concepts: BTreeMap<String, (String, &'static str)>,
+    classes_named: BTreeMap<String, String>,
+    families: BTreeMap<String, BTreeSet<String>>,
+    families_under: BTreeMap<String, BTreeSet<String>>,
     solvers: BTreeMap<String, Vec<String>>,
     suggestions: BTreeMap<String, BTreeSet<String>>,
 }
 
-/// Every `classifies` and `triage` annotation, every concept, and every
-/// calculation solving a relation concept, among `cids`.
+/// A concept's form, as a bundle names it.
+fn form_of(form: &ConceptForm) -> &'static str {
+    match form {
+        ConceptForm::Quantity { .. } => "quantity",
+        ConceptForm::Relation(_) => "relation",
+        _ => "subject",
+    }
+}
+
+/// Every `classifies` and `triage` annotation, every concept and family, and
+/// every calculation solving a relation concept, among `cids`.
 fn scan(graph: &Graph, cids: &[Cid]) -> Scan {
     let mut classifications = Vec::new();
     let mut concepts = BTreeMap::new();
+    let mut classes_named = BTreeMap::new();
+    let mut families: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut families_under: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     let mut solvers: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut suggestions: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for cid in cids {
         let text = cid.to_string();
         if let Some(claim) = graph.prose_claim(cid) {
             if let Some(Definition::Concept { pdc, form, .. }) = claim.defines() {
-                let form = match form {
-                    ConceptForm::Quantity { .. } => "quantity",
-                    ConceptForm::Relation(_) => "relation",
-                    _ => "subject",
-                };
-                concepts.insert(text.clone(), (pdc.clone(), form));
+                concepts.insert(text.clone(), (pdc.clone(), form_of(form)));
+            }
+            if let Some(Definition::Family(family)) = claim.defines() {
+                for class in family.classes() {
+                    families
+                        .entry(class.pdc.trim().to_lowercase())
+                        .or_default()
+                        .insert(text.clone());
+                }
+                if let Some(parent) = &family.parent {
+                    families_under
+                        .entry(parent.clone())
+                        .or_default()
+                        .insert(text.clone());
+                }
             }
             if let Some(solves) = claim.computes().and_then(|c| c.solves.as_ref()) {
                 solvers
@@ -654,6 +861,9 @@ fn scan(graph: &Graph, cids: &[Cid]) -> Scan {
                     .and_then(|v| v.get("subject"))
                     .and_then(Value::as_text)
                 {
+                    if let Some(aspect) = body.get("aspect").and_then(Value::as_text) {
+                        classes_named.insert(text.clone(), aspect.to_owned());
+                    }
                     classifications.push((text, target, subject.to_owned()));
                 }
             }
@@ -677,6 +887,9 @@ fn scan(graph: &Graph, cids: &[Cid]) -> Scan {
     Scan {
         classifications,
         concepts,
+        classes_named,
+        families,
+        families_under,
         solvers,
         suggestions,
     }

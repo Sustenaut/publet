@@ -32,7 +32,7 @@ untested.
 | 13.3 | 1 | conformance/index_node.feature |
 | 13.4 | 3 | conformance/archive.feature |
 | 14.1 | 3 | plumbing/merkle.feature, porcelain/corpus.feature |
-| 14.1.1 | 6 | conformance/consistency.feature, conformance/generations.feature |
+| 14.1.1 | 6 | conformance/consistency.feature, conformance/generations.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature |
 | 14.3.1 | 2 | conformance/consistency.feature |
 | 14.3.2 | 5 | conformance/no_have_want.feature, scenarios/privacy_modes.feature |
 | 14.3.3 | 1 | scenarios/stale_basis.feature |
@@ -48,12 +48,12 @@ untested.
 | 4.5 | 1 | conformance/object_size.feature |
 | 4.7 | 3 | conformance/blobs.feature |
 | 5.1 | 4 | conformance/immutability.feature, porcelain/compose.feature |
-| 5.2 | 2 | conformance/assessment.feature, conformance/class_rules.feature, conformance/usage.feature |
+| 5.2 | 2 | conformance/assessment.feature, conformance/class_rules.feature, conformance/families.feature, conformance/usage.feature |
 | 5.4 | 2 | conformance/evidence_required.feature |
 | 5.5 | 5 | conformance/evidence_required.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/sources.feature |
 | 5.7 | 2 | conformance/atomicity.feature |
 | 5.8 | 4 | conformance/data.feature |
-| 5.9.1 | 7 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/singulars.feature, conformance/singulars.feature |
+| 5.9.1 | 12 | conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/singulars.feature, conformance/singulars.feature |
 | 5.9.2 | 5 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.3 | 2 | conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.4 | 3 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
@@ -67,7 +67,7 @@ untested.
 | 7.4 | 4 | conformance/assumption.feature |
 | 8 | 8 | conformance/documents.feature, conformance/forks.feature, porcelain/doc.feature, porcelain/env.feature, porcelain/render.feature |
 | 9.1 | 1 | porcelain/build.feature |
-| 9.2 | 3 | plumbing/divergence.feature |
+| 9.2 | 3 | conformance/families.feature, conformance/families.feature, conformance/families.feature, conformance/families.feature, plumbing/divergence.feature |
 | 9.3 | 1 | conformance/anchors.feature |
 
 ## Not yet covered

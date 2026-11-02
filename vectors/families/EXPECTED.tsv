@@ -1,0 +1,28 @@
+accept-edition	accepted
+accept-edition-that-grew	accepted
+reject-edition-child-not-flagged	6 heads a family and has no `children` flag
+reject-edition-code-in-two-families	define (1/9) twice
+reject-edition-count-of-auxiliaries-in-total	its counts give `total`
+reject-edition-count-of-classes	its counts give `main`
+reject-edition-count-of-groups	defines.counts
+reject-edition-count-of-listed-families	defines.counts
+reject-edition-empty-group	at least one head
+reject-edition-flag-with-no-family	63 has a `children` flag and no family under it
+reject-edition-group-lost-a-head	group 1 lost "\"...\""
+reject-edition-grouping-lost-a-group	grouping 2 lost 1
+reject-edition-grouping-of-undefined-group	defines.groupings
+reject-edition-no-section	defines.sections
+reject-edition-number-dropped	grouping 3 of the edition it supersedes is gone
+reject-edition-number-reused	group 2 is reused with a different meaning
+reject-edition-number-twice	each number once
+reject-edition-parent-disagrees	the family listed under 6 states the parent
+reject-edition-top-with-parent	the top family states the parent
+reject-edition-undefined-grouping	names the grouping 7, which the edition does not define
+reject-family-children-false	defines.members.children
+reject-family-code-in-both-lists	each code once
+reject-family-code-twice	each code once
+reject-family-kind-not-in-depends	defines.kind
+reject-family-member-with-sort	without `sort`
+reject-family-no-classes	at least one class
+reject-family-no-grouping	defines.grouping
+reject-family-parent-is-a-member	defines.parent

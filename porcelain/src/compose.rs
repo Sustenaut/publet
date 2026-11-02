@@ -376,13 +376,28 @@ pub(crate) fn quantity_citations(
     {
         push(defines.get("part_of"));
     }
-    if let Some(defines) = fields.get("defines")
-        && defines.get("sort").and_then(Value::as_text) == Some("concept")
-    {
-        push(defines.get("kind"));
-        if let Some(Value::Array(slots)) = defines.get("relation").and_then(|r| r.get("slots")) {
-            for slot in slots {
-                push(slot.get("kind"));
+    if let Some(defines) = fields.get("defines") {
+        let mut concepts: Vec<&Value> = Vec::new();
+        match defines.get("sort").and_then(Value::as_text) {
+            Some("concept") => concepts.push(defines),
+            // Section 5.9.1: a family's classes presuppose what each would
+            // as a concept of its own.
+            Some("family") => {
+                for list in ["members", "auxiliaries"] {
+                    if let Some(Value::Array(classes)) = defines.get(list) {
+                        concepts.extend(classes);
+                    }
+                }
+            }
+            _ => {}
+        }
+        for concept in concepts {
+            push(concept.get("kind"));
+            if let Some(Value::Array(slots)) = concept.get("relation").and_then(|r| r.get("slots"))
+            {
+                for slot in slots {
+                    push(slot.get("kind"));
+                }
             }
         }
     }

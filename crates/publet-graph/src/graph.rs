@@ -279,6 +279,7 @@ impl Graph {
                 Self::check_verdict(class, annotation.aspect())?;
             }
         }
+        self.check_families()?;
         for anchor in self.anchors.values() {
             anchor.check_against(self)?;
         }
@@ -356,6 +357,34 @@ impl Graph {
                     .and_then(|c| self.object(&c))
                     .is_some_and(|r| r.author().to_string() == author)
             })
+    }
+
+    /// The objects `cid` supersedes by its own author's felicitous
+    /// `supersedes` relations (Section 6). Anyone may file a `supersedes`
+    /// from an object they did not write, and that says nothing about it.
+    pub(crate) fn superseded_by_own_author(&self, cid: &Cid) -> Vec<Cid> {
+        let Some(object) = self.object(cid) else {
+            return Vec::new();
+        };
+        self.relations
+            .values()
+            .filter(|r| r.kind() == RelationKind::Supersedes && r.from() == cid)
+            .filter(|r| r.author() == object.author() && self.supersedes_is_felicitous(r.cid()))
+            .map(|r| r.to().clone())
+            .collect()
+    }
+
+    /// Every annotation of `kind`, in identifier order.
+    pub(crate) fn annotations_of_kind<'a>(
+        &'a self,
+        kind: &'a str,
+    ) -> impl Iterator<Item = &'a Annotation> {
+        self.annotations.values().filter(move |a| a.kind() == kind)
+    }
+
+    /// Every prose claim, in identifier order.
+    pub(crate) fn prose_claims(&self) -> impl Iterator<Item = &ProseClaim> {
+        self.prose_claims.values()
     }
 
     /// Whether the `supersedes` relation `relation` is felicitous: a
@@ -575,8 +604,8 @@ impl Graph {
             let Some(object) = self.object(&cid) else {
                 continue;
             };
-            if let Some(term) = claim.term(object) {
-                out.push((term, cid));
+            for term in claim.terms(object) {
+                out.push((term, cid.clone()));
             }
         }
         out.sort_by(|a, b| {

@@ -772,6 +772,8 @@ diverge on its own lineage:
 | a statistical measure | `definitional` claim with `defines` | a column's `measure`, and `depends` |
 | a concept, of a quantity or a relation | `definitional` claim with `defines` | `classifies` annotations, a calculation's `solves`, a column's `concept`, and `depends` |
 | one particular thing: a singular | `definitional` claim with `defines` | a row's `about` cell, another singular's `part_of`, and `depends` |
+| the classes directly under one class: a family | `definitional` claim with `defines` | a PDC code wherever a field takes a code, the family's CID and `aspect` wherever a field takes a CID, and `depends` |
+| a release of the PDC: an edition | `definitional` claim with `defines` | whatever pins that release |
 | a calculation | `procedural` claim, optionally with `computes` | evidence with `role: "derivation"` |
 | a measurement method | `procedural` claim | evidence with `role: "method"` (Section 5.5) |
 
@@ -820,6 +822,30 @@ says what is defined:
              class: <PDC code string>,
              part_of: <CID of a singular>,   // OPTIONAL
              location: { h3: <H3 cell> } }   // OPTIONAL
+         | { sort: "family",
+             parent: <PDC code string>,      // absent only for the top family
+             grouping: <unsigned integer>,
+             members: [ <member>, ... ],
+             auxiliaries: [ <member>, ... ] } // OPTIONAL
+         | { sort: "edition",
+             top: <CID of the top family>,
+             sections: { main: { <PDC code>: <CID of a family>, ... },
+                         "common-auxiliaries": { ... },
+                         "special-auxiliaries": { ... } },
+             groups: [ { number: <unsigned integer>,
+                         heads: [ <PDC code string>, ... ] }, ... ],
+             groupings: [ { number: <unsigned integer>,
+                            groups: [ <group number>, ... ] }, ... ],
+             counts: { main: <tally>,
+                       "common-auxiliaries": <tally>,
+                       "special-auxiliaries": <tally>,
+                       total: <tally>,
+                       groups: <unsigned integer>,
+                       groupings: <unsigned integer> } }
+  // member: the fields of a concept, in any of its forms, without `sort`,
+  //         and children: true when the member heads a family of its own
+  // tally:  { families: <unsigned integer>, classes: <unsigned integer>,
+  //           auxiliaries: <unsigned integer> }
   // any sort, OPTIONAL:
            matches: [ { relation: "exact" | "close", ref: <URI> }, ... ]
 ```
@@ -851,10 +877,12 @@ says what is defined:
   the UDC Summary [UDC] in which every UDC Summary class keeps its code and
   a narrower PDC class is written as the code it extends, a tilde (`~`),
   which UDC notation never uses, and a number: `(1/9)~1` narrows the UDC
-  place class (1/9), and `(1/9)~1~2` narrows `(1/9)~1`. A concept's
-  broader concept is the one at the code its own code extends, so a code
-  is broader than every code that begins with it. A concept carries `kind`,
-  `relation`, or neither, never both.
+  place class (1/9), and `(1/9)~1~2` narrows `(1/9)~1`. A class's broader
+  class is the parent of the family that defines it. A code holding a
+  concept that no family defines has, by convention, the code it extends
+  with `~` as its broader class. A code's text does not otherwise say what
+  is broader, because the UDC's links are not all prefixes: 631 sits under
+  631/635. A concept carries `kind`, `relation`, or neither, never both.
 
   A **subject concept** carries neither: a class of things or topics, such
   as a UDC class (agriculture; plant cultivation under artificial light),
@@ -894,6 +922,20 @@ says what is defined:
   present, names the singular it is a part of; and `location`, when
   present, the H3 cell [H3] it is in. Section 5.9.6 says how facts are
   stated about a singular and how a path key finds them.
+- **`family`** defines the classes directly under one class together, in
+  one claim signed once. `parent` is that class's PDC code, absent only for
+  the single top family, which holds the classification's roots. `members`
+  are its classes in source order, and `auxiliaries` the special auxiliaries
+  that start in this family. Each is a concept exactly as the sort `concept`
+  defines one, in any of its forms, without `sort`, and `children: true`
+  marks one that heads a family of its own; the field is absent otherwise.
+  `grouping` is the number of the one auxiliary grouping these classes may
+  use, defined by the edition. Families name each other by code and never
+  by CID, so revising one signs one family and nothing above it. See
+  **Families** below.
+- **`edition`** pins one release of the PDC: every family by its exact CID,
+  and the auxiliary groups and groupings those families use. See **PDC
+  editions** below.
 - **`matches`** links the definition to the same or a close concept
   elsewhere, such as a UCUM code, a QUDT quantity kind, or an ISO 4217
   currency code, so that this vocabulary extends theirs rather than
@@ -907,8 +949,11 @@ declaring claim in `depends`; each MUST also list the `system` claim whose
 syntax it is written in. A quantity concept MUST list its `kind` in
 `depends`. A relation concept MUST list in `depends` each kind a slot
 binds, and for each PDC code a slot binds, a quantity concept at that
-code. An implementation MUST reject a claim carrying `defines` whose
-class is not `definitional`, whose `sort` is not one of the seven, or whose
+code, which for a family's member may be another member of that family. A
+family MUST list in `depends` each kind and concept its members would have
+to if each were a claim of its own. An implementation MUST reject a claim
+carrying `defines` whose
+class is not `definitional`, whose `sort` is not one of those above, or whose
 fields do not have the shapes above, including a role that is not an
 identifier (a letter or underscore, then letters, digits and underscores),
 a role used twice, a `product` without one non-zero exponent for each
@@ -919,9 +964,12 @@ with no leading zeros.
 The name a definition goes by is in the definition itself: `symbol` or
 `name` is `term(D)` for Section 9.2, except for a `concept`, whose
 `term(D)` is its `pdc` code, so that two concepts at one code are compared
-as two definitions of one term, and a `singular`, which defines a thing
-rather than a term and has no `term(D)`: two basements of one name are two
-things, not two senses of a word. A node that serves definitions under
+as two definitions of one term; a `family`, whose `term(D)` is the set of
+its members' and auxiliaries' codes, so that it is compared per code; a
+`singular`, which defines a thing rather than a term and has no `term(D)`:
+two basements of one name are two things, not two senses of a word; and an
+`edition`, which lists definitions rather than making one and has no
+`term(D)`. A node that serves definitions under
 human-readable names (for example `https://pub.<host>/def/<name>`) derives
 that mapping from the definitions it holds; the definition's CID remains
 its identity, so one definition reached through two hosts is one
@@ -930,13 +978,98 @@ definition.
 **Concepts and codes.** Each PDC code is meant to hold one concept, and
 each concept one code. The protocol does not keep that rule: it has no
 namespace (Section 9.1), and anyone may publish a concept at a code that
-already has one. A **PDC edition** keeps it: a document (Section 8)
-listing exactly one concept lineage per code. A code with more than one
-candidate concept, in an edition or among the definitions a reader holds,
+already has one. A **PDC edition** keeps it: it lists exactly one family
+for each parent code, and so one definition for each code it covers. A code
+with more than one
+candidate definition, among the definitions a reader holds, whether two
+concepts, a concept and a family's member, or two families' members,
 is shown as contested, naming each candidate, until a viewpoint or the
 code's expert group (Section 9.3) selects one; neither candidate is hidden.
 Reframing a concept, by moving a boundary line or narrowing it, is a new
-version of it (`supersedes`), so the code keeps one lineage.
+version of the claim defining it (`supersedes`), so the code keeps one
+lineage.
+
+**Families.** A family asserts its members as a whole, by the rule Section
+5.8 gives data: under its one `class` and `scope`, and with one `content`, a
+single sentence naming the parent, such as "The PDC classes directly under
+63 Agriculture, forestry, farming." The atomicity tests of Section 5.7 apply
+to that sentence, not to the members. Disputing one class is disputing the
+family, with the dispute's `aspect` naming the code. A new version of a
+family is a new object plus `supersedes`, as with any claim (R1), and giving
+a leaf its first child signs two families: the new one, and its parent's,
+for the `children` flag.
+
+An implementation MUST reject a family in which a code appears more than
+once across `members` and `auxiliaries`, in which `parent` is itself a
+member or auxiliary, which has neither members nor auxiliaries, or in which
+a member carries `sort` or a `children` other than `true`.
+
+Where a field takes a code, a class is named by its code, whichever claim
+defines it: a column's `concept`, a singular's `class`, a relation's slot,
+and a calculation's `solves` are unchanged, and a family in `depends` serves
+each of its codes as a concept claim there would. Where a field takes a CID,
+a class is named by its family's CID with `aspect` holding the code: a
+`classifies` annotation's `value` names the family and its `aspect` the
+class; a `disputes` relation or a `usage` annotation targets the family with
+`aspect` the code. An implementation MUST reject a `classifies` annotation
+whose subject is a family and whose `aspect` is not one of that family's
+codes, since it would place something under no class. A `verdict` remains
+barred from a family, as from every `definitional` claim (Section 5.2); what
+settles one of its classes is `usage`. A single `concept` claim stays valid,
+and competes per code with a family's member at that code, as two concept
+claims do.
+
+**PDC editions.** An edition is a `definitional` claim, signed by its
+steward with purpose `authored`, because a release is an assertion of which
+definitions make up the PDC: it moves forward by `supersedes`, so the release
+history is a lineage, and it can be disputed and anchored as any claim can.
+
+`sections` lists every family but the top one by its exact CID, keyed by its
+parent's code: `main` for the classes, `common-auxiliaries` for the branch
+of common auxiliary tables, and `special-auxiliaries` for what lies under a
+special auxiliary. `top` names the top family, which has no parent to be
+keyed by. A code alone does not fix content, so an edition is what a reader
+pins. The listed families are what the edition is about, not what it
+presupposes: they stay out of its `depends`, which would otherwise repeat
+every CID and exceed the object size limit (Section 4.5), and the edition's
+checks below reach them instead. When an edition outgrows one object, it is
+future work to divide it (Appendix B).
+
+`groups` are numbered flat lists of auxiliary table heads, each by its code;
+a head includes everything under it. `groupings` are numbered sets of group
+numbers, and a family's `grouping` names one. Both grow only: a group or
+grouping only gains members, and a number never changes its meaning, so a
+family's `grouping` means what it meant when it was signed. To narrow what a
+family may use, an edition defines a new grouping and the family is revised
+to name it.
+
+`counts` states the size of what is listed, so that a reader can check a
+copy is whole: for each section, its families and the members (`classes`)
+and `auxiliaries` they define; in `total`, those sums with the top family
+added; and the number of `groups` and `groupings`.
+
+An implementation MUST reject an edition:
+
+- whose shape differs from the one above: a section missing, a parent code
+  or family CID listed twice, a number used twice, a group with no heads or
+  a repeated head, or a grouping naming a group the edition does not define
+  or naming one twice;
+- whose `counts` disagree with what it lists, or, for the families it holds,
+  with the classes and auxiliaries they define;
+- that lists under a code a claim that is not a family with that `parent`,
+  as `top` a family that has a `parent`, or a family whose `grouping` the
+  edition does not define;
+- whose families define one code twice, or whose `children` flags disagree
+  with the families listed: a class flagged with no family under it, a family
+  under a class not flagged, or a family under a code no listed family
+  defines; or
+- that, against an edition it supersedes by its own author's `supersedes`
+  relation, has a group or grouping that lost a member, or a number reused
+  with a different meaning.
+
+A family the reader does not hold cannot be checked. Holding only part of an
+edition is not grounds for rejecting it, but an implementation MUST NOT
+present what it could not check as checked.
 
 Evidence, data and references reach a concept rather than one another:
 an extract claim (Section 5.9.8) is placed under a concept by a
@@ -945,7 +1078,8 @@ membership in the annotation's scope, and a calculation pooling values
 of a concept lists the concept in `depends`. Which values a calculation may pool is then
 the set of claims classified under the concept, and disputing a
 membership, a boundary, or the pooling is disputing one object each.
-Moving a concept to another code is future work (Appendix B).
+A family's class is placed the same way, by the family's CID and the code
+in `aspect`. Moving a concept to another code is future work (Appendix B).
 
 **Bounds are not part of a concept.** A limit on what values a concept
 may take is a claim of its own citing the concept in `depends`, so that
@@ -1917,18 +2051,22 @@ compute:
 
 ```
   pairs(P, Q) =
-    { (D_p, D_q) : D_p in closure(P.depends), D_q in closure(Q.depends),
-                   D_p != D_q,
-                   D_p.class = D_q.class = "definitional",
-                   term(D_p) = term(D_q),
-                   no trusted `equivalent` relation joins D_p and D_q }
+    { (t, D_p, D_q) : D_p in closure(P.depends), D_q in closure(Q.depends),
+                      D_p != D_q,
+                      D_p.class = D_q.class = "definitional",
+                      t in term(D_p) and t in term(D_q),
+                      no trusted `equivalent` relation joins D_p and D_q }
 
-  divergent_terms(P, Q) = { t : (D_p, D_q) in pairs,
+  divergent_terms(P, Q) = { t : (t, D_p, D_q) in pairs,
                                 lineage(D_p) != lineage(D_q) }
 
-  stale_terms(P, Q)     = { t : (D_p, D_q) in pairs,
+  stale_terms(P, Q)     = { t : (t, D_p, D_q) in pairs,
                                 lineage(D_p) == lineage(D_q) }
 ```
+
+`term(D)` is a set: one term for most definitions, one per code for a family
+(Section 5.9.1), so a concept at 631 and a rival family defining 631 meet on
+that code alone, whatever else the family defines.
 
 The distinction is R15 and the remedies differ.
 
@@ -1991,8 +2129,9 @@ successor. Competing anchors coexist and resolve per viewpoint; there is no
 election, because an electorate requires a global identity registry.
 
 **Expert groups.** An expert group is an anchor over a PDC code's
-subtree (Section 5.9.1): it anchors the concept lineage at that code and
-is read as covering the codes beneath it, and its stewards recommend which concept holds each code beneath it,
+subtree (Section 5.9.1): it anchors the lineage of the family under that
+code, and is read as covering every family below it, found by walking
+`parent` codes. Its stewards recommend which definition holds each code beneath it,
 review suggestions there, and approve changes within it. A group is
 founded by one steward, who nominates others; each nominee joins as any
 steward does, by `threshold` circle signatures plus the nominee's
@@ -2593,8 +2732,9 @@ absence proofs. Implementations MUST publish both and MUST serve proofs of
 each kind on request.
 
 A publisher advancing a domain MUST issue a consistency proof from the
-previous generation and MUST publish a **generation record** stating the
-membership change explicitly:
+previous generation and MUST publish a **generation record**, signed in the
+same step by the publishing key with purpose `authored` (Section 4.4),
+stating the membership change explicitly:
 
 ```
   { pub: "1", type: "generation", created, author,
@@ -2619,6 +2759,12 @@ An inclusion proof in one generation and an absence proof in the next will
 reveal a removal to anyone who thinks to look; a generation record makes
 the publisher state it, with a justification, as a condition of the
 generation being well formed at all.
+
+Like the domain manifest and the record itself, the record's signature
+describes the membership rather than belonging to it: its membership root
+covers every member, so neither could be inside what it commits to. An
+`author` field names a key but proves nothing (Section 4.3); the signature is
+what lets a reader hold the publisher to the record.
 
 #### 14.1.2 Witnessing
 
@@ -3232,6 +3378,11 @@ version of the concept with a different `pdc`, allowed only onto a code
 holding no concept yet, after which the old code points to the new one.
 Neither the move nor the pointer is specified.
 
+**B.18 Dividing an edition.** A PDC edition (Section 5.9.1) lists every
+family in one object. When the PDC outgrows the object size limit, an edition
+per section and a top one listing them would fit. Neither the top edition's
+shape nor how `counts` and the grow-only rule span them is specified.
+
 ---
 
 ## Appendix C. Glossary
@@ -3298,6 +3449,11 @@ any slot or as `explicit`, solved by the calculations whose `solves`
 names it; those ways of solving it are its **interface** (Sections 5.9.1
 and 5.9.5).
 
+**Family** — a `definitional` claim defining the classes directly under one
+class together, naming that class by PDC code as its `parent`; a class is
+cited by its code, or by the family's CID with the code in `aspect`
+(Section 5.9.1).
+
 **Singular** — a `definitional` claim defining one particular thing rather
 than a class: a basement, a growing box, a soil sample, a company. It names
 the class it is a member of by PDC code, and optionally the singular it is
@@ -3317,9 +3473,10 @@ verdict confirms the reading (Section 5.9.8).
 
 **PDC** — the Extended Publet Decimal Classification: the UDC Summary's
 classes under their own codes, extended by narrower classes whose codes
-extend a UDC code with `~` and a number, such as `(1/9)~1`. A **PDC edition** is a document listing one concept
-lineage per code; a code with two candidates is shown as contested
-(Section 5.9.1).
+extend a UDC code with `~` and a number, such as `(1/9)~1`. A **PDC edition** is a `definitional` claim listing one
+family per parent code by its exact CID, with the auxiliary groups and
+groupings they use and its counts, so that one release can be pinned; a code
+with two candidates is shown as contested (Section 5.9.1).
 
 **Blob** — a byte string named by the CID of its bytes. Unsigned and not
 an object; what it is, and how large, is stated by the object citing it,

@@ -13,6 +13,7 @@ mod assumption;
 mod data;
 mod divergence;
 mod document;
+mod edition;
 mod error;
 mod graph;
 mod lint;
@@ -29,8 +30,9 @@ pub use error::GraphError;
 pub use graph::{Graph, Lineage, LineageView, MAX_ROTATIONS, ROTATION_PURPOSE};
 pub use lint::{Finding, check, check_in};
 pub use quantity::{
-    Binding, Boundary, Computes, ConceptForm, ConceptRelation, Definition, Describes, Parameter,
-    ParameterType, RelationForm, Slot, Solves,
+    Binding, Boundary, Computes, ConceptForm, ConceptRelation, Definition, Describes,
+    EDITION_SECTIONS, Edition, Family, Member, Parameter, ParameterType, RelationForm, Slot,
+    Solves, Tally,
 };
 pub use singular::{Fact, PathError, segment};
 pub use view::{Annotation, Class, Key, Principal, ProseClaim, Relation, RelationKind};
