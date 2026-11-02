@@ -959,6 +959,129 @@ def _bundles_of_cached(runner, corpus):
     return lambda cid: json.loads((bundles / "o" / f"{cid}.json").read_text())
 
 
+OBJECT_LIMIT = 64 * 1024
+
+
+def _many_claims(where, count: int):
+    path = where / "publets" / "note" / "publet.json"
+    source = json.loads(path.read_text())
+    source["claims"].update({
+        f"c{n}": {"class": "normative", "scope": "the test", "content": f"Claim number {n} holds."}
+        for n in range(count)})
+    path.write_text(json.dumps(source))
+
+
+@given(parsers.parse("a corpus with a key and a publet of {count:d} claims"), target_fixture="corpus")
+def corpus_many(runner, count: int):
+    corpus = corpus_with_key(runner)
+    _many_claims(corpus["where"], count)
+    return corpus
+
+
+@when(parsers.parse("I add {count:d} claims to the publet and publish it"))
+def add_many(runner, corpus, count: int):
+    corpus["index"] = _lock_index(corpus)
+    _many_claims(corpus["where"], count)
+    _published(runner, corpus["where"])
+
+
+def _lock_index(corpus) -> int:
+    lock = json.loads((corpus["where"] / "corpus.lock").read_text())
+    return lock["corpus"]["generation"]["index"]
+
+
+def _records(runner, where) -> list[dict]:
+    """Each generation record in a directory, read through `pub bundle`."""
+    out = runner.run("pub", "bundle", f"--dir={where}", "--out=record-bundles")
+    assert out.code == 0, out.stderr
+    index = json.loads((runner.cwd / "record-bundles" / "index.json").read_text())
+    cids = [o["cid"] for o in index["objects"] if o["type"] == "generation"]
+    read = lambda cid: json.loads(  # noqa: E731
+        (runner.cwd / "record-bundles" / "o" / f"{cid}.json").read_text())
+    records = []
+    for cid in cids:
+        bundle = read(cid)
+        assert any(u["how"] == "signature" for u in bundle["used_by"]), cid
+        assert bundle["bytes"]["size"] <= OBJECT_LIMIT, bundle["bytes"]
+        records.append({"cid": cid, **bundle["object"]["body"]})
+    return sorted(records, key=lambda r: r["index"])
+
+
+@then(parsers.parse("the corpus has {count:d} generation records, each inside the object size "
+                    "limit and signed"))
+def corpus_records(runner, corpus, count: int):
+    corpus["records"] = _records(runner, corpus["where"] / "objects")
+    assert len(corpus["records"]) == count
+
+
+@then("the records chain from index 0, and their added lists are its members")
+def records_chain(corpus):
+    records = corpus["records"]
+    assert [r["index"] for r in records] == list(range(len(records)))
+    assert "parent" not in records[0]
+    assert all(r["parent"] == p["cid"] for p, r in zip(records, records[1:]))
+    added = [c for r in records for c in r["added"]]
+    assert len(added) == len(set(added))
+    members = set()
+    for path in (corpus["where"] / "objects").glob("*.cbor"):
+        members.add(path.stem.replace("_", ":"))
+    outside = members - set(added)
+    # The manifest, the records and their signatures describe the membership.
+    assert len(outside) == 1 + 2 * len(records), len(outside)
+
+
+@then("every plumbing reader loads the corpus's objects")
+def readers_load(runner, corpus):
+    where = corpus["where"] / "objects"
+    assert runner.run("pub-ls", f"--dir={where}").code == 0
+    head = corpus["records"][-1]
+    # `pub-delta` applies the records after a generation to its members.
+    delta = runner.cwd / "delta"
+    delta.mkdir()
+    name = head["cid"].replace(":", "_") + ".cbor"
+    (delta / name).write_bytes((where / name).read_bytes())
+    members = [f"--member={c}" for c in corpus["records"][0]["added"]]
+    out = runner.run("pub-delta", f"--dir={delta}", "--from=0", *members)
+    assert out.code == 0, out.stderr
+    total = sum(len(r["added"]) for r in corpus["records"])
+    assert json.loads(out.stdout)["members"] == total, out.stdout
+    corpus["index"] = head["index"]
+
+
+@then("the generation is one past where it was")
+def one_past(corpus):
+    assert _lock_index(corpus) == corpus["index"] + 1
+
+
+@then("the generation is 2 past where it was, with records inside the object size limit and signed")
+def two_past(runner, corpus):
+    assert _lock_index(corpus) == corpus["index"] + 2
+    _records(runner, corpus["where"] / "objects")
+
+
+@given(parsers.parse("a directory of {count:d} objects and a workspace with a key"))
+def domain_many(runner, ctx, count: int):
+    workspace(runner)
+    assert runner.run("pub", "sign", "--generate-key", "--principal=human").code == 0
+    where = runner.cwd / "domain"
+    where.mkdir()
+    write_store(where, [publet(fv.STEWARD, CREATED, "normative", f"Claim {n} holds.")
+                        for n in range(count)])
+    ctx["domain"] = where
+
+
+@then(parsers.parse("the directory has {count:d} generation records, each inside the object size "
+                    "limit and signed"))
+def directory_records(runner, ctx, result, count: int):
+    # `pub domain` leaves the key in the workspace; a reader needs its object.
+    assert result.stdout.count("generation  ") == count
+    key = next(l for l in (runner.cwd / ".publet" / "config").read_text().splitlines()
+               if l.startswith("author=")).split("=", 1)[1]
+    copied = runner.run("pub-cat", "--store=.publet/objects.redb", key)
+    (ctx["domain"] / (key.replace(":", "_") + ".cbor")).write_bytes(copied.out)
+    assert len(_records(runner, ctx["domain"])) == count
+
+
 @given("a directory of objects and a workspace with a key")
 def domain_with_key(runner, ctx):
     workspace(runner)

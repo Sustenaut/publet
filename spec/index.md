@@ -2794,6 +2794,12 @@ A generation whose membership root implies a removal not listed in
 `removed`, or a listed removal with no `ref`, is **malformed** and
 implementations MUST reject it.
 
+A generation record is an object, so it MUST fit the size limit (Section 4.5).
+A change too large for one record is stated across as many consecutive records
+as it takes, each following the last by `parent` and `index`, naming the
+membership root after its own part of the change, and signed. The domain
+manifest's `snapshot` is the root after the last of them.
+
 Declaring removals rather than leaving them to be discovered is the point.
 An inclusion proof in one generation and an absence proof in the next will
 reveal a removal to anyone who thinks to look; a generation record makes

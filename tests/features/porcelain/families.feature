@@ -66,6 +66,30 @@ Feature: Families are bundled for a theme, one bundle per family and per code
     Then the corpus's generation record is signed by its key with purpose "authored"
     And the signature is not a member of the generation
 
+  @must-14.1.1 @must-4.5
+  Scenario: A first publish too large for one record is stated across several
+    Given a corpus with a key and a publet of 600 claims
+    When I publish it
+    Then the corpus has 2 generation records, each inside the object size limit and signed
+    And the records chain from index 0, and their added lists are its members
+    And every plumbing reader loads the corpus's objects
+    When I revise the publet and publish it
+    Then the generation is one past where it was
+
+  @must-14.1.1 @must-4.5
+  Scenario: Advancing by a change too large for one record is stated across several
+    Given a corpus with a key and one publet
+    When I publish it
+    And I add 600 claims to the publet and publish it
+    Then the generation is 2 past where it was, with records inside the object size limit and signed
+
+  @must-14.1.1 @must-4.5
+  Scenario: pub domain states a large genesis across several records
+    Given a directory of 1000 objects and a workspace with a key
+    When I make a domain of the directory
+    Then it succeeds
+    And the directory has 2 generation records, each inside the object size limit and signed
+
   @must-14.1.1
   Scenario: pub domain signs the genesis record where a key is held
     Given a directory of objects and a workspace with a key

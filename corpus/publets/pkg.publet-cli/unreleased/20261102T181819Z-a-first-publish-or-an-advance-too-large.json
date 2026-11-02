@@ -1,0 +1,4 @@
+{
+  "category": "fixed",
+  "change": "A first publish or an advance too large for one generation record is now stated across several consecutive signed records, each inside the 64 KiB object limit. One record of more than about 970 members could be written but not read back, which stopped the next `pub publish` and `pub bundle --dir`"
+}
