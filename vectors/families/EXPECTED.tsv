@@ -1,11 +1,18 @@
 accept-edition	accepted
 accept-edition-that-grew	accepted
+accept-family-allowed-uses	accepted
+accept-family-change-proposed-by-another-key	accepted
+accept-family-revised-by-a-delegate	accepted
+accept-family-revised-by-its-steward	accepted
+reject-edition-assessment	a `assessment` cannot target
 reject-edition-child-not-flagged	6 heads a family and has no `children` flag
 reject-edition-code-in-two-families	define (1/9) twice
 reject-edition-count-of-auxiliaries-in-total	its counts give `total`
 reject-edition-count-of-classes	its counts give `main`
 reject-edition-count-of-groups	defines.counts
 reject-edition-count-of-listed-families	defines.counts
+reject-edition-critique	a `critique` cannot target
+reject-edition-disputes	a `disputes` cannot target
 reject-edition-empty-group	at least one head
 reject-edition-flag-with-no-family	63 has a `children` flag and no family under it
 reject-edition-group-lost-a-head	group 1 lost "\"...\""
@@ -16,13 +23,25 @@ reject-edition-number-dropped	grouping 3 of the edition it supersedes is gone
 reject-edition-number-reused	group 2 is reused with a different meaning
 reject-edition-number-twice	each number once
 reject-edition-parent-disagrees	the family listed under 6 states the parent
+reject-edition-supports	a `supports` cannot target
 reject-edition-top-with-parent	the top family states the parent
 reject-edition-undefined-grouping	names the grouping 7, which the edition does not define
+reject-edition-verdict	definitional
+reject-family-assessment	a `assessment` cannot target
+reject-family-assessment-on-a-code	a `assessment` cannot target
 reject-family-children-false	defines.members.children
 reject-family-code-in-both-lists	each code once
 reject-family-code-twice	each code once
+reject-family-critique	a `critique` cannot target
+reject-family-critique-on-a-code	a `critique` cannot target
+reject-family-disputes	a `disputes` cannot target
+reject-family-disputes-on-a-code	a `disputes` cannot target
 reject-family-kind-not-in-depends	defines.kind
 reject-family-member-with-sort	without `sort`
 reject-family-no-classes	at least one class
 reject-family-no-grouping	defines.grouping
 reject-family-parent-is-a-member	defines.parent
+reject-family-supports	a `supports` cannot target
+reject-family-supports-on-a-code	a `supports` cannot target
+reject-family-verdict	definitional
+reject-family-verdict-on-a-code	definitional

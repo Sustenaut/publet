@@ -146,10 +146,73 @@ Feature: A family defines the classes under one class, and an edition pins a rel
     And stderr mentions "must name one of its codes"
 
   @must-5.9.1
-  Scenario: Disputing one class targets the family with the code as aspect
+  Scenario Outline: A family is changed and not debated
     When I compose the family under "6"
-    And I dispute the family with aspect "63"
+    And I file a "<kind>" on the family <how>
+    Then it fails
+    And stderr mentions "a `<kind>` cannot target"
+
+    Examples:
+      | kind       | how               |
+      | disputes   | with aspect "63"  |
+      | disputes   | with no aspect    |
+      | supports   | with aspect "63"  |
+      | supports   | with no aspect    |
+      | assessment | with aspect "63"  |
+      | assessment | with no aspect    |
+
+  @must-5.9.1
+  Scenario Outline: An edition is changed and not debated
+    When I compose a release
+    And I file a "<kind>" on the edition
+    Then it fails
+    And stderr mentions "a `<kind>` cannot target"
+
+    Examples:
+      | kind       |
+      | disputes   |
+      | supports   |
+      | assessment |
+
+  @must-5.2
+  Scenario: A verdict remains barred from an edition
+    When I compose a release
+    And I file a "verdict" on the edition
+    Then it fails
+    And stderr mentions "definitional"
+
+  @must-5.9.1
+  Scenario Outline: What a family still admits passes
+    When I compose the family under "6"
+    And I file a "<kind>" on the family with no aspect
     Then it succeeds
+
+    Examples:
+      | kind        |
+      | tagged      |
+      | timestamped |
+      | retracts    |
+
+  @must-5.9.1
+  Scenario: A claim may rest on a family and be disputed itself
+    When I compose the family under "6"
+    And I dispute a claim resting on the family
+    Then it succeeds
+
+  @must-5.9.1
+  Scenario: The steward's next version of a family is authoritative
+    Given the family vector "accept-family-revised-by-its-steward"
+    Then the next version is in the family's authoritative lineage
+
+  @must-5.9.1
+  Scenario: A lineage delegate's next version of a family is authoritative
+    Given the family vector "accept-family-revised-by-a-delegate"
+    Then the next version is in the family's authoritative lineage
+
+  @must-5.9.1
+  Scenario: Another key's next version of a family is only a proposal
+    Given the family vector "accept-family-change-proposed-by-another-key"
+    Then the next version is in the family's full lineage and not its authoritative one
 
   @must-5.9.1
   Scenario: Usage of one class targets the family with the code as aspect
@@ -280,6 +343,25 @@ Feature: A family defines the classes under one class, and an edition pins a rel
       | reject-edition-number-reused |
       | reject-edition-grouping-lost-a-group |
       | reject-edition-number-dropped |
+      | reject-family-disputes |
+      | reject-family-disputes-on-a-code |
+      | reject-edition-disputes |
+      | reject-family-supports |
+      | reject-family-supports-on-a-code |
+      | reject-edition-supports |
+      | reject-family-assessment |
+      | reject-family-assessment-on-a-code |
+      | reject-edition-assessment |
+      | reject-family-verdict |
+      | reject-family-verdict-on-a-code |
+      | reject-edition-verdict |
+      | reject-family-critique |
+      | reject-family-critique-on-a-code |
+      | reject-edition-critique |
+      | accept-family-allowed-uses |
+      | accept-family-revised-by-its-steward |
+      | accept-family-revised-by-a-delegate |
+      | accept-family-change-proposed-by-another-key |
 
   Scenario: The family vectors are what their generator makes
     Then every family vector is what the generator makes

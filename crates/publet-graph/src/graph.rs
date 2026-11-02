@@ -382,6 +382,11 @@ impl Graph {
         self.annotations.values().filter(move |a| a.kind() == kind)
     }
 
+    /// Every relation of `kind`, in identifier order.
+    pub(crate) fn relations_of_kind(&self, kind: RelationKind) -> impl Iterator<Item = &Relation> {
+        self.relations.values().filter(move |r| r.kind() == kind)
+    }
+
     /// Every prose claim, in identifier order.
     pub(crate) fn prose_claims(&self) -> impl Iterator<Item = &ProseClaim> {
         self.prose_claims.values()

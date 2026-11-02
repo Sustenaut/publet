@@ -519,7 +519,8 @@ Implementations MUST reject a verdict annotation targeting a
 `definitional`, `normative`, `expressive`, or `performative` claim. For
 `attributive` and `archival`, a verdict's `aspect` MUST be `provenance`. A
 claim about the *content* of a quoted or archived statement is made by
-publishing an `empirical` claim asserting it, and contesting that.
+publishing an `empirical` claim asserting it, and contesting that. A PDC
+family or edition admits no judgement or argument at all (Section 5.9.1).
 
 A **performative** claim is not true or false, because asserting it is
 what does the thing: a retraction does not describe a withdrawal, it
@@ -989,15 +990,29 @@ Reframing a concept, by moving a boundary line or narrowing it, is a new
 version of the claim defining it (`supersedes`), so the code keeps one
 lineage.
 
-**Families.** A family asserts its members as a whole, by the rule Section
-5.8 gives data: under its one `class` and `scope`, and with one `content`, a
-single sentence naming the parent, such as "The PDC classes directly under
-63 Agriculture, forestry, farming." The atomicity tests of Section 5.7 apply
-to that sentence, not to the members. Disputing one class is disputing the
-family, with the dispute's `aspect` naming the code. A new version of a
-family is a new object plus `supersedes`, as with any claim (R1), and giving
-a leaf its first child signs two families: the new one, and its parent's,
-for the `children` flag.
+**Families.** A family states its members as a whole, under its one `class`
+and `scope`, and with one `content`, a single sentence naming the parent,
+such as "The PDC classes directly under 63 Agriculture, forestry, farming."
+The atomicity tests of Section 5.7 apply to that sentence, not to the members.
+
+A family is a stipulation: it says what the codes of this classification
+mean, and there is nothing in it to argue for or against, only something to
+change. It changes by a new version, never by debate. An implementation MUST
+reject a `disputes` or `supports` relation, and an `assessment`, `verdict` or
+`critique` annotation, whose target is a family or an edition, with or without
+an `aspect` naming a code. This is the admissibility R5 gives a class, as
+Section 5.2 applies it to a verdict; R6 still leaves anyone free to do what
+answers a stipulation, which is to propose a change or publish a rival.
+
+A new version of a family is a new object plus `supersedes` (R1). It is
+authoritative when signed by the key that signed the family or that key's
+`lineage` delegate (Section 10.6). From any other key it is a proposed change,
+which clients MUST show as a proposal (Section 6.1) until the steward publishes
+it. Giving a leaf its first child signs two families: the new one, and its
+parent's, for the `children` flag. Two keys publishing competing definitions
+at one code is not a debate on either: Section 9.2 compares the definitions,
+and a dispute between claims resting on them reports the divergence or
+staleness there as for any other definitions.
 
 An implementation MUST reject a family in which a code appears more than
 once across `members` and `auxiliaries`, in which `parent` is itself a
@@ -1010,19 +1025,20 @@ and a calculation's `solves` are unchanged, and a family in `depends` serves
 each of its codes as a concept claim there would. Where a field takes a CID,
 a class is named by its family's CID with `aspect` holding the code: a
 `classifies` annotation's `value` names the family and its `aspect` the
-class; a `disputes` relation or a `usage` annotation targets the family with
-`aspect` the code. An implementation MUST reject a `classifies` annotation
-whose subject is a family and whose `aspect` is not one of that family's
-codes, since it would place something under no class. A `verdict` remains
-barred from a family, as from every `definitional` claim (Section 5.2); what
-settles one of its classes is `usage`. A single `concept` claim stays valid,
+class; a `usage` annotation targets the family with `aspect` the code, and is
+what evidences how one of its classes is used. An implementation MUST reject a
+`classifies` annotation whose subject is a family and whose `aspect` is not one
+of that family's codes, since it would place something under no class. A
+family may also be `tagged` and `timestamped`, retracted by its own author, and
+cited by `depends` and evidence. A single `concept` claim stays valid,
 and competes per code with a family's member at that code, as two concept
 claims do.
 
 **PDC editions.** An edition is a `definitional` claim, signed by its
 steward with purpose `authored`, because a release is an assertion of which
 definitions make up the PDC: it moves forward by `supersedes`, so the release
-history is a lineage, and it can be disputed and anchored as any claim can.
+history is a lineage, and it can be anchored as any claim can. Like a family
+it is changed and not debated.
 
 `sections` lists every family but the top one by its exact CID, keyed by its
 parent's code: `main` for the classes, `common-auxiliaries` for the branch
@@ -1559,8 +1575,8 @@ lineage or a presupposition that a cycle would make incoherent.
 | `translates` | `from` translates `to` | `empirical` | Carries `method` (`human`/`machine`/`machine-post-edited`) and `fidelity` (`literal`/`idiomatic`/`adapted`). |
 | `implements` | `from` implements the interface `to` | `empirical` | Acyclic. `from` and `to` need not be signed claim objects (Section 6.2). |
 | `depends` | `from` presupposes `to` | `definitional` | Acyclic; implementations MUST reject cycle-closing edges. |
-| `disputes` | `from` argues against `to` | `performative` | MUST name a claim stating grounds. |
-| `supports` | `from` argues for `to` | `performative` | |
+| `disputes` | `from` argues against `to` | `performative` | MUST name a claim stating grounds. Inadmissible against a PDC family or edition (Section 5.9.1). |
+| `supports` | `from` argues for `to` | `performative` | Inadmissible for a PDC family or edition (Section 5.9.1). |
 | `equivalent` | `from` and `to` express the same claim | `definitional` | Not transitive; classes are computed per viewpoint. |
 | `retracts` | the signer withdraws a prior assertion | `performative` | Felicitous only from a key that signed the target. Does not delete; nodes MUST continue serving (R12). Clients MUST display it prominently. |
 | `derived-from` | `from` copies or adapts `to` | `attributive` | Required for forks. Acyclic. |
@@ -1586,7 +1602,8 @@ provenance claim, so a verdict on one must name the `provenance` aspect.
 The `performative` ones do something by being asserted. Their felicity
 conditions differ and are stated per kind above: only the key that signed
 an object may felicitously retract or supersede it, while anyone at all
-may dispute one, provided they name grounds. That difference is why
+may dispute one, provided they name grounds, unless it is a PDC family or
+edition (Section 5.9.1). That difference is why
 felicity is stated per kind and not per class.
 
 ### 6.1 Lineage (R15)
@@ -2135,8 +2152,9 @@ code, and is read as covering every family below it, found by walking
 review suggestions there, and approve changes within it. A group is
 founded by one steward, who nominates others; each nominee joins as any
 steward does, by `threshold` circle signatures plus the nominee's
-acceptance. Anyone may still publish, review, or dispute concepts in the
-subtree, and a group's choice is a recommendation like any anchor's.
+acceptance. Anyone may still publish a rival definition in the subtree or
+propose a change to one by `supersedes`, and a group's choice is a
+recommendation like any anchor's.
 
 No cap on anchors per key is specified. Anchor counts and acquisition rates
 are computable; viewpoints SHOULD discount implausible holdings and clients
@@ -3451,8 +3469,8 @@ and 5.9.5).
 
 **Family** — a `definitional` claim defining the classes directly under one
 class together, naming that class by PDC code as its `parent`; a class is
-cited by its code, or by the family's CID with the code in `aspect`
-(Section 5.9.1).
+cited by its code, or by the family's CID with the code in `aspect`. It is
+a stipulation, changed by a new version and never debated (Section 5.9.1).
 
 **Singular** — a `definitional` claim defining one particular thing rather
 than a class: a basement, a growing box, a soil sample, a company. It names

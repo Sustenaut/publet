@@ -297,10 +297,40 @@ def classify_no_aspect(runner, ctx):
                       f"--subject={ctx['family']['6']}", "--scope=unconditional")
 
 
-@when(parsers.parse('I dispute the family with aspect "{aspect}"'), target_fixture="result")
-def dispute_family(runner, ctx, aspect: str):
+def _file(runner, ctx, kind: str, target: str, *aspect: str):
+    if kind in ("disputes", "supports", "retracts"):
+        return runner.run("pub", "relate", f"--kind={kind}", f"--from={_a_claim(runner, ctx)}",
+                          f"--to={target}", "--scope=unconditional", *aspect)
+    value = {"assessment": ["--verdict=refuted", "--grounds=It should be otherwise."], "tagged": ["--tag=PUB-FAMILY-11-2026"],
+             "verdict": ["--finding=deny"],
+             "timestamped": [f"--at={CREATED}", "--service=https://example.org/ts",
+                             "--proof=a proof"]}[kind]
+    return runner.run("pub", "annotate", f"--kind={kind}", f"--target={target}",
+                      "--scope=unconditional", *value, *aspect)
+
+
+@when(parsers.parse('I file a "{kind}" on the family with aspect "{aspect}"'),
+      target_fixture="result")
+def file_with_aspect(runner, ctx, kind: str, aspect: str):
+    return _file(runner, ctx, kind, ctx["family"]["6"], f"--aspect={aspect}")
+
+
+@when(parsers.parse('I file a "{kind}" on the family with no aspect'), target_fixture="result")
+def file_no_aspect(runner, ctx, kind: str):
+    return _file(runner, ctx, kind, ctx["family"]["6"])
+
+
+@when(parsers.parse('I file a "{kind}" on the edition'), target_fixture="result")
+def file_on_edition(runner, ctx, kind: str):
+    return _file(runner, ctx, kind, ctx["edition"])
+
+
+@when("I dispute a claim resting on the family", target_fixture="result")
+def dispute_resting_claim(runner, ctx):
+    resting = _first(runner.run("pub", "compose", "--class=normative", "--content=Grow it there.",
+                                "--scope=unconditional", f"--depends={ctx['family']['6']}"))
     return runner.run("pub", "relate", "--kind=disputes", f"--from={_a_claim(runner, ctx)}",
-                      f"--to={ctx['family']['6']}", f"--aspect={aspect}", "--scope=unconditional")
+                      f"--to={resting}", "--scope=unconditional")
 
 
 @when(parsers.parse('I file usage on the family with aspect "{aspect}"'), target_fixture="result")
@@ -506,6 +536,30 @@ def vector_outcome(result, vector: str):
     else:
         assert result.code == 1, result.stdout
         assert rule in result.stderr, result.stderr
+
+
+def _lineage(runner, vector: str, *mode: str) -> list[str]:
+    family = cid_of(fv.claim(fv.content_of("6"), fv.FAMILIES["6"]))
+    out = runner.run("pub-lineage", f"--dir={fv.VECTORS / vector}", *mode, family)
+    assert out.code == 0, out.stderr
+    return out.stdout.split()
+
+
+def _next_version(vector: str) -> str:
+    author = fv.STEWARD if vector.endswith("steward") else fv.OTHER_KEY
+    return cid_of(fv.revision(author)[1])
+
+
+@then("the next version is in the family's authoritative lineage")
+def next_version_authoritative(runner, vector: str):
+    assert _next_version(vector) in _lineage(runner, vector, "--authoritative")
+
+
+@then("the next version is in the family's full lineage and not its authoritative one")
+def next_version_proposed(runner, vector: str):
+    newer = _next_version(vector)
+    assert newer in _lineage(runner, vector, "--full")
+    assert newer not in _lineage(runner, vector, "--authoritative")
 
 
 @then("the terms name each class and nothing for the edition")

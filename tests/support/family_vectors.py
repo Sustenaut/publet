@@ -18,7 +18,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from support.objects import author_key, cbor_map, cid_of, head, obj, text, uint  # noqa: E402
+from support.objects import (  # noqa: E402
+    author_key, cbor_map, cid_of, head, obj, publet, text, uint,
+)
 
 VECTORS = Path(__file__).resolve().parents[2] / "vectors" / "families"
 STEWARD = author_key("the PDC steward")
@@ -182,6 +184,97 @@ def _pair(families_objects, edition):
     return [*families_objects, edition]
 
 
+GROUNDS = publet(STEWARD, CREATED, "normative", "It should be otherwise.")
+_SCOPE = {"domain": "unconditional", "conditions": []}
+_ANNOTATIONS = {
+    "assessment": {"verdict": "refuted"},
+    "verdict": {"finding": "deny"},
+    "critique": {"defect": "other"},
+}
+
+
+def annotation(kind: str, target: str, value: dict, aspect: str | None = None) -> bytes:
+    fields = [("kind", text(kind)), ("target", text(target)), ("scope", encode(_SCOPE)),
+              ("value", encode(value))]
+    if aspect:
+        fields.append(("aspect", text(aspect)))
+    return obj("claim.annotation", STEWARD, CREATED, fields)
+
+
+def argued(kind: str, target: str, aspect: str | None = None) -> bytes:
+    fields = [("kind", text(kind)), ("from", text(cid_of(GROUNDS))), ("to", text(target)),
+              ("scope", encode(_SCOPE))]
+    if aspect:
+        fields.append(("aspect", text(aspect)))
+    return obj("claim.relation", STEWARD, CREATED, fields)
+
+
+def _debates(name: str, target: bytes, aspect: str | None) -> dict:
+    """One case per kind of argument or judgement against `target`."""
+    out = {}
+    for kind in ("disputes", "supports"):
+        out[f"reject-{name}-{kind}"] = (
+            [target, GROUNDS, argued(kind, cid_of(target), aspect)],
+            f"a `{kind}` cannot target")
+    for kind, value in _ANNOTATIONS.items():
+        # Section 5.2 refuses a verdict on any definitional claim, first.
+        rule = "definitional" if kind == "verdict" else f"a `{kind}` cannot target"
+        out[f"reject-{name}-{kind}"] = (
+            [target, annotation(kind, cid_of(target), value, aspect)], rule)
+    return out
+
+
+def _allowed_uses() -> list[bytes]:
+    """Everything a family still admits, on one family."""
+    family = claim(content_of("6"), FAMILIES["6"])
+    at = cid_of(family)
+    placed = publet(STEWARD, CREATED, "normative", "Grow it here.")
+    citing = obj("claim.prose", STEWARD, CREATED, [
+        ("class", text("empirical")), ("lang", text("en")),
+        ("content", text("The yield rose.")),
+        ("scope", encode(_SCOPE)),
+        ("depends", encode([at])),
+        ("evidence", encode([{"kind": "claim", "role": "method", "ref": at}])),
+    ])
+    return [
+        family, placed, citing, GROUNDS,
+        annotation("classifies", cid_of(placed), {"subject": at}, "63"),
+        annotation("usage", at, {"source": "https://example.org/udc", "locator": "p. 63"}, "63"),
+        annotation("tagged", at, {"tag": "PUB-FAMILY-11-2026"}),
+        annotation("timestamped", at, {"at": CREATED, "service": "https://example.org/ts",
+                                       "proof": "a proof"}),
+        obj("claim.relation", STEWARD, CREATED, [
+            ("kind", text("retracts")), ("from", text(cid_of(GROUNDS))), ("to", text(at)),
+            ("scope", encode(_SCOPE))]),
+    ]
+
+
+OTHER_KEY = author_key("someone else")
+
+
+def revision(author: str) -> list[bytes]:
+    """A family, and a next version of it by `author`."""
+    family = claim(content_of("6"), FAMILIES["6"])
+    grown = copy.deepcopy(FAMILIES["6"])
+    grown["members"].append(_klass("64", "Home economics"))
+    newer = obj("claim.prose", author, CREATED, [
+        ("class", text("definitional")), ("lang", text("en")),
+        ("content", text(content_of("6"))), ("scope", encode(_SCOPE)),
+        ("depends", encode([])), ("evidence", encode([])), ("defines", encode(grown)),
+    ])
+    edge = obj("claim.relation", author, CREATED, [
+        ("kind", text("supersedes")), ("from", text(cid_of(newer))), ("to", text(cid_of(family))),
+        ("scope", encode(_SCOPE))])
+    return [family, newer, edge]
+
+
+def _delegated_revision() -> list[bytes]:
+    return [*revision(OTHER_KEY), obj("claim.relation", STEWARD, CREATED, [
+        ("kind", text("delegates")), ("from", text(STEWARD)), ("to", text(OTHER_KEY)),
+        ("aspect", text("lineage")), ("effective", text("immediate")),
+        ("scope", encode(_SCOPE))])]
+
+
 # Case name -> (the objects, what a refusal must name). `None` must load.
 def cases() -> dict[str, tuple[list[bytes], str | None]]:
     out: dict[str, tuple[list[bytes], str | None]] = {}
@@ -262,6 +355,17 @@ def cases() -> dict[str, tuple[list[bytes], str | None]]:
         _superseding(_one_fewer_heads), "grouping 2 lost 1")
     out["reject-edition-number-dropped"] = (
         _superseding(_drop_grouping), "grouping 3 of the edition it supersedes is gone")
+
+    # A stipulation changes by a new version and is never debated.
+    family = claim(content_of("6"), FAMILIES["6"])
+    out.update(_debates("family", family, None))
+    out.update({k + "-on-a-code": v for k, v in _debates("family", family, "63").items()})
+    _, edition = release()
+    out.update(_debates("edition", edition, None))
+    out["accept-family-allowed-uses"] = (_allowed_uses(), None)
+    out["accept-family-revised-by-its-steward"] = (revision(STEWARD), None)
+    out["accept-family-revised-by-a-delegate"] = (_delegated_revision(), None)
+    out["accept-family-change-proposed-by-another-key"] = (revision(OTHER_KEY), None)
     return out
 
 

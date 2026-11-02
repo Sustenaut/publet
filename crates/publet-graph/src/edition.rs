@@ -15,12 +15,14 @@ use publet_core::Cid;
 use crate::GraphError;
 use crate::graph::Graph;
 use crate::quantity::{Definition, EDITION_SECTIONS, Edition, Family, Tally};
-use crate::view::ProseClaim;
+use crate::view::{ProseClaim, RelationKind};
 
 impl Graph {
-    /// Refuse an edition its families or predecessors disagree with, and a
-    /// `classifies` annotation placing something under no class of a family.
+    /// Refuse an edition its families or predecessors disagree with, a
+    /// `classifies` annotation placing something under no class of a family,
+    /// and any argument about or judgement of a family or an edition.
     pub(crate) fn check_families(&self) -> Result<(), GraphError> {
+        self.check_undebated()?;
         for claim in self.prose_claims() {
             if let Some(Definition::Edition(edition)) = claim.defines() {
                 self.check_edition(claim, edition).map_err(|reason| {
@@ -48,6 +50,36 @@ impl Graph {
                     family: subject.to_string(),
                     found: aspect.map(str::to_owned),
                 });
+            }
+        }
+        Ok(())
+    }
+
+    /// A family or an edition is a stipulation: it changes by a new version,
+    /// never by debate. A target not held is not known to be one, and is
+    /// checked by whoever holds it.
+    fn check_undebated(&self) -> Result<(), GraphError> {
+        let refuse = |kind: &str, target: &Cid| {
+            let stipulated = matches!(
+                self.prose_claim(target).and_then(ProseClaim::defines),
+                Some(Definition::Family(_) | Definition::Edition(_))
+            );
+            if stipulated {
+                return Err(GraphError::StipulationDebated {
+                    kind: kind.to_owned(),
+                    target: target.to_string(),
+                });
+            }
+            Ok(())
+        };
+        for kind in [RelationKind::Disputes, RelationKind::Supports] {
+            for relation in self.relations_of_kind(kind) {
+                refuse(kind.id(), relation.to())?;
+            }
+        }
+        for kind in ["assessment", "verdict", "critique"] {
+            for annotation in self.annotations_of_kind(kind) {
+                refuse(kind, annotation.target())?;
             }
         }
         Ok(())
