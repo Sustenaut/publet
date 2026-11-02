@@ -4,44 +4,51 @@ accept-family-allowed-uses	accepted
 accept-family-change-proposed-by-another-key	accepted
 accept-family-revised-by-a-delegate	accepted
 accept-family-revised-by-its-steward	accepted
-reject-edition-assessment	a `assessment` cannot target
-reject-edition-child-not-flagged	6 heads a family and has no `children` flag
-reject-edition-code-in-two-families	define (1/9) twice
-reject-edition-count-of-auxiliaries-in-total	its counts give `total`
-reject-edition-count-of-classes	its counts give `main`
+accept-proposal-argued-on-its-relation	accepted
+drop-classifies-under-no-class	must name one of its codes
+drop-concept-assessment	a `assessment` cannot target
+drop-concept-critique	a `critique` cannot target
+drop-concept-disputes	a `disputes` cannot target
+drop-concept-supports	a `supports` cannot target
+drop-concept-verdict	definitional
+drop-edition-assessment	a `assessment` cannot target
+drop-edition-child-not-flagged	6 heads a family and has no `children` flag
+drop-edition-code-in-two-families	define (1/9) twice
+drop-edition-count-of-auxiliaries-in-total	its counts give `total`
+drop-edition-count-of-classes	its counts give `main`
+drop-edition-critique	a `critique` cannot target
+drop-edition-disputes	a `disputes` cannot target
+drop-edition-flag-with-no-family	63 has a `children` flag and no family under it
+drop-edition-group-lost-a-head	group 1 lost "\"...\""
+drop-edition-grouping-lost-a-group	grouping 2 lost 1
+drop-edition-number-dropped	grouping 3 of the edition it supersedes is gone
+drop-edition-number-reused	group 2 is reused with a different meaning
+drop-edition-parent-disagrees	the family listed under 6 states the parent
+drop-edition-supports	a `supports` cannot target
+drop-edition-top-with-parent	the top family states the parent
+drop-edition-undefined-grouping	names the grouping 7, which the edition does not define
+drop-edition-verdict	definitional
+drop-family-assessment	a `assessment` cannot target
+drop-family-assessment-on-a-code	a `assessment` cannot target
+drop-family-critique	a `critique` cannot target
+drop-family-critique-on-a-code	a `critique` cannot target
+drop-family-disputes	a `disputes` cannot target
+drop-family-disputes-on-a-code	a `disputes` cannot target
+drop-family-supports	a `supports` cannot target
+drop-family-supports-on-a-code	a `supports` cannot target
+drop-family-verdict	definitional
+drop-family-verdict-on-a-code	definitional
 reject-edition-count-of-groups	defines.counts
 reject-edition-count-of-listed-families	defines.counts
-reject-edition-critique	a `critique` cannot target
-reject-edition-disputes	a `disputes` cannot target
 reject-edition-empty-group	at least one head
-reject-edition-flag-with-no-family	63 has a `children` flag and no family under it
-reject-edition-group-lost-a-head	group 1 lost "\"...\""
-reject-edition-grouping-lost-a-group	grouping 2 lost 1
 reject-edition-grouping-of-undefined-group	defines.groupings
 reject-edition-no-section	defines.sections
-reject-edition-number-dropped	grouping 3 of the edition it supersedes is gone
-reject-edition-number-reused	group 2 is reused with a different meaning
 reject-edition-number-twice	each number once
-reject-edition-parent-disagrees	the family listed under 6 states the parent
-reject-edition-supports	a `supports` cannot target
-reject-edition-top-with-parent	the top family states the parent
-reject-edition-undefined-grouping	names the grouping 7, which the edition does not define
-reject-edition-verdict	definitional
-reject-family-assessment	a `assessment` cannot target
-reject-family-assessment-on-a-code	a `assessment` cannot target
 reject-family-children-false	defines.members.children
 reject-family-code-in-both-lists	each code once
 reject-family-code-twice	each code once
-reject-family-critique	a `critique` cannot target
-reject-family-critique-on-a-code	a `critique` cannot target
-reject-family-disputes	a `disputes` cannot target
-reject-family-disputes-on-a-code	a `disputes` cannot target
 reject-family-kind-not-in-depends	defines.kind
 reject-family-member-with-sort	without `sort`
 reject-family-no-classes	at least one class
 reject-family-no-grouping	defines.grouping
 reject-family-parent-is-a-member	defines.parent
-reject-family-supports	a `supports` cannot target
-reject-family-supports-on-a-code	a `supports` cannot target
-reject-family-verdict	definitional
-reject-family-verdict-on-a-code	definitional

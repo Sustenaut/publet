@@ -85,6 +85,18 @@ pub struct Graph {
     /// can arrive in any order. Resolving it here at query time rather than
     /// at insert time removes that ordering dependency.
     edge_relations: BTreeMap<(RelationKind, String, String), BTreeSet<String>>,
+    /// What loading left out, and why (Section 5.2).
+    dropped: Vec<Dropped>,
+}
+
+/// An object a load left out because it is inadmissible given the others,
+/// though the rest of what was loaded stands (Section 5.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Dropped {
+    /// The object left out.
+    pub cid: Cid,
+    /// Why.
+    pub reason: GraphError,
 }
 
 impl Graph {
@@ -102,6 +114,36 @@ impl Graph {
     /// of an acyclic kind would close a cycle, or if an annotation violates
     /// the class rules of Section 5.2.
     pub fn insert(&mut self, cid: &Cid, object: Verified<Object>) -> Result<(), GraphError> {
+        self.index(cid, object, true)
+    }
+
+    /// As [`Graph::insert`], leaving an annotation's class rules for
+    /// [`Graph::inadmissible`] to find: a load reports such an object and
+    /// goes on.
+    pub(crate) fn insert_for_load(
+        &mut self,
+        cid: &Cid,
+        object: Verified<Object>,
+    ) -> Result<(), GraphError> {
+        self.index(cid, object, false)
+    }
+
+    /// What a load left out, in identifier order (Section 5.2).
+    #[must_use]
+    pub fn dropped(&self) -> &[Dropped] {
+        &self.dropped
+    }
+
+    pub(crate) fn set_dropped(&mut self, dropped: Vec<Dropped>) {
+        self.dropped = dropped;
+    }
+
+    fn index(
+        &mut self,
+        cid: &Cid,
+        object: Verified<Object>,
+        class_rules: bool,
+    ) -> Result<(), GraphError> {
         let object = object.into_inner();
         let key = cid.to_string();
         match object.kind() {
@@ -116,7 +158,9 @@ impl Graph {
             }
             "claim.annotation" => {
                 let annotation = Annotation::from_object(cid.clone(), &object)?;
-                self.check_annotation(&annotation)?;
+                if class_rules {
+                    self.check_annotation(&annotation)?;
+                }
                 self.annotations.insert(key.clone(), annotation);
             }
             "doc" => {
@@ -271,15 +315,33 @@ impl Graph {
     ///
     /// Returns the first [`GraphError`] found.
     pub fn validate(&self) -> Result<(), GraphError> {
+        if let Some((_, reason)) = self.inadmissible().into_iter().next() {
+            return Err(reason);
+        }
+        self.validate_structure()
+    }
+
+    /// Every object inadmissible given the others, with why (Section 5.2):
+    /// what an authoring tool refuses, and a load reports and leaves out.
+    #[must_use]
+    pub fn inadmissible(&self) -> Vec<(Cid, GraphError)> {
+        let mut out = Vec::new();
         for annotation in self.annotations.values() {
             if annotation.kind() != "verdict" {
                 continue;
             }
-            if let Some(class) = self.class_of(&annotation.target().to_string()) {
-                Self::check_verdict(class, annotation.aspect())?;
+            if let Some(class) = self.class_of(&annotation.target().to_string())
+                && let Err(reason) = Self::check_verdict(class, annotation.aspect())
+            {
+                out.push((annotation.cid().clone(), reason));
             }
         }
-        self.check_families()?;
+        out.extend(self.inadmissible_at_definitions());
+        out
+    }
+
+    /// The rules a load holds every object to, whoever wrote it.
+    pub(crate) fn validate_structure(&self) -> Result<(), GraphError> {
         for anchor in self.anchors.values() {
             anchor.check_against(self)?;
         }

@@ -5,8 +5,9 @@
 //! `quantity`. These need other objects: the families an edition lists, the
 //! edition it supersedes, the family a `classifies` annotation names. Objects
 //! arrive in any order and a reader may hold only part of a release, so they
-//! run once a graph is loaded, and a family not held is left unchecked rather
-//! than treated as a disagreement.
+//! are found once a graph is loaded, and a family not held is left unchecked
+//! rather than treated as a disagreement. What they find is refused when
+//! authoring, and reported and left out when loading (Section 5.2).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -18,19 +19,23 @@ use crate::quantity::{Definition, EDITION_SECTIONS, Edition, Family, Tally};
 use crate::view::{ProseClaim, RelationKind};
 
 impl Graph {
-    /// Refuse an edition its families or predecessors disagree with, a
-    /// `classifies` annotation placing something under no class of a family,
-    /// and any argument about or judgement of a family or an edition.
-    pub(crate) fn check_families(&self) -> Result<(), GraphError> {
-        self.check_undebated()?;
+    /// What Section 5.9.1 makes inadmissible, each with why: an edition its
+    /// families or predecessors disagree with, a `classifies` annotation
+    /// placing something under no class of a family, and any argument about
+    /// or judgement of a definition at a PDC code.
+    pub(crate) fn inadmissible_at_definitions(&self) -> Vec<(Cid, GraphError)> {
+        let mut out = self.debated_definitions();
         for claim in self.prose_claims() {
-            if let Some(Definition::Edition(edition)) = claim.defines() {
-                self.check_edition(claim, edition).map_err(|reason| {
+            if let Some(Definition::Edition(edition)) = claim.defines()
+                && let Err(reason) = self.check_edition(claim, edition)
+            {
+                out.push((
+                    claim.cid().clone(),
                     GraphError::EditionDisagrees {
                         edition: claim.cid().to_string(),
                         reason,
-                    }
-                })?;
+                    },
+                ));
             }
         }
         for annotation in self.annotations_of_kind("classifies") {
@@ -46,43 +51,48 @@ impl Graph {
             };
             let aspect = annotation.aspect();
             if !family.classes().any(|c| Some(c.pdc.as_str()) == aspect) {
-                return Err(GraphError::ClassifiedUnderNoClass {
-                    family: subject.to_string(),
-                    found: aspect.map(str::to_owned),
-                });
+                out.push((
+                    annotation.cid().clone(),
+                    GraphError::ClassifiedUnderNoClass {
+                        family: subject.to_string(),
+                        found: aspect.map(str::to_owned),
+                    },
+                ));
             }
         }
-        Ok(())
+        out
     }
 
-    /// A family or an edition is a stipulation: it changes by a new version,
-    /// never by debate. A target not held is not known to be one, and is
-    /// checked by whoever holds it.
-    fn check_undebated(&self) -> Result<(), GraphError> {
-        let refuse = |kind: &str, target: &Cid| {
-            let stipulated = matches!(
+    /// A definition at a PDC code is a stipulation: it changes by a new
+    /// version, never by debate (R6). A target not held is not known to be
+    /// one, and is checked by whoever holds it.
+    fn debated_definitions(&self) -> Vec<(Cid, GraphError)> {
+        let stipulated = |target: &Cid| {
+            matches!(
                 self.prose_claim(target).and_then(ProseClaim::defines),
-                Some(Definition::Family(_) | Definition::Edition(_))
-            );
-            if stipulated {
-                return Err(GraphError::StipulationDebated {
-                    kind: kind.to_owned(),
-                    target: target.to_string(),
-                });
-            }
-            Ok(())
+                Some(Definition::Concept { .. } | Definition::Family(_) | Definition::Edition(_))
+            )
         };
+        let refused = |kind: &str, target: &Cid| GraphError::StipulationDebated {
+            kind: kind.to_owned(),
+            target: target.to_string(),
+        };
+        let mut out = Vec::new();
         for kind in [RelationKind::Disputes, RelationKind::Supports] {
             for relation in self.relations_of_kind(kind) {
-                refuse(kind.id(), relation.to())?;
+                if stipulated(relation.to()) {
+                    out.push((relation.cid().clone(), refused(kind.id(), relation.to())));
+                }
             }
         }
         for kind in ["assessment", "verdict", "critique"] {
             for annotation in self.annotations_of_kind(kind) {
-                refuse(kind, annotation.target())?;
+                if stipulated(annotation.target()) {
+                    out.push((annotation.cid().clone(), refused(kind, annotation.target())));
+                }
             }
         }
-        Ok(())
+        out
     }
 
     /// The family `cid` defines, if it is held and defines one.

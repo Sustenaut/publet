@@ -213,13 +213,13 @@ def _debates(name: str, target: bytes, aspect: str | None) -> dict:
     """One case per kind of argument or judgement against `target`."""
     out = {}
     for kind in ("disputes", "supports"):
-        out[f"reject-{name}-{kind}"] = (
+        out[f"drop-{name}-{kind}"] = (
             [target, GROUNDS, argued(kind, cid_of(target), aspect)],
             f"a `{kind}` cannot target")
     for kind, value in _ANNOTATIONS.items():
         # Section 5.2 refuses a verdict on any definitional claim, first.
         rule = "definitional" if kind == "verdict" else f"a `{kind}` cannot target"
-        out[f"reject-{name}-{kind}"] = (
+        out[f"drop-{name}-{kind}"] = (
             [target, annotation(kind, cid_of(target), value, aspect)], rule)
     return out
 
@@ -268,6 +268,13 @@ def revision(author: str) -> list[bytes]:
     return [family, newer, edge]
 
 
+def _argued_proposal() -> list[bytes]:
+    """A proposal, with an argument for it and a reply on its relation."""
+    objects = revision(OTHER_KEY)
+    edge = cid_of(objects[-1])
+    return [*objects, GROUNDS, argued("supports", edge), argued("disputes", edge)]
+
+
 def _delegated_revision() -> list[bytes]:
     return [*revision(OTHER_KEY), obj("claim.relation", STEWARD, CREATED, [
         ("kind", text("delegates")), ("from", text(STEWARD)), ("to", text(OTHER_KEY)),
@@ -275,7 +282,9 @@ def _delegated_revision() -> list[bytes]:
         ("scope", encode(_SCOPE))])]
 
 
-# Case name -> (the objects, what a refusal must name). `None` must load.
+# Case name -> (the objects, what a refusal must name). `None` must load whole.
+# A `reject-` case makes the load fail: an object that cannot be read. A `drop-`
+# case loads with one object left out and reported (Section 5.2).
 def cases() -> dict[str, tuple[list[bytes], str | None]]:
     out: dict[str, tuple[list[bytes], str | None]] = {}
 
@@ -319,41 +328,41 @@ def cases() -> dict[str, tuple[list[bytes], str | None]]:
         _pair(*release(edit=_set("counts", "main", "families", 9))), "defines.counts")
 
     # An edition against its families.
-    out["reject-edition-count-of-classes"] = (
+    out["drop-edition-count-of-classes"] = (
         _pair(*release(edit=_set("counts", "main", "classes", 9))), "its counts give `main`")
-    out["reject-edition-count-of-auxiliaries-in-total"] = (
+    out["drop-edition-count-of-auxiliaries-in-total"] = (
         _pair(*release(edit=_set("counts", "total", "auxiliaries", 9))), "its counts give `total`")
-    out["reject-edition-child-not-flagged"] = (
+    out["drop-edition-child-not-flagged"] = (
         _pair(*release(_with("----", lambda f: f["members"][0].pop("children")))),
         "6 heads a family and has no `children` flag")
-    out["reject-edition-flag-with-no-family"] = (
+    out["drop-edition-flag-with-no-family"] = (
         _pair(*release(_with("6", lambda f: f["members"][0].update(children=True)))),
         "63 has a `children` flag and no family under it")
-    out["reject-edition-undefined-grouping"] = (
+    out["drop-edition-undefined-grouping"] = (
         _pair(*release(_with("6", lambda f: f.update(grouping=7)))),
         "names the grouping 7, which the edition does not define")
-    out["reject-edition-parent-disagrees"] = (
+    out["drop-edition-parent-disagrees"] = (
         _pair(*release(_with("6", lambda f: f.update(parent="7")))),
         "the family listed under 6 states the parent")
-    out["reject-edition-top-with-parent"] = (
+    out["drop-edition-top-with-parent"] = (
         _pair(*release(_with(None, lambda f: f.update(parent="0")))),
         "the top family states the parent")
 
     def code_twice(fam):
         fam["members"].append({"pdc": "(1/9)", "name": "Place, again"})
-    out["reject-edition-code-in-two-families"] = (
+    out["drop-edition-code-in-two-families"] = (
         _pair(*release(_with("6", code_twice))), "define (1/9) twice")
 
     # An edition against the one it supersedes.
-    out["reject-edition-group-lost-a-head"] = (
+    out["drop-edition-group-lost-a-head"] = (
         _superseding(_lost_a_head),
         'group 1 lost "\\"...\\""')
-    out["reject-edition-number-reused"] = (
+    out["drop-edition-number-reused"] = (
         _superseding(_set("groups", 1, "heads", ["(4)"])),
         "group 2 is reused with a different meaning")
-    out["reject-edition-grouping-lost-a-group"] = (
+    out["drop-edition-grouping-lost-a-group"] = (
         _superseding(_one_fewer_heads), "grouping 2 lost 1")
-    out["reject-edition-number-dropped"] = (
+    out["drop-edition-number-dropped"] = (
         _superseding(_drop_grouping), "grouping 3 of the edition it supersedes is gone")
 
     # A stipulation changes by a new version and is never debated.
@@ -362,10 +371,17 @@ def cases() -> dict[str, tuple[list[bytes], str | None]]:
     out.update({k + "-on-a-code": v for k, v in _debates("family", family, "63").items()})
     _, edition = release()
     out.update(_debates("edition", edition, None))
+    concept = claim("63: agriculture.", {"sort": "concept", "pdc": "63", "name": "agriculture"})
+    out.update(_debates("concept", concept, None))
+    placed = publet(STEWARD, CREATED, "normative", "Grow it here.")
+    out["drop-classifies-under-no-class"] = (
+        [family, placed, annotation("classifies", cid_of(placed), {"subject": cid_of(family)}, "64")],
+        "must name one of its codes")
     out["accept-family-allowed-uses"] = (_allowed_uses(), None)
     out["accept-family-revised-by-its-steward"] = (revision(STEWARD), None)
     out["accept-family-revised-by-a-delegate"] = (_delegated_revision(), None)
     out["accept-family-change-proposed-by-another-key"] = (revision(OTHER_KEY), None)
+    out["accept-proposal-argued-on-its-relation"] = (_argued_proposal(), None)
     return out
 
 

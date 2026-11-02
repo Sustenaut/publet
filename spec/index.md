@@ -286,7 +286,7 @@ governs.
 | **R3** | **Detached attestation.** Anything a party asserts *about* an object is a separate object signed by that party. No object contains another party's signature or judgement. |
 | **R4** | **Declared scope.** Every assertion states the conditions under which its author asserts it. |
 | **R5** | **Declared class.** Every assertion states its claim class. The class determines what evidence is required and which judgements are admissible. |
-| **R6** | **Open annotation.** Anyone may publish a relation or annotation targeting any object. No permission is required and none can be withheld. |
+| **R6** | **Open annotation.** Anyone may publish a relation or annotation targeting any object. No permission is required and none can be withheld. The one exception is a definition at a PDC code (a concept, family or edition): it may not be the target of `disputes`, `supports`, `assessment`, `verdict` or `critique`, and changes only by `supersedes` (Section 5.9.1). |
 | **R7** | **Viewpoint relativity.** Standing is computed relative to a declared trust policy and snapshot. There is no network-wide standing, and no key carries weight that no trust path reaches. |
 | **R8** | **Reproducible evaluation.** Evaluation is deterministic: the same policy over the same snapshot yields bit-identical results in every conformant implementation. |
 | **R9** | **Evidence dominance.** Proof settles formal claims; independent reproduction settles empirical claims. No quantity of endorsement substitutes for either. |
@@ -519,8 +519,21 @@ Implementations MUST reject a verdict annotation targeting a
 `definitional`, `normative`, `expressive`, or `performative` claim. For
 `attributive` and `archival`, a verdict's `aspect` MUST be `provenance`. A
 claim about the *content* of a quoted or archived statement is made by
-publishing an `empirical` claim asserting it, and contesting that. A PDC
-family or edition admits no judgement or argument at all (Section 5.9.1).
+publishing an `empirical` claim asserting it, and contesting that. A
+definition at a PDC code admits no judgement or argument at all (R6, Section
+5.9.1).
+
+**Rejecting an object.** Where this specification says to reject an object for
+what it targets, or for how it disagrees with other objects, what rejection
+means depends on the act. An authoring tool MUST refuse to create the object.
+An implementation loading objects it did not write, which any party may have
+published, MUST NOT accept or present the object, MUST report it with its CID
+and the reason, and MUST go on to load the rest: one object must not make a
+replica unreadable. This applies to a verdict refused above, to every argument
+or judgement refused at a PDC definition, to a `classifies` annotation under no
+class, and to an edition that disagrees with its families or predecessors (all
+Section 5.9.1). The object remains a member of any domain that holds it, and a
+node goes on serving it (R12).
 
 A **performative** claim is not true or false, because asserting it is
 what does the thing: a retraction does not describe a withdrawal, it
@@ -995,24 +1008,32 @@ and `scope`, and with one `content`, a single sentence naming the parent,
 such as "The PDC classes directly under 63 Agriculture, forestry, farming."
 The atomicity tests of Section 5.7 apply to that sentence, not to the members.
 
-A family is a stipulation: it says what the codes of this classification
-mean, and there is nothing in it to argue for or against, only something to
-change. It changes by a new version, never by debate. An implementation MUST
-reject a `disputes` or `supports` relation, and an `assessment`, `verdict` or
-`critique` annotation, whose target is a family or an edition, with or without
-an `aspect` naming a code. This is the admissibility R5 gives a class, as
-Section 5.2 applies it to a verdict; R6 still leaves anyone free to do what
-answers a stipulation, which is to propose a change or publish a rival.
+A definition at a PDC code, whether a `concept`, a family or an edition, is a
+stipulation: it says what the codes of this classification mean, and there is
+nothing in it to argue for or against, only something to change. It changes by
+a new version, never by debate. An implementation MUST reject a `disputes` or
+`supports` relation, and an `assessment`, `verdict` or `critique` annotation,
+whose target is such a definition, with or without an `aspect` naming a code
+(R6; Section 5.2 says what rejecting means).
 
-A new version of a family is a new object plus `supersedes` (R1). It is
-authoritative when signed by the key that signed the family or that key's
-`lineage` delegate (Section 10.6). From any other key it is a proposed change,
-which clients MUST show as a proposal (Section 6.1) until the steward publishes
-it. Giving a leaf its first child signs two families: the new one, and its
-parent's, for the `children` flag. Two keys publishing competing definitions
-at one code is not a debate on either: Section 9.2 compares the definitions,
-and a dispute between claims resting on them reports the divergence or
-staleness there as for any other definitions.
+A new version is a new object plus `supersedes` (R1). It is authoritative when
+signed by the key that signed the definition or that key's `lineage` delegate
+(Section 10.6). Giving a leaf its first child signs two families: the new one,
+and its parent's, for the `children` flag. Two keys publishing competing
+definitions at one code is not a debate on either: Section 9.2 compares the
+definitions, and a dispute between claims resting on them reports the
+divergence or staleness there as for any other definitions.
+
+**Proposing a change.** Anyone may propose a new definition, with an argument
+for it. A proposal is the new family, or concept, and a `supersedes` relation
+from it to the current one, by a key other than the steward or its delegate.
+Clients MUST show it as a proposal (Section 6.1) until the steward or its
+delegate publishes it, by a `supersedes` relation of their own. The argument is
+a separate claim, with a `supports` relation from it to the proposal's
+`supersedes` relation, and anyone may `supports` or `disputes` that relation in
+turn, naming grounds as any dispute does. The relation is what is argued: it
+asserts that one definition should replace another, which is a question, where
+neither definition is. Neither definition can be argued with directly.
 
 An implementation MUST reject a family in which a code appears more than
 once across `members` and `auxiliaries`, in which `parent` is itself a
@@ -1037,8 +1058,8 @@ claims do.
 **PDC editions.** An edition is a `definitional` claim, signed by its
 steward with purpose `authored`, because a release is an assertion of which
 definitions make up the PDC: it moves forward by `supersedes`, so the release
-history is a lineage, and it can be anchored as any claim can. Like a family
-it is changed and not debated.
+history is a lineage, and it can be anchored as any claim can. It is changed
+and not debated, as any definition at a PDC code is.
 
 `sections` lists every family but the top one by its exact CID, keyed by its
 parent's code: `main` for the classes, `common-auxiliaries` for the branch
@@ -1093,7 +1114,8 @@ an extract claim (Section 5.9.8) is placed under a concept by a
 membership in the annotation's scope, and a calculation pooling values
 of a concept lists the concept in `depends`. Which values a calculation may pool is then
 the set of claims classified under the concept, and disputing a
-membership, a boundary, or the pooling is disputing one object each.
+membership or the pooling is disputing one object each. A boundary changes by
+a new version of the concept, or by proposing one.
 A family's class is placed the same way, by the family's CID and the code
 in `aspect`. Moving a concept to another code is future work (Appendix B).
 
@@ -1575,8 +1597,8 @@ lineage or a presupposition that a cycle would make incoherent.
 | `translates` | `from` translates `to` | `empirical` | Carries `method` (`human`/`machine`/`machine-post-edited`) and `fidelity` (`literal`/`idiomatic`/`adapted`). |
 | `implements` | `from` implements the interface `to` | `empirical` | Acyclic. `from` and `to` need not be signed claim objects (Section 6.2). |
 | `depends` | `from` presupposes `to` | `definitional` | Acyclic; implementations MUST reject cycle-closing edges. |
-| `disputes` | `from` argues against `to` | `performative` | MUST name a claim stating grounds. Inadmissible against a PDC family or edition (Section 5.9.1). |
-| `supports` | `from` argues for `to` | `performative` | Inadmissible for a PDC family or edition (Section 5.9.1). |
+| `disputes` | `from` argues against `to` | `performative` | MUST name a claim stating grounds. Inadmissible against a definition at a PDC code (Section 5.9.1). |
+| `supports` | `from` argues for `to` | `performative` | Inadmissible for a definition at a PDC code (Section 5.9.1). |
 | `equivalent` | `from` and `to` express the same claim | `definitional` | Not transitive; classes are computed per viewpoint. |
 | `retracts` | the signer withdraws a prior assertion | `performative` | Felicitous only from a key that signed the target. Does not delete; nodes MUST continue serving (R12). Clients MUST display it prominently. |
 | `derived-from` | `from` copies or adapts `to` | `attributive` | Required for forks. Acyclic. |
@@ -1602,8 +1624,8 @@ provenance claim, so a verdict on one must name the `provenance` aspect.
 The `performative` ones do something by being asserted. Their felicity
 conditions differ and are stated per kind above: only the key that signed
 an object may felicitously retract or supersede it, while anyone at all
-may dispute one, provided they name grounds, unless it is a PDC family or
-edition (Section 5.9.1). That difference is why
+may dispute one, provided they name grounds, unless it is a definition at a
+PDC code (Section 5.9.1). That difference is why
 felicity is stated per kind and not per class.
 
 ### 6.1 Lineage (R15)
@@ -2153,7 +2175,7 @@ review suggestions there, and approve changes within it. A group is
 founded by one steward, who nominates others; each nominee joins as any
 steward does, by `threshold` circle signatures plus the nominee's
 acceptance. Anyone may still publish a rival definition in the subtree or
-propose a change to one by `supersedes`, and a group's choice is a
+propose a change to one (Section 5.9.1), and a group's choice is a
 recommendation like any anchor's.
 
 No cap on anchors per key is specified. Anchor counts and acquisition rates
@@ -3465,7 +3487,7 @@ pool through it. A **relation concept** relates quantity **slots**, each a
 role bound to a quantity concept or a kind, as a `product` solvable for
 any slot or as `explicit`, solved by the calculations whose `solves`
 names it; those ways of solving it are its **interface** (Sections 5.9.1
-and 5.9.5).
+and 5.9.5). It is changed by a new version and never debated.
 
 **Family** — a `definitional` claim defining the classes directly under one
 class together, naming that class by PDC code as its `parent`; a class is

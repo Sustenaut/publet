@@ -325,6 +325,146 @@ def file_on_edition(runner, ctx, kind: str):
     return _file(runner, ctx, kind, ctx["edition"])
 
 
+@when(parsers.parse('I file a "{kind}" on the concept'), target_fixture="result")
+def file_on_concept(runner, ctx, kind: str):
+    return _file(runner, ctx, kind, ctx["concept"])
+
+
+def _as_key(runner, ctx, who: str):
+    """Make `who` this workspace's key, generating it the first time."""
+    secret = runner.cwd / ".publet" / "signing.key"
+    config = runner.cwd / ".publet" / "config"
+    keys = ctx.setdefault("keys", {})
+    current = ctx.get("as")
+    if current:
+        keys[current] = secret.read_text(), _author(config)
+        secret.unlink()
+    ctx["as"] = who
+    if who in keys:
+        text_, author = keys[who]
+        secret.write_text(text_)
+        config.write_text("".join(f"author={author}\n" if line.startswith("author=") else line + "\n"
+                                  for line in config.read_text().splitlines()))
+    else:
+        out = runner.run("pub", "sign", "--generate-key", "--principal=human", f"--label={who}")
+        assert out.code == 0, out.stderr
+
+
+def _author(config) -> str:
+    return next(l for l in config.read_text().splitlines()
+                if l.startswith("author=")).split("=", 1)[1]
+
+
+def _proposed(ctx) -> dict:
+    return ctx["proposal"]
+
+
+@given("a steward's family")
+def stewards_family(runner, ctx):
+    workspace(runner)
+    _as_key(runner, ctx, "steward")
+    assert _family(runner, ctx, "6").code == 0
+
+
+@when("a second key proposes a new family superseding it")
+def second_key_proposes(runner, ctx):
+    _as_key(runner, ctx, "proposer")
+    grown = copy.deepcopy(fv.FAMILIES["6"])
+    grown["members"].append({"pdc": "64", "name": "Home economics"})
+    proposed = _first(_define(runner, "The PDC classes directly under 6, as proposed.", grown))
+    edge = _first(runner.run("pub", "relate", "--kind=supersedes", f"--from={proposed}",
+                             f"--to={ctx['family']['6']}", "--scope=unconditional"))
+    ctx["proposal"] = {"family": proposed, "edge": edge}
+
+
+def _grounds(runner, content: str) -> str:
+    return _first(runner.run("pub", "compose", "--class=normative", f"--content={content}",
+                             "--scope=unconditional"))
+
+
+@when("the second key files an argument supporting the proposal's relation",
+      target_fixture="result")
+def argument_supports_relation(runner, ctx):
+    argument = _grounds(runner, "Class 64 belongs under 6.")
+    return runner.run("pub", "relate", "--kind=supports", f"--from={argument}",
+                      f"--to={_proposed(ctx)['edge']}", "--scope=unconditional")
+
+
+@when("a third claim disputes the proposal's relation", target_fixture="result")
+def claim_disputes_relation(runner, ctx):
+    grounds = _grounds(runner, "Class 64 belongs under 7.")
+    return runner.run("pub", "relate", "--kind=disputes", f"--from={grounds}",
+                      f"--to={_proposed(ctx)['edge']}", "--scope=unconditional")
+
+
+@when(parsers.parse('the second key files a "{kind}" on the {which} family'),
+      target_fixture="result")
+def argue_with_a_family(runner, ctx, kind: str, which: str):
+    target = ctx["family"]["6"] if which == "current" else _proposed(ctx)["family"]
+    return _file(runner, ctx, kind, target)
+
+
+@then("everything held loads with nothing left out")
+def nothing_left_out(runner):
+    _export(runner)
+    out = runner.run("pub-ls", "--dir=exported")
+    assert out.code == 0 and "warning" not in out.stderr, out.stderr
+
+
+def _export(runner):
+    where = runner.cwd / "exported"
+    where.mkdir(exist_ok=True)
+    held = runner.run("pub", "bundle", f"--out={where}-bundle-{len(list(runner.cwd.iterdir()))}")
+    assert held.code == 0, held.stderr
+    bundle = sorted(p for p in runner.cwd.iterdir() if p.name.startswith("exported-bundle-"))[-1]
+    for obj_path in (bundle / "pub" / "v1" / "object").iterdir():
+        (where / (obj_path.name.replace(":", "_") + ".cbor")).write_bytes(obj_path.read_bytes())
+    return where
+
+
+@when("the steward publishes the proposal")
+def steward_publishes(runner, ctx):
+    _as_key(runner, ctx, "steward")
+    _first(runner.run("pub", "relate", "--kind=supersedes", f"--from={_proposed(ctx)['family']}",
+                      f"--to={ctx['family']['6']}", "--scope=unconditional"))
+
+
+def _proposal_lineage(runner, ctx, mode: str) -> list[str]:
+    _export(runner)
+    out = runner.run("pub-lineage", "--dir=exported", mode, ctx["family"]["6"])
+    assert out.code == 0, out.stderr
+    return out.stdout.split()
+
+
+@then("the proposal is in the family's full lineage and not its authoritative one")
+def proposal_is_proposal(runner, ctx):
+    assert _proposed(ctx)["family"] in _proposal_lineage(runner, ctx, "--full")
+    assert _proposed(ctx)["family"] not in _proposal_lineage(runner, ctx, "--authoritative")
+
+
+@then("the proposal is in the family's authoritative lineage")
+def proposal_published(runner, ctx):
+    assert _proposed(ctx)["family"] in _proposal_lineage(runner, ctx, "--authoritative")
+
+
+@given(parsers.parse('a workspace holding a family vector "{case}" as a directory'))
+def vector_as_domain_dir(runner, ctx, case: str):
+    assert runner.run("pub", "init").code == 0
+    where = runner.cwd / "domain"
+    where.mkdir()
+    for path in (fv.VECTORS / case).iterdir():
+        (where / path.name).write_bytes(path.read_bytes())
+    ctx["domain"] = where
+    ctx["members"] = {p.stem.replace("_", ":") for p in where.glob("*.cbor")}
+
+
+@then("every object in the directory is a member of its generation")
+def all_are_members(runner, ctx, result):
+    line = next(l for l in result.stdout.splitlines() if l.startswith("generation"))
+    read = _bundles_of(runner, ctx["domain"])
+    assert set(read(line.split()[1])["object"]["body"]["added"]) == ctx["members"]
+
+
 @when("I dispute a claim resting on the family", target_fixture="result")
 def dispute_resting_claim(runner, ctx):
     resting = _first(runner.run("pub", "compose", "--class=normative", "--content=Grow it there.",
@@ -531,8 +671,17 @@ def vector_outcome(result, vector: str):
     table = dict(line.split("\t", 1) for line in
                  (fv.VECTORS / "EXPECTED.tsv").read_text().splitlines())
     rule = table[vector]
-    if rule == "accepted":
+    if vector.startswith("accept-"):
+        assert rule == "accepted", rule
+        assert result.code == 0 and "warning" not in result.stderr, result.stderr
+    elif vector.startswith("drop-"):
+        # One object left out and reported, by its CID, and the rest loaded.
         assert result.code == 0, result.stderr
+        assert rule in result.stderr, result.stderr
+        files = {p.stem.replace("_", ":") for p in (fv.VECTORS / vector).glob("*.cbor")}
+        listed = set(result.stdout.split())
+        assert listed < files and len(files - listed) == 1, (files, listed)
+        assert f"warning: dropped {next(iter(files - listed))}" in result.stderr, result.stderr
     else:
         assert result.code == 1, result.stdout
         assert rule in result.stderr, result.stderr

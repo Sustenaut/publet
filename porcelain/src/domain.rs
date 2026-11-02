@@ -236,7 +236,14 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     // relation pointing outside the directory is caught here, not by
     // whoever clones this domain expecting it to be self-contained.
     let graph = publet_graph::load::from_dir(&a.dir).map_err(|e| e.to_string())?;
-    let members: Vec<String> = graph.cids().into_iter().map(ToOwned::to_owned).collect();
+    // What the load left out is still in the directory, so still a member
+    // (Section 5.2).
+    let members: Vec<String> = graph
+        .cids()
+        .into_iter()
+        .map(ToOwned::to_owned)
+        .chain(graph.dropped().iter().map(|d| d.cid.to_string()))
+        .collect();
     publet_domain::check_depends_closure(&graph, &members).map_err(|e| e.to_string())?;
     for kind in &a.also {
         publet_domain::check_equivalence_closure(&graph, &members, *kind)

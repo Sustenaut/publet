@@ -27,7 +27,7 @@ pub use data::{ABOUT, Cell, Column, Data, Source, View, sources};
 pub use divergence::{Divergence, TermConflict, TermPartition, compare, partition};
 pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
-pub use graph::{Graph, Lineage, LineageView, MAX_ROTATIONS, ROTATION_PURPOSE};
+pub use graph::{Dropped, Graph, Lineage, LineageView, MAX_ROTATIONS, ROTATION_PURPOSE};
 pub use lint::{Finding, check, check_in};
 pub use quantity::{
     Binding, Boundary, Computes, ConceptForm, ConceptRelation, Definition, Describes,

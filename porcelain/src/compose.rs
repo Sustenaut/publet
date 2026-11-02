@@ -289,16 +289,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 ///
 /// Returns a message naming each problem that refuses the claim.
 pub(crate) fn check_quantities(store: &Store, cid: &Cid, bytes: &[u8]) -> Result<(), String> {
-    let mut objects = vec![(cid.clone(), bytes.to_vec())];
-    for cid_text in store.cids().map_err(|e| e.to_string())? {
-        if let Ok(held) = cid_text.parse::<Cid>()
-            && let Ok(Some(held_bytes)) = store.get(&held)
-        {
-            objects.push((held, held_bytes));
-        }
-    }
-    let graph = publet_graph::load::from_objects(objects)
-        .map_err(|e| format!("this claim was refused, so it was not stored: {e}"))?;
+    let graph = load_offering(store, cid, bytes, "this claim was refused")?;
     let Some(claim) = graph.prose_claim(cid) else {
         return Ok(());
     };
@@ -316,6 +307,47 @@ pub(crate) fn check_quantities(store: &Store, cid: &Cid, bytes: &[u8]) -> Result
         eprintln!("{problem}");
     }
     Ok(())
+}
+
+/// Everything held plus one new object, refusing it if it is inadmissible or
+/// would make something held inadmissible. A load reports such an object and
+/// goes on; an authoring tool refuses to create one (Section 5.2).
+///
+/// # Errors
+///
+/// Returns a message starting with `refused` if the object is refused, or if
+/// what is held cannot be read.
+fn load_offering(
+    store: &Store,
+    cid: &Cid,
+    bytes: &[u8],
+    refused: &str,
+) -> Result<publet_graph::Graph, String> {
+    let mut held = Vec::new();
+    for cid_text in store.cids().map_err(|e| e.to_string())? {
+        if let Ok(known) = cid_text.parse::<Cid>()
+            && let Ok(Some(known_bytes)) = store.get(&known)
+        {
+            held.push((known, known_bytes));
+        }
+    }
+    let mut all = held.clone();
+    all.push((cid.clone(), bytes.to_vec()));
+    let graph = publet_graph::load::from_objects_quietly(all)
+        .map_err(|e| format!("{refused}, so it was not stored: {e}"))?;
+    if !graph.dropped().is_empty() {
+        let before = publet_graph::load::from_objects_quietly(held)
+            .map_err(|e| format!("{refused}, so it was not stored: {e}"))?;
+        if let Some(new) = graph
+            .dropped()
+            .iter()
+            .find(|d| !before.dropped().iter().any(|b| b.cid == d.cid))
+        {
+            return Err(format!("{refused}, so it was not stored: {}", new.reason));
+        }
+    }
+    publet_graph::load::report(&graph);
+    Ok(graph)
 }
 
 /// `defines` and `computes` from `--defines` and `--computes` files.
@@ -640,17 +672,7 @@ pub(crate) fn offer_then_store(
     bytes: &[u8],
     refused: &str,
 ) -> Result<(), String> {
-    let mut objects = vec![(cid.clone(), bytes.to_vec())];
-    for cid_text in store.cids().map_err(|e| e.to_string())? {
-        let Ok(held) = cid_text.parse::<Cid>() else {
-            continue;
-        };
-        if let Ok(Some(held_bytes)) = store.get(&held) {
-            objects.push((held, held_bytes));
-        }
-    }
-    publet_graph::load::from_objects(objects)
-        .map_err(|e| format!("{refused}, so it was not stored: {e}"))?;
+    load_offering(store, cid, bytes, refused)?;
     store.put(cid, bytes).map_err(|e| e.to_string())
 }
 

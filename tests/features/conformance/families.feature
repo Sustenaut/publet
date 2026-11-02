@@ -174,6 +174,65 @@ Feature: A family defines the classes under one class, and an edition pins a rel
       | supports   |
       | assessment |
 
+  @must-2
+  Scenario Outline: A concept is changed and not debated
+    When I compose a concept at "63"
+    And I file a "<kind>" on the concept
+    Then it fails
+    And stderr mentions "a `<kind>` cannot target"
+
+    Examples:
+      | kind       |
+      | disputes   |
+      | supports   |
+      | assessment |
+
+  @must-5.2
+  Scenario: Authoring refuses what a load would report and leave out
+    When I compose the family under "6"
+    And I file a "disputes" on the family with no aspect
+    Then it fails
+    And stderr mentions "so it was not stored"
+
+  @must-5.2
+  Scenario: A dispute on a family does not stop the rest loading
+    Given the family vector "drop-family-disputes"
+    When I load the vector
+    Then the vector's outcome is what its table says
+    And stderr mentions "warning: dropped"
+
+  @must-5.2
+  Scenario: What a load leaves out is still a member of the domain it is in
+    Given a workspace holding a family vector "drop-family-disputes" as a directory
+    When I make a domain of the directory
+    Then it succeeds
+    And every object in the directory is a member of its generation
+
+  @must-5.9.1
+  Scenario: A proposal is argued on its supersedes relation, by two keys
+    Given a steward's family
+    When a second key proposes a new family superseding it
+    Then the proposal is in the family's full lineage and not its authoritative one
+    When the second key files an argument supporting the proposal's relation
+    Then it succeeds
+    When a third claim disputes the proposal's relation
+    Then it succeeds
+    When the second key files a "supports" on the current family
+    Then it fails
+    And stderr mentions "a `supports` cannot target"
+    When the second key files a "disputes" on the current family
+    Then it fails
+    And stderr mentions "a `disputes` cannot target"
+    When the second key files a "supports" on the proposed family
+    Then it fails
+    And stderr mentions "a `supports` cannot target"
+    When the second key files a "disputes" on the proposed family
+    Then it fails
+    And stderr mentions "a `disputes` cannot target"
+    Then everything held loads with nothing left out
+    When the steward publishes the proposal
+    Then the proposal is in the family's authoritative lineage
+
   @must-5.2
   Scenario: A verdict remains barred from an edition
     When I compose a release
@@ -316,6 +375,13 @@ Feature: A family defines the classes under one class, and an edition pins a rel
     Examples:
       | case |
       | accept-edition |
+      | drop-concept-disputes |
+      | drop-concept-supports |
+      | drop-concept-assessment |
+      | drop-concept-verdict |
+      | drop-concept-critique |
+      | drop-classifies-under-no-class |
+      | accept-proposal-argued-on-its-relation |
       | accept-edition-that-grew |
       | reject-family-code-twice |
       | reject-family-code-in-both-lists |
@@ -331,33 +397,33 @@ Feature: A family defines the classes under one class, and an edition pins a rel
       | reject-edition-empty-group |
       | reject-edition-count-of-groups |
       | reject-edition-count-of-listed-families |
-      | reject-edition-count-of-classes |
-      | reject-edition-count-of-auxiliaries-in-total |
-      | reject-edition-child-not-flagged |
-      | reject-edition-flag-with-no-family |
-      | reject-edition-undefined-grouping |
-      | reject-edition-parent-disagrees |
-      | reject-edition-top-with-parent |
-      | reject-edition-code-in-two-families |
-      | reject-edition-group-lost-a-head |
-      | reject-edition-number-reused |
-      | reject-edition-grouping-lost-a-group |
-      | reject-edition-number-dropped |
-      | reject-family-disputes |
-      | reject-family-disputes-on-a-code |
-      | reject-edition-disputes |
-      | reject-family-supports |
-      | reject-family-supports-on-a-code |
-      | reject-edition-supports |
-      | reject-family-assessment |
-      | reject-family-assessment-on-a-code |
-      | reject-edition-assessment |
-      | reject-family-verdict |
-      | reject-family-verdict-on-a-code |
-      | reject-edition-verdict |
-      | reject-family-critique |
-      | reject-family-critique-on-a-code |
-      | reject-edition-critique |
+      | drop-edition-count-of-classes |
+      | drop-edition-count-of-auxiliaries-in-total |
+      | drop-edition-child-not-flagged |
+      | drop-edition-flag-with-no-family |
+      | drop-edition-undefined-grouping |
+      | drop-edition-parent-disagrees |
+      | drop-edition-top-with-parent |
+      | drop-edition-code-in-two-families |
+      | drop-edition-group-lost-a-head |
+      | drop-edition-number-reused |
+      | drop-edition-grouping-lost-a-group |
+      | drop-edition-number-dropped |
+      | drop-family-disputes |
+      | drop-family-disputes-on-a-code |
+      | drop-edition-disputes |
+      | drop-family-supports |
+      | drop-family-supports-on-a-code |
+      | drop-edition-supports |
+      | drop-family-assessment |
+      | drop-family-assessment-on-a-code |
+      | drop-edition-assessment |
+      | drop-family-verdict |
+      | drop-family-verdict-on-a-code |
+      | drop-edition-verdict |
+      | drop-family-critique |
+      | drop-family-critique-on-a-code |
+      | drop-edition-critique |
       | accept-family-allowed-uses |
       | accept-family-revised-by-its-steward |
       | accept-family-revised-by-a-delegate |

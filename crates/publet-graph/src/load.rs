@@ -5,11 +5,12 @@
 //! index it. Putting it here rather than in each binary keeps the binaries
 //! thin and makes this testable.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use publet_core::{Cid, HashAlg, Object};
 
-use crate::{Graph, GraphError};
+use crate::{Dropped, Graph, GraphError};
 
 /// Why a directory could not be loaded.
 #[derive(Debug)]
@@ -39,7 +40,9 @@ impl std::error::Error for LoadError {}
 ///
 /// Each pair is verified against its identifier before it is indexed, and
 /// objects rejected on the first pass are retried once everything else is
-/// in, so arrival order does not decide validity.
+/// in, so arrival order does not decide validity. An object inadmissible
+/// given the others is reported on stderr and left out, and the rest loads
+/// (Section 5.2): [`Graph::dropped`] lists them.
 ///
 /// # Errors
 ///
@@ -49,32 +52,40 @@ pub fn from_objects<I>(objects: I) -> Result<Graph, LoadError>
 where
     I: IntoIterator<Item = (Cid, Vec<u8>)>,
 {
-    let mut graph = Graph::new();
-    let mut deferred = Vec::new();
-    for (cid, bytes) in objects {
-        let verified = Object::parse(&bytes)
-            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?
-            .verify(&cid)
-            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?;
-        if graph.insert(&cid, verified).is_err() {
-            deferred.push((cid, bytes));
-        }
-    }
-    for (cid, bytes) in deferred {
-        let verified = Object::parse(&bytes)
-            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?
-            .verify(&cid)
-            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?;
-        graph.insert(&cid, verified).map_err(LoadError::Graph)?;
-    }
-    graph.validate().map_err(LoadError::Graph)?;
+    let graph = from_objects_quietly(objects)?;
+    report(&graph);
     Ok(graph)
+}
+
+/// As [`from_objects`], leaving it to the caller to [`report`] what was left
+/// out: an authoring tool refuses what its own object would make inadmissible.
+///
+/// # Errors
+///
+/// As [`from_objects`].
+pub fn from_objects_quietly<I>(objects: I) -> Result<Graph, LoadError>
+where
+    I: IntoIterator<Item = (Cid, Vec<u8>)>,
+{
+    let items: Vec<_> = objects
+        .into_iter()
+        .map(|(cid, bytes)| (cid.to_string(), cid, bytes))
+        .collect();
+    build(&items)
+}
+
+/// Say on stderr what a load left out, and why (Section 5.2).
+pub fn report(graph: &Graph) {
+    for dropped in graph.dropped() {
+        eprintln!("warning: dropped {}: {}", dropped.cid, dropped.reason);
+    }
 }
 
 /// Load every `*.cbor` file under `dir` into a graph.
 ///
 /// Each file's bytes are verified against their own computed identifier, so
-/// a corrupted file is refused rather than indexed.
+/// a corrupted file is refused rather than indexed. What [`from_objects`]
+/// leaves out, this leaves out and reports too.
 ///
 /// # Errors
 ///
@@ -91,8 +102,7 @@ pub fn from_dir(dir: &Path) -> Result<Graph, LoadError> {
     // the same graph, and directory iteration order is not guaranteed.
     entries.sort();
 
-    let mut graph = Graph::new();
-    let mut deferred = Vec::new();
+    let mut items = Vec::with_capacity(entries.len());
     for path in entries {
         let bytes = std::fs::read(&path).map_err(LoadError::Io)?;
         let name = path.file_name().map_or_else(
@@ -100,27 +110,64 @@ pub fn from_dir(dir: &Path) -> Result<Graph, LoadError> {
             |n| n.to_string_lossy().into_owned(),
         );
         let cid = Cid::of(&bytes, HashAlg::Sha2_256);
-        let verified = Object::parse(&bytes)
-            .map_err(|e| LoadError::Object(name.clone(), e.to_string()))?
-            .verify(&cid)
-            .map_err(|e| LoadError::Object(name.clone(), e.to_string()))?;
-        // Relations referring to objects not yet loaded are retried once
-        // everything else is in, so file order does not decide validity.
-        if graph.insert(&cid, verified).is_err() {
-            deferred.push((cid, bytes, name));
+        items.push((name, cid, bytes));
+    }
+    let graph = build(&items)?;
+    report(&graph);
+    Ok(graph)
+}
+
+/// Index named objects, leaving out what is inadmissible given the rest.
+fn build(items: &[(String, Cid, Vec<u8>)]) -> Result<Graph, LoadError> {
+    let whole = index(items, &BTreeSet::new())?;
+    let inadmissible = whole.inadmissible();
+    if inadmissible.is_empty() {
+        // Rules whose subject is a target cannot be checked on insert,
+        // because objects arrive in whatever order they arrive.
+        whole.validate_structure().map_err(LoadError::Graph)?;
+        return Ok(whole);
+    }
+    // Indexed afresh, so no edge or lineage still rests on what is left out.
+    // Taking objects away only removes targets, so nothing new turns up.
+    let left_out: BTreeSet<String> = inadmissible.iter().map(|(c, _)| c.to_string()).collect();
+    let mut graph = index(items, &left_out)?;
+    graph.validate_structure().map_err(LoadError::Graph)?;
+    let mut dropped: Vec<Dropped> = inadmissible
+        .into_iter()
+        .map(|(cid, reason)| Dropped { cid, reason })
+        .collect();
+    dropped.sort_by_key(|d| d.cid.to_string());
+    graph.set_dropped(dropped);
+    Ok(graph)
+}
+
+/// Index every object but those in `skip`. Relations referring to objects
+/// not yet loaded are retried once everything else is in, so order does not
+/// decide validity.
+fn index(items: &[(String, Cid, Vec<u8>)], skip: &BTreeSet<String>) -> Result<Graph, LoadError> {
+    let verified = |name: &str, cid: &Cid, bytes: &[u8]| {
+        Object::parse(bytes)
+            .map_err(|e| LoadError::Object(name.to_owned(), e.to_string()))?
+            .verify(cid)
+            .map_err(|e| LoadError::Object(name.to_owned(), e.to_string()))
+    };
+    let mut graph = Graph::new();
+    let mut deferred = Vec::new();
+    for item @ (name, cid, bytes) in items {
+        if skip.contains(&cid.to_string()) {
+            continue;
+        }
+        if graph
+            .insert_for_load(cid, verified(name, cid, bytes)?)
+            .is_err()
+        {
+            deferred.push(item);
         }
     }
-    for (cid, bytes, name) in deferred {
-        let verified = Object::parse(&bytes)
-            .map_err(|e| LoadError::Object(name.clone(), e.to_string()))?
-            .verify(&cid)
-            .map_err(|e| LoadError::Object(name.clone(), e.to_string()))?;
-        graph.insert(&cid, verified).map_err(LoadError::Graph)?;
+    for (name, cid, bytes) in deferred {
+        graph
+            .insert_for_load(cid, verified(name, cid, bytes)?)
+            .map_err(LoadError::Graph)?;
     }
-    // Rules whose subject is a target cannot be checked on insert, because
-    // objects arrive in whatever order the directory yields. Without this
-    // call a class violation slips through whenever the annotation happens
-    // to sort before its target.
-    graph.validate().map_err(LoadError::Graph)?;
     Ok(graph)
 }

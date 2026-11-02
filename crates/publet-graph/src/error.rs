@@ -82,16 +82,16 @@ pub enum GraphError {
         reason: String,
     },
 
-    /// A relation or annotation argued about, or judged, a family or an
-    /// edition, which is changed and not debated (Section 5.9.1).
+    /// A relation or annotation argued about, or judged, a definition at a
+    /// PDC code, which is changed and not debated (R6, Section 5.9.1).
     #[error(
-        "a `{kind}` cannot target {target}: a PDC family or edition is a \
-         stipulation, changed by a new version and never debated (Section 5.9.1)"
+        "a `{kind}` cannot target {target}: a definition at a PDC code is a \
+         stipulation, changed by a new version and never debated (R6, Section 5.9.1)"
     )]
     StipulationDebated {
         /// The relation or annotation kind.
         kind: String,
-        /// The family or edition.
+        /// The concept, family or edition.
         target: String,
     },
 
