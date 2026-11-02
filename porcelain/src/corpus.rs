@@ -516,50 +516,67 @@ fn advance(cfg: &Config, author: &str, meta: &mut Meta) -> Result<Option<(u64, C
                 ));
             }
             let added: Vec<String> = members.difference(&before).cloned().collect();
+            let kept: Vec<String> = before.iter().cloned().collect();
             let domain: Cid = domain
                 .parse()
                 .map_err(|_| "bad domain in lock".to_owned())?;
             let parent: Cid = previous
                 .parse()
                 .map_err(|_| "bad generation in lock".to_owned())?;
-            let (cid, bytes) = crate::domain::next_generation(
+            let records = crate::domain::next_generations(
                 author,
                 &created,
                 &domain,
                 index + 1,
                 &parent,
-                &listed,
+                &kept,
                 &added,
             )?;
-            // Hold the record to the rules a reader will: it follows its
+            // Hold each record to the rules a reader will: it follows its
             // parent, and declares exactly the change in membership.
-            let record = Object::parse(&bytes)
-                .map_err(|e| e.to_string())?
-                .verify(&cid)
-                .map_err(|e| e.to_string())?
-                .into_inner();
-            let next =
-                publet_domain::Generation::from_object(&record).map_err(|e| e.to_string())?;
-            next.follows(&read_generation(&objects, previous)?)
+            let mut last = read_generation(&objects, previous)?;
+            let mut joined = before;
+            let mut newest = None;
+            for (cid, bytes) in &records {
+                let record = Object::parse(bytes)
+                    .map_err(|e| e.to_string())?
+                    .verify(cid)
+                    .map_err(|e| e.to_string())?
+                    .into_inner();
+                let next =
+                    publet_domain::Generation::from_object(&record).map_err(|e| e.to_string())?;
+                next.follows(&last).map_err(|e| e.to_string())?;
+                let mut after = joined.clone();
+                after.extend(next.added.iter().map(ToString::to_string));
+                next.check_against(
+                    &publet_algorithms::membership::Membership::new(joined),
+                    &publet_algorithms::membership::Membership::new(after.clone()),
+                )
                 .map_err(|e| e.to_string())?;
-            next.check_against(
-                &publet_algorithms::membership::Membership::new(before),
-                &publet_algorithms::membership::Membership::new(listed.clone()),
-            )
-            .map_err(|e| e.to_string())?;
-            write_generation(cfg, author, &created, &cid, &bytes)?;
-            (index + 1, cid)
+                write_generation(cfg, author, &created, cid, bytes)?;
+                newest = Some((next.index, cid.clone()));
+                joined = after;
+                last = next;
+            }
+            newest.ok_or("no generation record was made")?
         }
     } else {
         {
-            let ((domain, dbytes), (cid, gbytes)) = crate::domain::manifest_and_genesis(
+            let ((domain, dbytes), records) = crate::domain::manifest_and_genesis(
                 author, &cfg.label, cfg.bound, &created, &listed, size,
             )?;
             std::fs::create_dir_all(&objects).map_err(|e| e.to_string())?;
-            write_generation(cfg, author, &created, &cid, &gbytes)?;
+            for (cid, bytes) in &records {
+                write_generation(cfg, author, &created, cid, bytes)?;
+            }
             std::fs::write(objects.join(file_name(&domain)), &dbytes).map_err(|e| e.to_string())?;
             meta.domain = Some(domain.to_string());
-            (0, cid)
+            let last = records.len().saturating_sub(1);
+            let (cid, _) = records
+                .into_iter()
+                .next_back()
+                .ok_or("no generation record was made")?;
+            (last as u64, cid)
         }
     };
     meta.generation = Some((written.0, written.1.to_string()));

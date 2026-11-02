@@ -27,7 +27,10 @@
 //! commentary, so requiring it stays affordable.
 
 use publet_algorithms::membership::Membership;
-use publet_core::{Cid, HashAlg, Object, cbor::Value};
+use publet_core::{
+    Cid, HashAlg, Object,
+    cbor::{MAX_OBJECT_BYTES, Value},
+};
 use publet_graph::RelationKind;
 
 use crate::workspace::Workspace;
@@ -93,18 +96,23 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
     })
 }
 
-/// The manifest and genesis generation, with their CIDs and the root they
-/// both name.
+/// Most members one generation record lists. An identifier takes 67 bytes in
+/// `added`, so this keeps a record well inside the object size limit (Section
+/// 4.5) with room for its header.
+const MAX_ADDED_PER_RECORD: usize = 900;
+
+/// The manifest and the genesis generation records, with their CIDs and the
+/// root the manifest and the last record both name.
 struct Built {
     domain: (Cid, Vec<u8>),
-    generation: (Cid, Vec<u8>),
+    generations: Vec<Signed>,
     snapshot: Cid,
     root: publet_algorithms::log::Hash,
 }
 
-/// Author the domain manifest and genesis generation as one consistent
-/// pair -- both name the same snapshot CID, which is only guaranteed by
-/// building them together from one computed root.
+/// Author the domain manifest and genesis generation records together, so
+/// that the manifest and the last record name the same snapshot CID, which is
+/// only guaranteed by building them from one computed root.
 fn build_objects(author: &str, a: &Args, members: &[String], size: u64) -> Result<Built, String> {
     let root = Membership::new(members.iter().cloned()).root();
     let snapshot = Cid::from_digest(HashAlg::Sha2_256, &root)
@@ -129,23 +137,11 @@ fn build_objects(author: &str, a: &Args, members: &[String], size: u64) -> Resul
     // nothing as "removed", against an empty predecessor membership. It is
     // declared explicitly rather than left implicit so a second generation
     // later has something real to be checked against (Section 14.1.1).
-    let generation_bytes = Object::builder("generation", author)
-        .created(&a.created)
-        .field("domain", Value::Text(domain_cid.to_string()))
-        .field("index", Value::Uint(0))
-        .field("snapshot", Value::Text(snapshot.to_string()))
-        .field(
-            "added",
-            Value::Array(members.iter().map(|m| Value::Text(m.clone())).collect()),
-        )
-        .field("removed", Value::Array(Vec::new()))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let generation_cid = Cid::of(&generation_bytes, HashAlg::Sha2_256);
+    let generations = generation_chain(author, &a.created, &domain_cid, 0, None, &[], members)?;
 
     Ok(Built {
         domain: (domain_cid, domain_bytes),
-        generation: (generation_cid, generation_bytes),
+        generations,
         snapshot,
         root,
     })
@@ -154,7 +150,71 @@ fn build_objects(author: &str, a: &Args, members: &[String], size: u64) -> Resul
 /// An object's identifier and bytes.
 pub(crate) type Signed = (Cid, Vec<u8>);
 
-/// A domain manifest and its genesis generation over `members`, for a
+/// The consecutive generation records stating that `added` joined `before`,
+/// starting at `index` after `parent`. A record is an object, so a change too
+/// large for one is stated across as many as it takes (Section 14.1.1), each
+/// naming the membership root after its own part. An empty change is one
+/// record. Nothing is ever removed from a corpus -- objects are immutable and
+/// a corpus only grows -- so `removed` is empty.
+///
+/// # Errors
+///
+/// Returns a message if a root cannot be addressed, or a record cannot be
+/// built or would not fit the size limit.
+fn generation_chain(
+    author: &str,
+    created: &str,
+    domain: &Cid,
+    index: u64,
+    parent: Option<&Cid>,
+    before: &[String],
+    added: &[String],
+) -> Result<Vec<Signed>, String> {
+    let mut records = Vec::new();
+    let mut members = before.to_vec();
+    let mut parent = parent.cloned();
+    let parts: Vec<&[String]> = if added.is_empty() {
+        vec![added]
+    } else {
+        added.chunks(MAX_ADDED_PER_RECORD).collect()
+    };
+    for (index, part) in (index..).zip(parts) {
+        members.extend_from_slice(part);
+        let root = Membership::new(members.iter().cloned()).root();
+        let snapshot = Cid::from_digest(HashAlg::Sha2_256, &root)
+            .ok_or("could not address the membership root as a CID")?;
+        let mut builder = Object::builder("generation", author)
+            .created(created)
+            .field("domain", Value::Text(domain.to_string()))
+            .field("index", Value::Uint(index));
+        if let Some(parent) = &parent {
+            builder = builder.field("parent", Value::Text(parent.to_string()));
+        }
+        let bytes = builder
+            .field("snapshot", Value::Text(snapshot.to_string()))
+            .field(
+                "added",
+                Value::Array(part.iter().map(|m| Value::Text(m.clone())).collect()),
+            )
+            .field("removed", Value::Array(Vec::new()))
+            .build()
+            .map_err(|e| e.to_string())?;
+        if bytes.len() > MAX_OBJECT_BYTES {
+            return Err(format!(
+                "a generation record of {} members is {} bytes, over the {MAX_OBJECT_BYTES} byte \
+                 object limit",
+                part.len(),
+                bytes.len()
+            ));
+        }
+        let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+        parent = Some(cid.clone());
+        records.push((cid, bytes));
+    }
+    Ok(records)
+}
+
+/// A domain manifest and its genesis generation records over `members`, for a
 /// caller that has its own label, bound, and members rather than flags --
 /// `pub build` in a corpus, on the corpus's first generation.
 ///
@@ -168,7 +228,7 @@ pub(crate) fn manifest_and_genesis(
     created: &str,
     members: &[String],
     size: u64,
-) -> Result<(Signed, Signed), String> {
+) -> Result<(Signed, Vec<Signed>), String> {
     let args = Args {
         dir: std::path::PathBuf::new(),
         label: label.to_owned(),
@@ -177,43 +237,26 @@ pub(crate) fn manifest_and_genesis(
         also: Vec::new(),
     };
     let built = build_objects(author, &args, members, size)?;
-    Ok((built.domain, built.generation))
+    Ok((built.domain, built.generations))
 }
 
-/// The generation record after `parent`: `index`, the membership root of
-/// `members`, and the members `added` since. Nothing is ever removed from a
-/// corpus -- objects are immutable and a corpus only grows -- so `removed`
-/// is empty, and a membership that lost a member is refused by the caller.
+/// The generation records after `parent` stating that `added` joined `before`,
+/// the first at `index`. A membership that lost a member is refused by the
+/// caller.
 ///
 /// # Errors
 ///
-/// Returns a message if the root cannot be addressed or the object built.
-pub(crate) fn next_generation(
+/// As [`generation_chain`].
+pub(crate) fn next_generations(
     author: &str,
     created: &str,
     domain: &Cid,
     index: u64,
     parent: &Cid,
-    members: &[String],
+    before: &[String],
     added: &[String],
-) -> Result<(Cid, Vec<u8>), String> {
-    let root = Membership::new(members.iter().cloned()).root();
-    let snapshot = Cid::from_digest(HashAlg::Sha2_256, &root)
-        .ok_or("could not address the membership root as a CID")?;
-    let bytes = Object::builder("generation", author)
-        .created(created)
-        .field("domain", Value::Text(domain.to_string()))
-        .field("index", Value::Uint(index))
-        .field("parent", Value::Text(parent.to_string()))
-        .field("snapshot", Value::Text(snapshot.to_string()))
-        .field(
-            "added",
-            Value::Array(added.iter().map(|m| Value::Text(m.clone())).collect()),
-        )
-        .field("removed", Value::Array(Vec::new()))
-        .build()
-        .map_err(|e| e.to_string())?;
-    Ok((Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+) -> Result<Vec<Signed>, String> {
+    generation_chain(author, created, domain, index, Some(parent), before, added)
 }
 
 /// Build and store a domain's manifest and genesis generation.
@@ -266,24 +309,26 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     }
 
     let built = build_objects(&author, &a, &members, size)?;
-    // Section 14.1.1: the publishing key signs the record in the same step.
+    // Section 14.1.1: the publishing key signs each record in the same step.
     // A workspace with no key yet has only a placeholder `author`, which
     // nothing could be signed as; that is said below.
-    let signature = if crate::sign::has_key(&here) {
-        let (cid, bytes) = &built.generation;
-        Some(crate::sign::signature(
-            &here,
-            &author,
-            &a.created,
-            crate::build::PURPOSE,
-            cid,
-            bytes,
-        )?)
-    } else {
-        None
-    };
-    let mut written = vec![&built.domain, &built.generation];
-    written.extend(&signature);
+    let signed = crate::sign::has_key(&here);
+    let mut signatures = Vec::new();
+    if signed {
+        for (cid, bytes) in &built.generations {
+            signatures.push(crate::sign::signature(
+                &here,
+                &author,
+                &a.created,
+                crate::build::PURPOSE,
+                cid,
+                bytes,
+            )?);
+        }
+    }
+    let mut written = vec![&built.domain];
+    written.extend(&built.generations);
+    written.extend(&signatures);
     for (cid, bytes) in &written {
         let name = format!("{}.cbor", cid.to_string().replace(':', "_"));
         std::fs::write(a.dir.join(name), bytes).map_err(|e| e.to_string())?;
@@ -300,12 +345,27 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         "  \"{}\", {size} of {} declared bytes, closed under {closed_under_desc}",
         a.label, a.bound
     );
-    println!("generation  {}", built.generation.0);
-    println!("  index 0 (genesis), {} added, 0 removed", members.len());
-    match &signature {
-        Some((cid, _)) => println!("  signed    {cid}"),
-        None => {
-            println!("  unsigned: this workspace has no key; `pub sign --generate-key` makes one");
+    for (index, ((cid, _), part)) in built
+        .generations
+        .iter()
+        .zip(
+            members
+                .chunks(MAX_ADDED_PER_RECORD)
+                .chain(std::iter::once(&[][..])),
+        )
+        .enumerate()
+    {
+        println!("generation  {cid}");
+        println!(
+            "  index {index}{}, {} added, 0 removed",
+            if index == 0 { " (genesis)" } else { "" },
+            part.len()
+        );
+        match signatures.get(index) {
+            Some((signature, _)) => println!("  signed    {signature}"),
+            None => println!(
+                "  unsigned: this workspace has no key; `pub sign --generate-key` makes one"
+            ),
         }
     }
     println!();
@@ -318,4 +378,66 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     println!("  not a stored object -- the membership root itself, addressed as");
     println!("  a CID, exactly as `pub-store declare` will recompute it");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn members(count: usize) -> Vec<String> {
+        (0..count)
+            .map(|n| Cid::of(&n.to_le_bytes(), HashAlg::Sha2_256).to_string())
+            .collect()
+    }
+
+    #[test]
+    fn a_change_too_large_for_one_record_is_stated_across_several() {
+        let domain = Cid::of(b"domain", HashAlg::Sha2_256);
+        let author = Cid::of(b"author", HashAlg::Sha2_256).to_string();
+        let added = members(MAX_ADDED_PER_RECORD * 2 + 1);
+        let records = generation_chain(
+            &author,
+            "2026-11-02T00:00:00Z",
+            &domain,
+            0,
+            None,
+            &[],
+            &added,
+        )
+        .unwrap();
+        assert_eq!(records.len(), 3);
+        let mut previous: Option<Cid> = None;
+        let mut listed = Vec::new();
+        for (index, (cid, bytes)) in records.iter().enumerate() {
+            assert!(bytes.len() <= MAX_OBJECT_BYTES);
+            let object = Object::parse(bytes)
+                .unwrap()
+                .verify(cid)
+                .unwrap()
+                .into_inner();
+            let record = publet_domain::Generation::from_object(&object).unwrap();
+            assert_eq!(record.index, index as u64);
+            assert_eq!(record.parent, previous);
+            listed.extend(record.added.iter().map(ToString::to_string));
+            let root = Membership::new(listed.iter().cloned()).root();
+            assert_eq!(
+                record.snapshot,
+                Cid::from_digest(HashAlg::Sha2_256, &root).unwrap()
+            );
+            previous = Some(cid.clone());
+        }
+        assert_eq!(listed, added);
+    }
+
+    #[test]
+    fn a_change_that_fits_is_one_record_and_no_change_is_one_empty_record() {
+        let domain = Cid::of(b"domain", HashAlg::Sha2_256);
+        let author = Cid::of(b"author", HashAlg::Sha2_256).to_string();
+        let created = "2026-11-02T00:00:00Z";
+        let added = members(MAX_ADDED_PER_RECORD);
+        for list in [&added[..], &[]] {
+            let records = generation_chain(&author, created, &domain, 0, None, &[], list).unwrap();
+            assert_eq!(records.len(), 1);
+        }
+    }
 }
