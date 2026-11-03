@@ -518,9 +518,29 @@ impl Graph {
         false
     }
 
+    /// Every `sig` object in this graph whose `target` is `target`, whoever
+    /// wrote it and whether or not it verifies.
+    #[must_use]
+    pub fn signatures_of(&self, target: &Cid) -> Vec<&Object> {
+        let target = target.to_string();
+        self.objects
+            .values()
+            .filter(|o| {
+                o.kind() == "sig"
+                    && o.body().get("target").and_then(Value::as_text) == Some(target.as_str())
+            })
+            .collect()
+    }
+
     /// Whether a `sig` object in this graph, authored by the key `key`,
     /// signs the object `target` for `purpose` with a signature that
-    /// verifies against the public key `key`'s own object states.
+    /// verifies against the public key `key`'s own object states (Section
+    /// 4.4). The key object and the target must both be held.
+    #[must_use]
+    pub fn is_signed_by(&self, key: &Cid, target: &Cid, purpose: &str) -> bool {
+        self.signed_by(key, target, purpose)
+    }
+
     fn signed_by(&self, key: &Cid, target: &Cid, purpose: &str) -> bool {
         let Some(key_object) = self.objects.get(&key.to_string()) else {
             return false;

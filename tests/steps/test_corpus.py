@@ -290,3 +290,34 @@ def retired_kept(corpora):
     assert kept.parent == corpora.parent / ".publet" / "retired", kept
     assert kept.exists() and (corpora.parent / ".publet" / "signing.key").exists()
     assert kept.read_text() != (corpora.parent / ".publet" / "signing.key").read_text()
+
+
+@when("the signature of the parent's newest generation record is removed")
+def unsign_parent_head(corpora):
+    head = corpora.lock(corpora.parent)["corpus"]["generation"]["cid"]
+    objects = corpora.parent / "objects"
+    removed = 0
+    for path in objects.glob("*.cbor"):
+        data = path.read_bytes()
+        if b"\x64type\x63sig" in data and head.encode() in data:
+            path.unlink()
+            removed += 1
+    assert removed == 1, removed
+
+
+@when("I upgrade the child", target_fixture="result")
+def upgrade_child(corpora):
+    return corpora.pub(corpora.child, "corpus", "upgrade")
+
+
+@then(parsers.parse('the child is refused, naming "{fragment}"'))
+def child_refused(result, fragment: str):
+    assert result.returncode != 0, result.stdout
+    assert fragment in result.stderr, result.stderr
+
+
+@then("the child is not refused, and no unsigned generation is mentioned")
+def child_accepted(result):
+    assert result.returncode == 0, result.stderr
+    assert "unsigned" not in result.stderr, result.stderr
+

@@ -16,7 +16,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use publet_algorithms::membership::{Membership, verify as verify_membership};
-use publet_core::{Cid, HashAlg};
+use publet_core::{Cid, HashAlg, Object, cbor::Value};
 use publet_store::Store;
 
 /// State shared by the handlers.
@@ -144,14 +144,20 @@ async fn delta(
         return Err(StatusCode::BAD_REQUEST);
     }
     let mut objects = Vec::new();
+    let mut records = Vec::new();
     for index in (from + 1)..=to {
         let record = node
             .store
             .generation(&domain, index)
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             .ok_or(StatusCode::NOT_FOUND)?;
+        records.push(Cid::of(&record, HashAlg::Sha2_256).to_string());
         objects.push(record);
     }
+    // Each record's signatures, and the keys that made them, travel with it,
+    // so the client can check the records before it trusts them (Section
+    // 14.1.1).
+    objects.extend(signatures_of(&node.store, &records)?);
     // The objects each record adds travel with it, so applying the delta
     // needs no further round trips.
     let added = node
@@ -167,6 +173,39 @@ async fn delta(
         }
     }
     Ok(crate::wire::pack(&objects))
+}
+
+/// The `sig` objects held whose target is one of `records`, and the key
+/// objects of their authors.
+fn signatures_of(store: &Store, records: &[String]) -> Result<Vec<Vec<u8>>, StatusCode> {
+    let mut out = Vec::new();
+    let mut keys = std::collections::BTreeSet::new();
+    for text in store
+        .cids()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    {
+        let Ok(cid) = text.parse::<Cid>() else {
+            continue;
+        };
+        let Ok(Some(bytes)) = store.get(&cid) else {
+            continue;
+        };
+        let Ok(parsed) = Object::parse(&bytes) else {
+            continue;
+        };
+        let object = parsed.peek();
+        let target = object.body().get("target").and_then(Value::as_text);
+        if object.kind() == "sig" && target.is_some_and(|t| records.iter().any(|r| r == t)) {
+            keys.insert(object.author().to_string());
+            out.push(bytes);
+        }
+    }
+    for key in keys.iter().filter_map(|k| k.parse::<Cid>().ok()) {
+        if let Ok(Some(bytes)) = store.get(&key) {
+            out.push(bytes);
+        }
+    }
+    Ok(out)
 }
 
 /// Checkpoint origins a client may sync from.

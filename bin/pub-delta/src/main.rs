@@ -3,7 +3,9 @@
 //! The verification is the point. After applying a delta the client
 //! recomputes the membership root and compares it to what the final
 //! generation declares, so a delta that adds, omits, or substitutes
-//! anything is refused without the serving peer being trusted.
+//! anything is refused without the serving peer being trusted. Before that,
+//! each record's signature is checked against its author's key, found among
+//! the objects in the directory (Section 14.1.1).
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -41,6 +43,7 @@ fn main() -> ExitCode {
     }
 
     let mut records = Vec::new();
+    let mut held: Vec<(Cid, Vec<u8>)> = Vec::new();
     let entries = match std::fs::read_dir(&dir) {
         Ok(e) => e,
         Err(e) => {
@@ -66,19 +69,34 @@ fn main() -> ExitCode {
         let Ok(verified) = parsed.verify(&cid) else {
             continue;
         };
-        if verified.object().kind() != "generation" {
-            continue;
-        }
-        match Generation::from_object(verified.object()) {
-            Ok(g) => records.push(g),
-            Err(e) => {
+        let generation = (verified.object().kind() == "generation")
+            .then(|| Generation::from_object(verified.object()));
+        held.push((cid.clone(), bytes));
+        match generation {
+            None => {}
+            Some(Ok(g)) => records.push((g, cid)),
+            Some(Err(e)) => {
                 eprintln!("{e}");
                 return ExitCode::from(EXIT_VIOLATION);
             }
         }
     }
 
-    records.sort_by_key(|g| g.index);
+    records.sort_by_key(|(g, _)| g.index);
+    let graph = publet_domain::signature_graph(&held);
+    let chain: Vec<Cid> = records.iter().map(|(_, cid)| cid.clone()).collect();
+    match publet_domain::check_records(&graph, &chain) {
+        Ok(warnings) => {
+            for warning in warnings {
+                eprintln!("warning: {warning}");
+            }
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(EXIT_VIOLATION);
+        }
+    }
+    let records: Vec<Generation> = records.into_iter().map(|(g, _)| g).collect();
     if records.is_empty() {
         eprintln!("no generation records found in {}", dir.display());
         return ExitCode::from(EXIT_VIOLATION);
