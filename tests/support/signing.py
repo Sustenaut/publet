@@ -24,12 +24,13 @@ def bstr(data: bytes) -> bytes:
 class Key:
     """A key named by `seed`, with its `key` object (Section 10.1)."""
 
-    def __init__(self, seed: str):
+    def __init__(self, seed: str, principal: str | None = "human"):
         self.private = Ed25519PrivateKey.from_private_bytes(hashlib.sha256(seed.encode()).digest())
         public = self.private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
-        self.object = obj("key", cid_of(public), CREATED, [
-            ("alg", text("ed25519")), ("pubkey", bstr(public)), ("principal", text("human")),
-        ])
+        fields = [("alg", text("ed25519")), ("pubkey", bstr(public))]
+        if principal is not None:
+            fields.append(("principal", text(principal)))
+        self.object = obj("key", cid_of(public), CREATED, fields)
         self.cid = cid_of(self.object)
 
     def sign(self, target: bytes, purpose: str = "authored", value: bytes | None = None) -> bytes:

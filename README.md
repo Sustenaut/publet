@@ -228,6 +228,11 @@ status 1. A command that reads objects others may have written leaves such an
 object out, prints `warning: dropped <CID>: <reason>` to stderr, and goes on
 with status 0 (specification Section 5.2).
 
+`pub why` and `pub-index` count only evidence its author signed: an
+annotation, trust edge or dispute without a valid signature by the key it
+names is left out and named on stderr (specification Section 4.4). Sign your
+own with `pub sign --purpose=authored --target=CID`, or by publishing it.
+
 `pub why` never reduces a standing to a badge. It shows the weights, the
 divergence factor, the threshold, the reproduction counts against the
 replication floor, and a sentence naming which rule produced the outcome --

@@ -73,6 +73,10 @@ def workspace(bin_dir: Path, tmp_path: Path):
 def workspace_with_claim(bin_dir: Path, tmp_path: Path):
     p = Pub(bin_dir, tmp_path)
     assert p.run("init").returncode == 0
+    # A key the policy trusts, so the affirmations below can be signed and
+    # count (Section 4.4).
+    key = p.run("sign", "--generate-key", "--principal=human").stdout.decode().split()[1]
+    assert p.run("policy", f"--root={key}").returncode == 0
     out = p.run(
         "compose", "--class=empirical", f"--content={COHORT}",
         "--scope=adults 40-65, single-centre, unblinded",
@@ -99,6 +103,9 @@ def fifty_affirmations(pub):
             ("value", value),
         ])
         pub.add(ann)
+        # Section 4.4: an affirmation counts only when its author signed it.
+        signed = pub.run("sign", "--purpose=authored", f"--target={cid_of(ann)}")
+        assert signed.returncode == 0, text_of(signed)
 
 
 def _author_of(pub) -> str:

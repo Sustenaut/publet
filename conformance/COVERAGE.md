@@ -44,7 +44,7 @@ untested.
 | 4.1 | 1 | conformance/canonical_form.feature |
 | 4.2 | 2 | plumbing/cid.feature, plumbing/verify.feature |
 | 4.3 | 5 | plumbing/verify.feature |
-| 4.4 | 3 | conformance/signatures.feature |
+| 4.4 | 3 | conformance/evaluation_signatures.feature, conformance/signatures.feature |
 | 4.5 | 1 | conformance/object_size.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature |
 | 4.7 | 3 | conformance/blobs.feature |
 | 5.1 | 4 | conformance/immutability.feature, porcelain/compose.feature |

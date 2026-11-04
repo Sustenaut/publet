@@ -16,7 +16,9 @@ use std::process::ExitCode;
 
 use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg};
-use publet_eval::{Policy, class_of, evaluate, evidence_for, propagate, trust_edges};
+use publet_eval::{
+    Policy, class_of, evaluate, evidence_for, propagate, trust_edges, unverified_evidence,
+};
 use publet_graph::load;
 
 const EXIT_VIOLATION: u8 = 1;
@@ -80,6 +82,14 @@ fn main() -> ExitCode {
         .map_or_else(|| "<malformed>".to_owned(), |c| c.to_string());
 
     let weights = propagate(&policy, &trust_edges(&graph));
+    // Section 4.4: what its author did not sign does not count, and is said.
+    let left_out = unverified_evidence(&graph, None);
+    if !left_out.is_empty() {
+        eprintln!(
+            "warning: {} annotation(s) or claim(s) not counted, not signed by their author",
+            left_out.len()
+        );
+    }
 
     let mut rows = Vec::new();
     for cid_text in graph.cids() {
