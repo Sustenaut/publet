@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "`pub read` shows whether an object's author signed it, `pub read --json` gives it as `signature`, and each object summary `pub bundle` writes carries a `signature` of `verified`, `missing`, `invalid` or `not-applicable`"
-}
