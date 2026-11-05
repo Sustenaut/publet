@@ -1,4 +1,0 @@
-{
-  "category": "changed",
-  "change": "Readers refuse a domain whose generation records are not signed by its publisher: `pub-sync` before storing anything, `pub-delta`, and a corpus reading a pinned parent. A record with a signature that does not verify, signed by a key that does not continue the earlier records' signer, or unsigned after a signed one is refused; unsigned records from before a domain signed are accepted with a warning. `pub-serve` sends each record's signatures and keys with a delta"
-}
