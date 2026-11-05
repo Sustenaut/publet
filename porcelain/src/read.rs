@@ -170,8 +170,49 @@ fn fetch(
         .get(target)
         .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("not in your replica: {target}"))?;
-    let graph = crate::build::graph_of(&store)?;
+    let graph = signature_context(&store, target, &bytes)?;
     Ok((bytes, Some(mode), graph))
+}
+
+/// The graph a signature check of `target` needs, and nothing more: the
+/// object, the signatures naming it, and the keys of its author and of those
+/// signatures. Loading the whole store to answer one question about one
+/// object would make every read as slow as the store is large.
+fn signature_context(
+    store: &publet_store::Store,
+    target: &Cid,
+    bytes: &[u8],
+) -> Result<publet_graph::Graph, String> {
+    let wanted = target.to_string();
+    let mut objects = vec![(target.clone(), bytes.to_vec())];
+    let mut keys = std::collections::BTreeSet::new();
+    if let Ok(object) = publet_core::Object::parse(bytes) {
+        keys.insert(object.peek().author().to_string());
+    }
+    for text in store.cids().map_err(|e| e.to_string())? {
+        let Ok(cid) = text.parse::<Cid>() else {
+            continue;
+        };
+        let Some(held) = store.get(&cid).map_err(|e| e.to_string())? else {
+            continue;
+        };
+        let Ok(parsed) = publet_core::Object::parse(&held) else {
+            continue;
+        };
+        let object = parsed.peek();
+        if object.kind() == "sig"
+            && object.body().get("target").and_then(Value::as_text) == Some(wanted.as_str())
+        {
+            keys.insert(object.author().to_string());
+            objects.push((cid, held));
+        }
+    }
+    for key in keys.iter().filter_map(|k| k.parse::<Cid>().ok()) {
+        if let Some(held) = store.get(&key).map_err(|e| e.to_string())? {
+            objects.push((key, held));
+        }
+    }
+    publet_graph::load::from_objects_quietly(objects).map_err(|e| e.to_string())
 }
 
 /// What `pub read` says about whether the author signed the object.
