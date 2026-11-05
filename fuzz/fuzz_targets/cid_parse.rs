@@ -9,6 +9,10 @@ use publet_core::Cid;
 
 fuzz_target!(|text: &str| {
     if let Ok(cid) = text.parse::<Cid>() {
-        assert_eq!(cid.to_string(), text, "accepted a second text form of an identifier");
+        assert_eq!(
+            cid.to_string(),
+            text,
+            "accepted a second text form of an identifier"
+        );
     }
 });

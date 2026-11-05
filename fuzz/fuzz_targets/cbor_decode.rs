@@ -9,6 +9,10 @@ use publet_core::cbor::{decode, encode};
 
 fuzz_target!(|data: &[u8]| {
     if let Ok(value) = decode(data) {
-        assert_eq!(encode(&value), data, "accepted bytes that are not the canonical encoding");
+        assert_eq!(
+            encode(&value),
+            data,
+            "accepted bytes that are not the canonical encoding"
+        );
     }
 });

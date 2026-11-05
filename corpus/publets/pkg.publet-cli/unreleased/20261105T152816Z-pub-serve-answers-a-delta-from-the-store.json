@@ -1,0 +1,4 @@
+{
+  "category": "fixed",
+  "change": "pub-serve answers a delta from the store's new index of signatures by target, instead of reading every object it holds; a store made earlier builds the index once when opened"
+}
