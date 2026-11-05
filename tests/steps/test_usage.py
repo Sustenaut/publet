@@ -15,9 +15,29 @@ FIRST = "en.wiktionary.org/wiki/Merkle_tree"
 SECOND = "doc.rust-lang.org/reference"
 
 
+def _keyed(runner) -> None:
+    """Give the workspace a key its policy trusts, as `pub sign` makes one."""
+    out = runner.run("pub", "sign", "--generate-key", "--principal=human")
+    assert out.code == 0, out.stderr
+    key = out.stdout.split()[1]
+    assert runner.run("pub", "policy", f"--root={key}").code == 0
+
+
+def _annotate(runner, *args: str):
+    """`pub annotate`, then sign what it made: an annotation counts only when
+    its author signed it (Section 4.4)."""
+    out = runner.run("pub", "annotate", *args)
+    if out.code == 0:
+        signed = runner.run("pub", "sign", "--purpose=authored",
+                            f"--target={out.stdout.split()[0]}")
+        assert signed.code == 0, signed.stderr
+    return out
+
+
 @given("a workspace with a composed definition", target_fixture="defn")
 def composed_definition(runner, tmp_path):
     assert runner.run("pub", "init").code == 0
+    _keyed(runner)
     out = runner.run("pub", "compose", "--class=definitional",
                      "--scope=unconditional", f"--content={CONTENT}")
     assert out.code == 0, out.stderr
@@ -26,7 +46,7 @@ def composed_definition(runner, tmp_path):
 
 @when("I record a verdict on it", target_fixture="result")
 def record_verdict(runner, defn):
-    return runner.run("pub", "annotate", "--scope=unconditional", "--kind=verdict",
+    return _annotate(runner, "--scope=unconditional", "--kind=verdict",
                       f"--target={defn['cid']}", "--finding=affirm")
 
 
@@ -34,7 +54,7 @@ def record_verdict(runner, defn):
 def cite_two(runner, defn):
     last = None
     for source in (FIRST, SECOND):
-        last = runner.run("pub", "annotate", "--scope=unconditional", "--kind=usage",
+        last = _annotate(runner, "--scope=unconditional", "--kind=usage",
                           f"--target={defn['cid']}", f"--source={source}",
                           "--locator=sense 1")
         assert last.code == 0, last.stderr
@@ -45,7 +65,7 @@ def cite_two(runner, defn):
 def cite_twice(runner, defn):
     last = None
     for locator in ("sense 1", "sense 2"):
-        last = runner.run("pub", "annotate", "--scope=unconditional", "--kind=usage",
+        last = _annotate(runner, "--scope=unconditional", "--kind=usage",
                           f"--target={defn['cid']}", f"--source={FIRST}",
                           f"--locator={locator}")
         assert last.code == 0, last.stderr

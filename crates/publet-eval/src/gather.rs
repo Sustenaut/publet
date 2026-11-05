@@ -4,6 +4,12 @@
 //! This is the bridge, and it is deliberately thin: it reads what was
 //! signed and makes no judgements, because whose signatures count is a
 //! viewpoint question that belongs to the evaluation itself.
+//!
+//! What counts is what its author signed (Section 4.4). An object's `author`
+//! names a key but proves nothing, so an annotation, a trust edge or a
+//! dispute's grounds count only with a signature by that key that verifies
+//! against the key's own object. Anything else is left out, and
+//! [`unverified_evidence`] names it so a caller can say so.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -11,6 +17,50 @@ use publet_core::{Cid, Object, cbor::Value};
 use publet_graph::{Class, Graph, RelationKind};
 
 use crate::{Evidence, Reproducibility, Reproductions};
+
+/// The purpose evidence is signed for (Section 4.4).
+pub const PURPOSE: &str = "authored";
+
+/// Whether `object`'s author signed it, so that it may count.
+fn signed(graph: &Graph, cid: &Cid, object: &Object) -> bool {
+    graph.is_signed_by(object.author(), cid, PURPOSE)
+}
+
+/// Every object that would bear on `target`, or with `None` on any claim or
+/// on trust, that is left out because its author's signature is missing or
+/// does not verify (Section 4.4), in identifier order.
+#[must_use]
+pub fn unverified_evidence(graph: &Graph, target: Option<&Cid>) -> Vec<Cid> {
+    let target = target.map(ToString::to_string);
+    let mut out = Vec::new();
+    for cid_text in graph.cids() {
+        let Ok(cid) = cid_text.parse::<Cid>() else {
+            continue;
+        };
+        let Some(object) = graph.object(&cid) else {
+            continue;
+        };
+        let body = object.body();
+        let bears = match object.kind() {
+            "claim.annotation" => {
+                let kind = body.get("kind").and_then(Value::as_text);
+                let aimed = body.get("target").and_then(Value::as_text);
+                kind == Some("trusts")
+                    || (matches!(kind, Some("verdict" | "settled" | "assessment" | "usage"))
+                        && target.as_deref().is_none_or(|t| aimed == Some(t)))
+            }
+            "claim.prose" => graph
+                .out(RelationKind::Disputes, &cid)
+                .iter()
+                .any(|to| target.as_deref().is_none_or(|t| to == t)),
+            _ => false,
+        };
+        if bears && !signed(graph, &cid, object) {
+            out.push(cid);
+        }
+    }
+    out
+}
 
 /// Gather the evidence bearing on `target`.
 ///
@@ -49,7 +99,7 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         let Some(Value::Text(annotated)) = body.get("target") else {
             continue;
         };
-        if annotated != &target.to_string() {
+        if annotated != &target.to_string() || !signed(graph, &cid, object) {
             continue;
         }
         let author = object.author().to_string();
@@ -87,7 +137,9 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         if settled.contains(&cid.to_string()) {
             continue;
         }
-        if let Some(object) = graph.object(&cid) {
+        if let Some(object) = graph.object(&cid)
+            && signed(graph, &cid, object)
+        {
             evidence.argued_disputes.insert(object.author().to_string());
         }
     }
@@ -548,7 +600,9 @@ pub fn trust_edges(graph: &Graph) -> Vec<crate::TrustEdge> {
             continue;
         }
         let body = object.body();
-        if body.get("kind").and_then(Value::as_text) != Some("trusts") {
+        if body.get("kind").and_then(Value::as_text) != Some("trusts")
+            || !signed(graph, &cid, object)
+        {
             continue;
         }
         let Some(Value::Text(to)) = body.get("target") else {

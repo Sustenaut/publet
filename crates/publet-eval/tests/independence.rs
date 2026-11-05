@@ -6,9 +6,46 @@
 //! that guard. This is the coverage for it.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use publet_core::{Cid, HashAlg, Object, cbor::Value};
-use publet_eval::evidence_for;
+use publet_core::{Cid, HashAlg, Object, SigAlg, cbor::Value};
+use publet_eval::{PURPOSE, evidence_for, unverified_evidence};
 use publet_graph::{Graph, load};
+
+/// The keys these tests sign with, by seed. Evidence counts only when its
+/// author signed it (Section 4.4), so `graph` signs each object a key wrote.
+const SEEDS: [&str; 2] = ["K_a", "K_b"];
+
+fn secret(seed: &str) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    for (slot, byte) in out.iter_mut().zip(seed.bytes().cycle()) {
+        *slot = byte;
+    }
+    out
+}
+
+/// A graph of `objects`, with a signature by its author on each one that a
+/// key in [`SEEDS`] wrote.
+fn graph(objects: &[(Cid, Vec<u8>)]) -> Graph {
+    let mut all = objects.to_vec();
+    for (cid, bytes) in objects {
+        let author = Object::parse(bytes).unwrap().peek().author().clone();
+        let Some(seed) = SEEDS.iter().find(|s| human_key(s).0 == author) else {
+            continue;
+        };
+        let value = publet_core::sign(SigAlg::Ed25519, &secret(seed), PURPOSE, bytes).unwrap();
+        all.push(object(
+            "sig",
+            &author.to_string(),
+            "2026-04-01T00:00:00Z",
+            &[
+                ("target", Value::Text(cid.to_string())),
+                ("alg", Value::Text("ed25519".into())),
+                ("value", Value::Bytes(value)),
+                ("purpose", Value::Text(PURPOSE.into())),
+            ],
+        ));
+    }
+    load::from_objects(all).unwrap()
+}
 
 fn map(pairs: &[(&str, Value)]) -> Value {
     Value::Map(
@@ -30,13 +67,14 @@ fn object(kind: &str, author: &str, created: &str, body: &[(&str, Value)]) -> (C
 
 /// A key declaring a human principal. Only these count toward a floor (R11).
 fn human_key(seed: &str) -> (Cid, Vec<u8>) {
+    let public = publet_core::verifying_key(SigAlg::Ed25519, &secret(seed)).unwrap();
     object(
         "key",
-        &Cid::of(seed.as_bytes(), HashAlg::Sha2_256).to_string(),
+        &Cid::of(&public, HashAlg::Sha2_256).to_string(),
         "2026-01-01T00:00:00Z",
         &[
             ("alg", Value::Text("ed25519".into())),
-            ("pubkey", Value::Bytes(seed.as_bytes().to_vec())),
+            ("pubkey", Value::Bytes(public)),
             ("principal", Value::Text("human".into())),
         ],
     )
@@ -143,7 +181,7 @@ fn graph_with(affiliations: Vec<(Cid, Vec<u8>)>) -> (Graph, Cid) {
         reproduction(&second, "2026-03-02T00:00:00Z", &claim),
     ];
     objects.extend(affiliations);
-    (load::from_objects(objects).unwrap(), claim)
+    (graph(&objects), claim)
 }
 
 fn keys() -> (Cid, Cid) {
@@ -274,14 +312,13 @@ fn one_funder_is_one_party() {
             ),
         ],
     );
-    let graph = load::from_objects(vec![
+    let graph = graph(&[
         (one_key, one_bytes),
         (two_key, two_bytes),
         (claim.clone(), claim_bytes),
         funded_reproduction(&one, "2026-03-01T00:00:00Z", &claim, Some("grant-7")),
         funded_reproduction(&two, "2026-03-02T00:00:00Z", &claim, Some("grant-7")),
-    ])
-    .unwrap();
+    ]);
     assert_eq!(
         evidence_for(&graph, &claim)
             .reproductions
@@ -413,12 +450,38 @@ fn a_verified_settlement_on_a_formal_claim_is_proof_checked() {
         ],
     );
 
-    let graph = load::from_objects(vec![
+    let graph = graph(&[
         (author.clone(), author_key),
         (claim.clone(), claim_bytes),
         settlement,
-    ])
-    .unwrap();
+    ]);
 
     assert!(evidence_for(&graph, &claim).proof_checked);
+}
+
+// covers: evidence_for, unverified_evidence
+#[test]
+fn a_reproduction_its_author_did_not_sign_is_not_counted_and_is_named() {
+    let (first, first_key) = human_key("K_a");
+    let (claim, claim_bytes) = object(
+        "claim.prose",
+        &first.to_string(),
+        "2026-02-01T00:00:00Z",
+        &[
+            ("class", Value::Text("normative".into())),
+            ("lang", Value::Text("en".into())),
+            ("content", Value::Text("the rate should fall".into())),
+            ("depends", Value::Array(Vec::new())),
+        ],
+    );
+    let unsigned = reproduction(&first, "2026-03-01T00:00:00Z", &claim);
+    let left_out = unsigned.0.clone();
+    let graph = load::from_objects(vec![
+        (first.clone(), first_key),
+        (claim.clone(), claim_bytes),
+        unsigned,
+    ])
+    .unwrap();
+    assert_eq!(evidence_for(&graph, &claim).reproductions.consistent, 0);
+    assert_eq!(unverified_evidence(&graph, Some(&claim)), vec![left_out]);
 }

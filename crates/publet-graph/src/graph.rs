@@ -89,6 +89,38 @@ pub struct Graph {
     dropped: Vec<Dropped>,
 }
 
+/// The purpose an author signs what they publish for (Section 4.4).
+pub const AUTHORED: &str = "authored";
+
+/// Whether an object's author signed it, as a reader shows it (Section 4.4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SignatureStatus {
+    /// A signature by the key the object names as `author` verifies.
+    Verified,
+    /// No signature by its author is held, so it counts for nothing yet.
+    Missing,
+    /// A signature names the object and its author, and does not verify.
+    Invalid,
+    /// A signature or a key, which is not itself signed for publishing: a
+    /// signature is the attestation, and a key is what one is checked
+    /// against.
+    NotApplicable,
+}
+
+impl SignatureStatus {
+    /// The identifier a reader or a bundle shows.
+    #[must_use]
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Verified => "verified",
+            Self::Missing => "missing",
+            Self::Invalid => "invalid",
+            Self::NotApplicable => "not-applicable",
+        }
+    }
+}
+
 /// An object a load left out because it is inadmissible given the others,
 /// though the rest of what was loaded stands (Section 5.2).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -516,6 +548,86 @@ impl Graph {
             }
         }
         false
+    }
+
+    /// Whether `cid`'s author signed it (Section 4.4). Unknown objects read as
+    /// [`SignatureStatus::Missing`]. For every object at once, use
+    /// [`Graph::signature_statuses`], which reads the graph once.
+    #[must_use]
+    pub fn signature_status(&self, cid: &Cid) -> SignatureStatus {
+        match self.object(cid) {
+            Some(object) => self.status_from(object, &self.signatures_of(cid)),
+            None => SignatureStatus::Missing,
+        }
+    }
+
+    /// [`Graph::signature_status`] of every object, by identifier, in one
+    /// pass over the graph rather than one per object.
+    #[must_use]
+    pub fn signature_statuses(&self) -> BTreeMap<String, SignatureStatus> {
+        let mut by_target: BTreeMap<&str, Vec<&Object>> = BTreeMap::new();
+        for object in self.objects.values().filter(|o| o.kind() == "sig") {
+            if let Some(target) = object.body().get("target").and_then(Value::as_text) {
+                by_target.entry(target).or_default().push(object);
+            }
+        }
+        self.objects
+            .iter()
+            .map(|(cid, object)| {
+                let sigs = by_target.get(cid.as_str()).map_or(&[][..], Vec::as_slice);
+                (cid.clone(), self.status_from(object, sigs))
+            })
+            .collect()
+    }
+
+    /// An object's status, given the signatures naming it.
+    fn status_from(&self, object: &Object, sigs: &[&Object]) -> SignatureStatus {
+        if matches!(object.kind(), "sig" | "key") {
+            return SignatureStatus::NotApplicable;
+        }
+        let by_author: Vec<&&Object> = sigs
+            .iter()
+            .filter(|s| {
+                s.author() == object.author()
+                    && s.body().get("purpose").and_then(Value::as_text) == Some(AUTHORED)
+            })
+            .collect();
+        if by_author.iter().any(|s| self.verifies(s, object, AUTHORED)) {
+            SignatureStatus::Verified
+        } else if by_author.is_empty() {
+            SignatureStatus::Missing
+        } else {
+            SignatureStatus::Invalid
+        }
+    }
+
+    /// Whether `sig` is a valid signature over `target` for `purpose`, by
+    /// the key its own `author` names, against that key's held object.
+    fn verifies(&self, sig: &Object, target: &Object, purpose: &str) -> bool {
+        let Some(key) = self.objects.get(&sig.author().to_string()) else {
+            return false;
+        };
+        let text =
+            |o: &Object, k: &str| o.body().get(k).and_then(Value::as_text).map(str::to_owned);
+        if key.kind() != "key" || text(key, "alg").as_deref() != Some("ed25519") {
+            return false;
+        }
+        let (Some(Value::Bytes(public)), Some(Value::Bytes(value))) =
+            (key.body().get("pubkey"), sig.body().get("value"))
+        else {
+            return false;
+        };
+        text(sig, "purpose").is_some_and(|found| {
+            publet_core::verify(
+                SigAlg::Ed25519,
+                public,
+                value,
+                &found,
+                purpose,
+                target.bytes(),
+            )
+            .is_ok()
+        })
     }
 
     /// Every `sig` object in this graph whose `target` is `target`, whoever

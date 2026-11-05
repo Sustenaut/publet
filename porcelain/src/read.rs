@@ -46,12 +46,12 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     }
 
     let wanted = wanted.ok_or("a CID, or an object file, is required")?;
-    let (target, bytes, mode) = if let Ok(target) = wanted.parse::<Cid>() {
-        let (bytes, mode) = fetch(&target, dir.as_deref())?;
-        (target, bytes, mode)
+    let (target, bytes, mode, graph) = if let Ok(target) = wanted.parse::<Cid>() {
+        let (bytes, mode, graph) = fetch(&target, dir.as_deref())?;
+        (target, bytes, mode, Some(graph))
     } else if std::path::Path::new(wanted).is_file() {
         let (target, bytes) = from_file(std::path::Path::new(wanted))?;
-        (target, bytes, None)
+        (target, bytes, None, None)
     } else {
         return Err(format!(
             "{wanted} is neither a CID nor a file holding an object"
@@ -62,8 +62,11 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .verify(&target)
         .map_err(|e| e.to_string())?;
+    // Section 4.4: whether the author signed it, which decides whether it
+    // counts. A file read alone has nothing to check a signature against.
+    let signature = graph.as_ref().map(|g| g.signature_status(&target));
     if json {
-        return print_json(&target, &bytes, mode);
+        return print_json(&target, &bytes, mode, signature);
     }
     let object = object.object();
     let body = object.body();
@@ -72,6 +75,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     println!("type      {}", object.kind());
     println!("author    {}", object.author());
     println!("created   {}", object.created());
+    println!("signed    {}", signature_line(signature));
 
     // A relation or annotation asserts something about two other objects
     // (or one object and a value), and until now this printed nothing past
@@ -150,13 +154,13 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 fn fetch(
     target: &Cid,
     dir: Option<&std::path::Path>,
-) -> Result<(Vec<u8>, Option<crate::workspace::Mode>), String> {
+) -> Result<(Vec<u8>, Option<crate::workspace::Mode>, publet_graph::Graph), String> {
     if let Some(path) = dir {
         let graph = publet_graph::load::from_dir(path).map_err(|e| e.to_string())?;
         let object = graph
             .object(target)
             .ok_or_else(|| format!("not in {}: {target}", path.display()))?;
-        return Ok((object.bytes().to_vec(), None));
+        return Ok((object.bytes().to_vec(), None, graph));
     }
     let here = std::env::current_dir().map_err(|e| e.to_string())?;
     let ws = Workspace::open(&here)?;
@@ -166,7 +170,61 @@ fn fetch(
         .get(target)
         .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("not in your replica: {target}"))?;
-    Ok((bytes, Some(mode)))
+    let graph = signature_context(&store, target, &bytes)?;
+    Ok((bytes, Some(mode), graph))
+}
+
+/// The graph a signature check of `target` needs, and nothing more: the
+/// object, the signatures naming it, and the keys of its author and of those
+/// signatures. Loading the whole store to answer one question about one
+/// object would make every read as slow as the store is large.
+fn signature_context(
+    store: &publet_store::Store,
+    target: &Cid,
+    bytes: &[u8],
+) -> Result<publet_graph::Graph, String> {
+    let wanted = target.to_string();
+    let mut objects = vec![(target.clone(), bytes.to_vec())];
+    let mut keys = std::collections::BTreeSet::new();
+    if let Ok(object) = publet_core::Object::parse(bytes) {
+        keys.insert(object.peek().author().to_string());
+    }
+    for text in store.cids().map_err(|e| e.to_string())? {
+        let Ok(cid) = text.parse::<Cid>() else {
+            continue;
+        };
+        let Some(held) = store.get(&cid).map_err(|e| e.to_string())? else {
+            continue;
+        };
+        let Ok(parsed) = publet_core::Object::parse(&held) else {
+            continue;
+        };
+        let object = parsed.peek();
+        if object.kind() == "sig"
+            && object.body().get("target").and_then(Value::as_text) == Some(wanted.as_str())
+        {
+            keys.insert(object.author().to_string());
+            objects.push((cid, held));
+        }
+    }
+    for key in keys.iter().filter_map(|k| k.parse::<Cid>().ok()) {
+        if let Some(held) = store.get(&key).map_err(|e| e.to_string())? {
+            objects.push((key, held));
+        }
+    }
+    publet_graph::load::from_objects_quietly(objects).map_err(|e| e.to_string())
+}
+
+/// What `pub read` says about whether the author signed the object.
+fn signature_line(status: Option<publet_graph::SignatureStatus>) -> &'static str {
+    use publet_graph::SignatureStatus as S;
+    match status {
+        Some(S::Verified) => "yes, by its author",
+        Some(S::Missing) => "no: it counts towards no standing until its author signs it",
+        Some(S::Invalid) => "no: a signature by its author does not verify",
+        Some(_) => "not applicable: signatures and keys are not signed for publishing",
+        None => "not checked: a file read alone holds no key or signature to check against",
+    }
 }
 
 /// An object file's bytes and the identifier they hash to (Section 4.2).
@@ -201,11 +259,13 @@ fn print_json(
     target: &Cid,
     bytes: &[u8],
     mode: Option<crate::workspace::Mode>,
+    signature: Option<publet_graph::SignatureStatus>,
 ) -> Result<(), String> {
     let decoded = publet_core::cbor::decode(bytes).map_err(|e| e.to_string())?;
     let out = serde_json::json!({
         "cid": target.to_string(),
         "mode": mode.map(crate::workspace::Mode::label),
+        "signature": signature.map(publet_graph::SignatureStatus::id),
         "object": to_json(&decoded),
     });
     let text = serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?;

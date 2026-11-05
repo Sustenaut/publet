@@ -10,6 +10,7 @@ use publet_core::Cid;
 use publet_core::cbor::Value;
 use publet_eval::{
     Outcome, Policy, class_of, evaluate, evidence_for, propagate_within, trust_edges,
+    unverified_evidence,
 };
 use publet_graph::Class;
 use publet_graph::load;
@@ -59,6 +60,10 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let class = class_of(&graph, &target)
         .ok_or_else(|| format!("{target} is not a claim in your replica"))?;
     let evidence = evidence_for(&graph, &target);
+    // Section 4.4: what its author did not sign does not count, and is said.
+    for left_out in unverified_evidence(&graph, Some(&target)) {
+        eprintln!("warning: not counted: {left_out} is not signed by its author");
+    }
     // Trust confined to subjects applies only to something in one of them
     // (Section 18.5), so the target's own memberships are the context the
     // propagation runs in.

@@ -53,5 +53,15 @@ mutable_key_type = "deny"
 missing_errors_doc = "warn"
 missing_panics_doc = "warn"
 
+# Signatures are checked wherever objects are read (Section 4.4), and the
+# curve arithmetic is many times slower unoptimized: debug builds, and the
+# suite that runs them, would spend most of their time there.
+[profile.dev.package.curve25519-dalek]
+opt-level = 3
+[profile.dev.package.ed25519-dalek]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3
+
 [profile.release]
 overflow-checks = true

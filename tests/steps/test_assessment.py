@@ -15,9 +15,29 @@ CONTENT = "hash function: a function mapping data of arbitrary size to fixed-siz
 GROUNDS = "omits collision resistance, so it misleads in a security context"
 
 
+def _keyed(runner) -> None:
+    """Give the workspace a key its policy trusts, as `pub sign` makes one."""
+    out = runner.run("pub", "sign", "--generate-key", "--principal=human")
+    assert out.code == 0, out.stderr
+    key = out.stdout.split()[1]
+    assert runner.run("pub", "policy", f"--root={key}").code == 0
+
+
+def _annotate(runner, *args: str):
+    """`pub annotate`, then sign what it made: an annotation counts only when
+    its author signed it (Section 4.4)."""
+    out = runner.run("pub", "annotate", *args)
+    if out.code == 0:
+        signed = runner.run("pub", "sign", "--purpose=authored",
+                            f"--target={out.stdout.split()[0]}")
+        assert signed.code == 0, signed.stderr
+    return out
+
+
 @given("a workspace with a scoped definition", target_fixture="defn")
 def scoped_definition(runner, tmp_path):
     assert runner.run("pub", "init").code == 0
+    _keyed(runner)
     out = runner.run("pub", "compose", "--class=definitional",
                      "--scope=non-cryptographic contexts", f"--content={CONTENT}")
     assert out.code == 0, out.stderr
@@ -34,14 +54,14 @@ def _weights(body: str) -> list[str]:
 
 @when(parsers.parse('I assess it as "{verdict}"'), target_fixture="result")
 def assess(runner, defn, verdict: str):
-    return runner.run("pub", "annotate", "--scope=unconditional", "--kind=assessment",
+    return _annotate(runner, "--scope=unconditional", "--kind=assessment",
                       f"--target={defn['cid']}", f"--verdict={verdict}",
                       f"--grounds={GROUNDS}")
 
 
 @when("I assess it with no grounds", target_fixture="result")
 def assess_no_basis(runner, defn):
-    return runner.run("pub", "annotate", "--scope=unconditional", "--kind=assessment",
+    return _annotate(runner, "--scope=unconditional", "--kind=assessment",
                       f"--target={defn['cid']}", "--verdict=sound-in-scope")
 
 

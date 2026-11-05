@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pytest_bdd import given, parsers, scenarios, then, when
 
+from support.signing import Key
 from support.objects import (
     author_key, cbor_map, cid_of, head, obj, publet, relation, text, uint,
     write_store,
@@ -87,22 +88,26 @@ def _disputed_workspace(bin_dir, tmp_path, *, resolution_outcome, cover_grounds)
     """A claim, an argued dispute, and optionally a resolution covering it."""
     pub = bin_dir / "pub"
     store_bin = bin_dir / "pub-store"
-    assert subprocess.run([str(pub), "init"], capture_output=True,
-                          cwd=tmp_path).returncode == 0
-    config = (tmp_path / ".publet/config").read_text()
-    author = [l.split("=", 1)[1] for l in config.splitlines()
-              if l.startswith("author=")][0]
+    def run(*args: str) -> str:
+        proc = subprocess.run([str(pub), *args], capture_output=True, cwd=tmp_path, check=False)
+        assert proc.returncode == 0, proc.stderr
+        return proc.stdout.decode()
+
+    # The author's own key declares a human principal, for its verdicts and
+    # reproductions to carry, and the policy trusts it.
+    run("init")
+    author = run("sign", "--generate-key", "--principal=human").split()[1]
+    run("policy", f"--root={author}")
 
     def add(data: bytes) -> str:
         proc = subprocess.run(
             [str(store_bin), "--store=.publet/objects.redb", "add"],
             input=data, capture_output=True, cwd=tmp_path, check=False)
         assert proc.returncode == 0, proc.stderr
-        return proc.stdout.decode().strip()
-
-    # The author's own key must declare a human principal for its verdicts
-    # and reproductions to carry.
-    add(key_object("K_a", "human"))
+        cid = proc.stdout.decode().strip()
+        # Section 4.4: evidence counts only when its author signed it.
+        run("sign", "--purpose=authored", f"--target={cid}")
+        return cid
 
     claim = publet(author, "2026-09-12T10:00:00Z", "empirical", "the claim")
     grounds = publet(author, "2026-09-12T11:00:00Z", "empirical", "the grounds")
@@ -171,14 +176,15 @@ def _reproduced_workspace(bin_dir, tmp_path, principal: str):
     # this fixture used to do, and why it agreed with an implementation
     # that counted the same person twice.
     for i in range(2):
-        reproducer_key = key_object(f"reproducer-{principal}-{i}", principal)
-        reproducer = cid_of(reproducer_key)
-        add(reproducer_key)
-        add(obj("claim.annotation", reproducer, f"2026-09-12T13:0{i}:00Z", [
+        reproducer = Key(f"reproducer-{principal}-{i}", principal)
+        add(reproducer.object)
+        filed = obj("claim.annotation", reproducer.cid, f"2026-09-12T13:0{i}:00Z", [
             ("kind", text("settled")),
             ("target", text(ws["claim"])),
             ("value", cbor_map([("outcome", text("consistent"))])),
-        ]))
+        ])
+        add(filed)
+        add(reproducer.sign(filed))
     return ws
 
 
@@ -192,15 +198,16 @@ def _one_signer_twice(bin_dir, tmp_path):
         subprocess.run([str(store_bin), "--store=.publet/objects.redb", "add"],
                        input=data, capture_output=True, cwd=tmp_path, check=False)
 
-    reproducer_key = key_object("lone-reproducer", "human")
-    reproducer = cid_of(reproducer_key)
-    add(reproducer_key)
+    reproducer = Key("lone-reproducer")
+    add(reproducer.object)
     for i in range(2):
-        add(obj("claim.annotation", reproducer, f"2026-09-12T14:0{i}:00Z", [
+        filed = obj("claim.annotation", reproducer.cid, f"2026-09-12T14:0{i}:00Z", [
             ("kind", text("settled")),
             ("target", text(ws["claim"])),
             ("value", cbor_map([("outcome", text("consistent"))])),
-        ]))
+        ])
+        add(filed)
+        add(reproducer.sign(filed))
     return ws
 
 

@@ -17,7 +17,7 @@ mod gather;
 /// that happens to implement it.
 pub use publet_algorithms::{Fixed6, SCALE};
 
-pub use gather::{class_of, evidence_for, trust_edges};
+pub use gather::{PURPOSE, class_of, evidence_for, trust_edges, unverified_evidence};
 mod policy;
 mod propagate;
 

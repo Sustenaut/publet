@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "`pub why` and `pub-index` count only evidence whose author signed it: an annotation, trust edge or dispute without a valid signature by the key it names no longer counts towards a standing, and is named on stderr. A local annotation counts once you sign it"
+}
