@@ -256,6 +256,8 @@ impl ParentView {
         });
         let members = membership(&cfg.path.join("objects"), &pin.generation)
             .map_err(|e| format!("parent `{}`: {e}", cfg.alias))?;
+        check_parent_signatures(&cfg.path.join("objects"), &pin.generation)
+            .map_err(|e| format!("parent `{}`: {e}", cfg.alias))?;
         Ok(Self {
             alias: cfg.alias.clone(),
             root: cfg.path.clone(),
@@ -367,6 +369,51 @@ fn membership(objects: &Path, generation: &str) -> Result<BTreeSet<String>, Stri
         }
     }
     Ok(members)
+}
+
+/// The records from a generation back to its genesis, genesis first.
+fn chain_of(objects: &Path, generation: &str) -> Result<Vec<Cid>, String> {
+    let mut chain = Vec::new();
+    let mut at = Some(generation.to_owned());
+    let mut seen = BTreeSet::new();
+    while let Some(cid) = at {
+        if !seen.insert(cid.clone()) {
+            return Err(format!("generation {cid} is its own ancestor"));
+        }
+        let record = read_generation(objects, &cid)?;
+        at = record.parent.as_ref().map(ToString::to_string);
+        chain.push(
+            cid.parse()
+                .map_err(|_| format!("`{cid}` is not an identifier"))?,
+        );
+    }
+    chain.reverse();
+    Ok(chain)
+}
+
+/// Refuse a parent whose records up to the pinned generation are not signed
+/// by its publisher (Section 14.1.1), and say which unsigned records from
+/// before it signed are accepted.
+fn check_parent_signatures(objects: &Path, generation: &str) -> Result<(), String> {
+    let chain = chain_of(objects, generation)?;
+    let mut held = Vec::new();
+    for entry in std::fs::read_dir(objects).map_err(|e| e.to_string())? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path.extension().is_some_and(|x| x == "cbor") {
+            let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+            held.push((Cid::of(&bytes, HashAlg::Sha2_256), bytes));
+        }
+    }
+    let graph = publet_domain::signature_graph(&held);
+    let warnings = publet_domain::check_records(&graph, &chain).map_err(|e| e.to_string())?;
+    if let Some(last) = warnings.last() {
+        eprintln!(
+            "warning: {} unsigned generation(s) in {}, accepted; the latest: {last}",
+            warnings.len(),
+            objects.display()
+        );
+    }
+    Ok(())
 }
 
 fn read_generation(objects: &Path, cid: &str) -> Result<publet_domain::Generation, String> {

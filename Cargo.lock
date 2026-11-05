@@ -1141,6 +1141,7 @@ name = "pub-sync"
 version = "0.3.0"
 dependencies = [
  "publet-core",
+ "publet-domain",
  "publet-net",
  "publet-store",
  "tokio",

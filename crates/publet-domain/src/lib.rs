@@ -9,9 +9,14 @@
 mod delta;
 mod generation;
 mod manifest;
+mod signature;
 mod witness;
 
 pub use delta::{DeltaError, apply, checkpoints, fetches_required, hex};
 pub use generation::{Generation, GenerationError, Removal, RemovalCause};
 pub use manifest::{Manifest, ManifestError, check_depends_closure, check_equivalence_closure};
+pub use signature::{
+    PURPOSE, RecordSignature, SignatureError, check_records, record_signature, records_of,
+    signature_graph, unsigned_accepted,
+};
 pub use witness::{SplitView, Witness, detect_split_views};

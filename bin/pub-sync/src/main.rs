@@ -7,8 +7,10 @@
 //!
 //! Each object is stored under the identifier of the bytes received. A peer
 //! serving altered bytes cannot pass them off as the object they alter:
-//! they have an identifier of their own. This command does not check the
-//! objects received against the domain's generation records.
+//! they have an identifier of their own. Nothing is stored until the
+//! records received, with those already held, are signed by the domain's
+//! publisher (Section 14.1.1). This command does not check the objects
+//! received against the domain's generation records.
 
 use std::process::ExitCode;
 
@@ -102,6 +104,11 @@ async fn main() -> ExitCode {
         }
     };
 
+    if let Err(e) = check_records(&store, &objects, &domain) {
+        eprintln!("{e}");
+        return ExitCode::from(EXIT_VIOLATION);
+    }
+
     let mut stored = 0usize;
     for bytes in objects {
         let cid = Cid::of(&bytes, HashAlg::Sha2_256);
@@ -116,4 +123,29 @@ async fn main() -> ExitCode {
 
     println!(r#"{{"domain":"{domain}","from":{from},"to":{to},"stored":{stored}}}"#);
     ExitCode::SUCCESS
+}
+
+/// Section 14.1.1: check the records received, with the records, signatures
+/// and keys already held, since the rule on unsigned records looks at the
+/// domain's history. Prints a warning for each unsigned record accepted.
+fn check_records(store: &Store, objects: &[Vec<u8>], domain: &Cid) -> Result<(), String> {
+    let mut held: Vec<(Cid, Vec<u8>)> = objects
+        .iter()
+        .map(|bytes| (Cid::of(bytes, HashAlg::Sha2_256), bytes.clone()))
+        .collect();
+    for text in store.cids().map_err(|e| e.to_string())? {
+        if let Ok(cid) = text.parse::<Cid>()
+            && let Ok(Some(bytes)) = store.get(&cid)
+        {
+            held.push((cid, bytes));
+        }
+    }
+    let graph = publet_domain::signature_graph(&held);
+    let chain = publet_domain::records_of(&held, domain);
+    let warnings = publet_domain::check_records(&graph, &chain)
+        .map_err(|e| format!("refused, so nothing was stored: {e}"))?;
+    for warning in warnings {
+        eprintln!("warning: {warning}");
+    }
+    Ok(())
 }

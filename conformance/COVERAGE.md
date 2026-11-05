@@ -32,7 +32,7 @@ untested.
 | 13.3 | 1 | conformance/index_node.feature |
 | 13.4 | 3 | conformance/archive.feature |
 | 14.1 | 3 | plumbing/merkle.feature, porcelain/corpus.feature |
-| 14.1.1 | 7 | conformance/consistency.feature, conformance/generations.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature |
+| 14.1.1 | 10 | conformance/consistency.feature, conformance/generations.feature, conformance/record_signatures.feature, conformance/signed_sync.feature, porcelain/corpus.feature, porcelain/corpus.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature |
 | 14.3.1 | 2 | conformance/consistency.feature |
 | 14.3.2 | 5 | conformance/no_have_want.feature, scenarios/privacy_modes.feature |
 | 14.3.3 | 1 | scenarios/stale_basis.feature |
@@ -44,7 +44,7 @@ untested.
 | 4.1 | 1 | conformance/canonical_form.feature |
 | 4.2 | 2 | plumbing/cid.feature, plumbing/verify.feature |
 | 4.3 | 5 | plumbing/verify.feature |
-| 4.4 | 2 | conformance/signatures.feature |
+| 4.4 | 3 | conformance/signatures.feature |
 | 4.5 | 1 | conformance/object_size.feature, porcelain/families.feature, porcelain/families.feature, porcelain/families.feature |
 | 4.7 | 3 | conformance/blobs.feature |
 | 5.1 | 4 | conformance/immutability.feature, porcelain/compose.feature |

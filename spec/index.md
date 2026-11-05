@@ -409,6 +409,26 @@ any time without changing its CID.
 `ed25519` is REQUIRED. `ml-dsa-65` [FIPS204] is RECOMMENDED for new
 deployments.
 
+**When signatures are checked.** A signature covers one whole object, and is
+an object of its own that can arrive later than its target, from anyone. So a
+reader checks at three points, each with what it holds then:
+
+1. **On receipt of each object**, before parsing it: that it is within the size
+   limit (Section 4.5) and that its bytes hash to the identifier it was asked
+   for or is named by (Section 4.2).
+2. **At the end of a pack or delta**, before using what it states: the
+   membership root against the domain's records, and each generation record's
+   signature by its publisher (Section 14.1.1).
+3. **Before evaluation**, before an object counts towards any standing: its
+   signature by the key its `author` names, against that key's object (Section
+   10.1), for the purpose its grammar is signed for.
+
+An object whose signature is missing or does not verify at the third point MUST
+NOT count towards any standing. An implementation reports it with its CID and
+the reason, as it reports an object it leaves out of a load (Section 5.2). It
+stays readable, and a local draft its author has not yet signed is read as one.
+A node serves it either way (R12).
+
 ### 4.5 Size
 
 Implementations MUST accept objects up to 1,048,576 bytes (1 MiB) and MAY reject
@@ -2815,6 +2835,22 @@ covers every member, so neither could be inside what it commits to. An
 `author` field names a key but proves nothing (Section 4.3); the signature is
 what lets a reader hold the publisher to the record.
 
+A reader taking in a domain's records, by delta, by a pack, or as a pinned
+parent, MUST check them in index order before it trusts the membership they
+state, and MUST refuse a record:
+
+- with a signature that targets it and does not verify by its `author`, which is
+  a wrong key or changed bytes;
+- signed by a key that does not continue the key that signed the domain's
+  earlier records, directly or by rotation (Section 10.5); or
+- unsigned, after an earlier record of the domain was signed.
+
+Records written before a domain began signing carry no signature. An
+implementation MAY accept an unsigned record that no signed record precedes,
+and MUST then report it as unsigned, so that a reader knows the record proves
+nothing about who wrote it. A delta carries each record's signatures and the
+keys that made them.
+
 #### 14.1.2 Witnessing
 
 Consistency proofs bind a publisher to one history. They do not prevent a
@@ -3001,7 +3037,8 @@ that what you concluded can be checked against it.
 
 A client MUST verify retrieved bytes against the requested CID before
 parsing, and MUST verify a received pack against the domain manifest's
-snapshot root before use.
+snapshot root before use, and the generation records it receives as Section
+14.1.1 says.
 
 ### 14.5 Reverse Edges Across Domains
 

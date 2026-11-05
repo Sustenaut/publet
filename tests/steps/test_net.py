@@ -17,9 +17,11 @@ import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
 from support.objects import author_key, cbor_map, cid_of, head, obj, publet, text, uint
+from support.signing import Key
 
 scenarios("../features/conformance/no_have_want.feature")
 scenarios("../features/scenarios/two_node_sync.feature")
+scenarios("../features/conformance/signed_sync.feature")
 
 KA = author_key("K_a")
 
@@ -36,7 +38,23 @@ def free_port() -> int:
 
 @given("a node serving a domain of five objects", target_fixture="node")
 def serving_node(runner, bin_dir: Path, tmp_path: Path):
+    yield from _serve(runner, bin_dir, tmp_path)
+
+
+@given(parsers.parse("a node serving a domain of five objects whose records are {how}"),
+       target_fixture="node")
+def serving_signed_node(runner, bin_dir: Path, tmp_path: Path, how: str):
+    publisher = Key("the publisher")
+    forged = {"signed": None, "forged from the third": (3, Key("someone else"))}[how]
+    yield from _serve(runner, bin_dir, tmp_path, publisher, forged)
+
+
+def _serve(runner, bin_dir: Path, tmp_path: Path, publisher=None, forged=None):
+    """A node serving five objects, one generation record each. With a
+    `publisher`, the records are its and it signs them, except that from
+    `forged`'s index on, `forged`'s key signs instead."""
     store = tmp_path / "source.redb"
+    author = publisher.cid if publisher else KA
 
     members = []
     objects = []
@@ -69,7 +87,7 @@ def serving_node(runner, bin_dir: Path, tmp_path: Path):
         gen_root = runner.run(
             "pub-merkle", stdin=("\n".join(sorted(running)) + "\n").encode()
         )
-        record = obj("generation", KA, "2026-09-12T10:00:00Z", [
+        record = obj("generation", author, "2026-09-12T10:00:00Z", [
             ("domain", text(domain)),
             ("index", uint(index)),
             ("parent", text(cid_of(b"parent"))),
@@ -80,6 +98,10 @@ def serving_node(runner, bin_dir: Path, tmp_path: Path):
         assert runner.run(
             "pub-store", f"--store={store}", "generation", stdin=record
         ).code == 0
+        if publisher:
+            signer = forged[1] if forged and index >= forged[0] else publisher
+            for data in (signer.object, signer.sign(record)):
+                assert runner.run("pub-store", f"--store={store}", "add", stdin=data).code == 0
 
     port = free_port()
     proc = subprocess.Popen(
@@ -210,3 +232,27 @@ def checkpoints_spaced(result):
     assert points, result.stdout
     gaps = {5 - p for p in points}
     assert gaps <= {1, 2, 4, 8, 16}, gaps
+
+
+@then("it succeeds")
+def sync_succeeds(result):
+    assert result.code == 0, result.stderr
+
+
+@then("it is refused, and nothing is stored")
+def sync_refused(runner, result, node):
+    assert result.code == 1, (result.stdout, result.stderr)
+    assert "refused, so nothing was stored" in result.stderr, result.stderr
+    listed = runner.run("pub-store", f"--store={node['replica']}", "list")
+    assert listed.stdout.split() == [], listed.stdout
+
+
+@then(parsers.parse('stderr says "{fragment}"'))
+def sync_stderr(result, fragment: str):
+    assert fragment in result.stderr, result.stderr
+
+
+@then(parsers.parse('stderr does not say "{fragment}"'))
+def sync_stderr_lacks(result, fragment: str):
+    assert fragment not in result.stderr, result.stderr
+

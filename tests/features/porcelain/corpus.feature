@@ -74,3 +74,19 @@ Feature: Project corpora build on parent corpora they are pinned to
     And I check the child's publet for rendering
     Then it fails
     And stderr mentions "names no render pipeline"
+
+  @must-14.1.1
+  Scenario: A parent whose newest generation lost its signature is refused
+    When I publish the child
+    And the parent's "tool.x" becomes version "1.1" and the parent is rebuilt
+    And the signature of the parent's newest generation record is removed
+    And I upgrade the child
+    Then the child is refused, naming "is unsigned, after an earlier generation"
+
+  @must-14.1.1
+  Scenario: A parent whose generations are all signed is read without a warning
+    When I publish the child
+    And the parent's "tool.x" becomes version "1.1" and the parent is rebuilt
+    And I upgrade the child
+    Then the child is not refused, and no unsigned generation is mentioned
+
