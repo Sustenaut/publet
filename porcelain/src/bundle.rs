@@ -150,6 +150,8 @@ struct Bundles<'g> {
     solvers: BTreeMap<String, Vec<String>>,
     /// Triage annotations by each object they name, as target or ref (Section 7.4).
     suggestions: BTreeMap<String, BTreeSet<String>>,
+    /// Whether each object's author signed it (Section 4.4), worked out once.
+    signatures: BTreeMap<String, publet_graph::SignatureStatus>,
 }
 
 impl<'g> Bundles<'g> {
@@ -222,6 +224,7 @@ impl<'g> Bundles<'g> {
             families_under,
             solvers,
             suggestions,
+            signatures: graph.signature_statuses(),
         }
     }
 
@@ -614,6 +617,14 @@ impl<'g> Bundles<'g> {
             "cid": text,
             "held": true,
             "type": object.kind(),
+            // Section 4.4: whether its author signed it, so a page can say
+            // whether it counts.
+            "signature": self
+                .signatures
+                .get(&text)
+                .copied()
+                .unwrap_or(publet_graph::SignatureStatus::Missing)
+                .id(),
             "class": claim.map(|c| c.class().id()),
             "sort": defines.map(Definition::sort),
             "name": self.term_of.get(&text),
