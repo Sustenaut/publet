@@ -14,7 +14,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use publet_algorithms::membership::Membership;
-use publet_core::{Cid, HashAlg, Object};
+use publet_core::{Cid, HashAlg, Object, cbor::Value};
 use redb::{
     Database, ReadableDatabase as _, ReadableTable as _, ReadableTableMetadata as _,
     TableDefinition,
@@ -39,6 +39,14 @@ const TIMESTAMPS: TableDefinition<'_, &str, &str> = TableDefinition::new("timest
 /// Generation records, keyed by the domain identifier, a NUL, and a
 /// zero-padded index, so lexicographic order matches numeric order.
 const GENERATIONS: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("generations");
+/// The `sig` objects held, keyed by the identifier each signs, a NUL and
+/// its own identifier, each with its author: so a target's signatures are
+/// one range read, not a walk of every object (Section 14.1.1).
+const SIGNATURES: TableDefinition<'_, &str, &str> = TableDefinition::new("signatures");
+/// Facts about the store itself, such as which indexes it has built.
+const META: TableDefinition<'_, &str, &str> = TableDefinition::new("meta");
+/// The `META` key saying [`SIGNATURES`] covers every object held.
+const SIGNATURES_BUILT: &str = "signatures-index";
 
 /// An object whose stored bytes no longer match its key.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -80,6 +88,23 @@ impl Store {
             let _ = tx.open_table(TOMBSTONES)?;
             let _ = tx.open_table(GENERATIONS)?;
             let _ = tx.open_table(TIMESTAMPS)?;
+            let _ = tx.open_table(SIGNATURES)?;
+            let mut meta = tx.open_table(META)?;
+            // A store made before the index existed gets it built once, here.
+            if meta.get(SIGNATURES_BUILT)?.is_none() {
+                let objects = tx.open_table(OBJECTS)?;
+                let mut signatures = tx.open_table(SIGNATURES)?;
+                for entry in objects.iter()? {
+                    let (key, value) = entry?;
+                    if let Some((target, author)) = signed(value.value()) {
+                        signatures.insert(
+                            signature_key(&target, key.value()).as_str(),
+                            author.as_str(),
+                        )?;
+                    }
+                }
+                meta.insert(SIGNATURES_BUILT, "1")?;
+            }
         }
         tx.commit()?;
         Ok(Self { db })
@@ -98,13 +123,39 @@ impl Store {
                 actual: Cid::of(bytes, cid.alg()).to_string(),
             });
         }
+        let key = cid.to_string();
         let tx = self.db.begin_write()?;
         {
             let mut table = tx.open_table(OBJECTS)?;
-            table.insert(cid.to_string().as_str(), bytes)?;
+            table.insert(key.as_str(), bytes)?;
+            if let Some((target, author)) = signed(bytes) {
+                let mut signatures = tx.open_table(SIGNATURES)?;
+                signatures.insert(signature_key(&target, &key).as_str(), author.as_str())?;
+            }
         }
         tx.commit()?;
         Ok(())
+    }
+
+    /// The `sig` objects held that sign `target`, each with its author's
+    /// identifier, in the order of the signatures' identifiers.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn signatures_of(&self, target: &str) -> Result<Vec<(String, String)>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(SIGNATURES)?;
+        let from = format!("{target}\u{0}");
+        let to = format!("{target}\u{1}");
+        let mut out = Vec::new();
+        for entry in table.range(from.as_str()..to.as_str())? {
+            let (key, author) = entry?;
+            if let Some((_, sig)) = key.value().split_once('\u{0}') {
+                out.push((sig.to_owned(), author.value().to_owned()));
+            }
+        }
+        Ok(out)
     }
 
     /// Store a blob, verifying its bytes against `cid` (Section 4.7).
@@ -564,7 +615,12 @@ impl Store {
         let removed;
         {
             let mut table = tx.open_table(OBJECTS)?;
-            removed = table.remove(key.as_str())?.is_some();
+            let mut signatures = tx.open_table(SIGNATURES)?;
+            let gone = table.remove(key.as_str())?.map(|v| v.value().to_vec());
+            if let Some((target, _)) = gone.as_deref().and_then(signed) {
+                signatures.remove(signature_key(&target, &key).as_str())?;
+            }
+            removed = gone.is_some();
         }
         tx.commit()?;
         Ok(removed)
@@ -594,8 +650,12 @@ impl Store {
         let tx = self.db.begin_write()?;
         {
             let mut table = tx.open_table(OBJECTS)?;
+            let mut signatures = tx.open_table(SIGNATURES)?;
             for cid in &candidates {
-                table.remove(cid.as_str())?;
+                let gone = table.remove(cid.as_str())?.map(|v| v.value().to_vec());
+                if let Some((target, _)) = gone.as_deref().and_then(signed) {
+                    signatures.remove(signature_key(&target, cid).as_str())?;
+                }
             }
         }
         tx.commit()?;
@@ -644,6 +704,22 @@ impl Store {
         }
         Ok(out)
     }
+}
+
+/// For a `sig` object, the identifier it signs and its author's.
+fn signed(bytes: &[u8]) -> Option<(String, String)> {
+    let parsed = Object::parse(bytes).ok()?;
+    let object = parsed.peek();
+    if object.kind() != "sig" {
+        return None;
+    }
+    let target = object.body().get("target").and_then(Value::as_text)?;
+    Some((target.to_owned(), object.author().to_string()))
+}
+
+/// Key a signature by what it signs, so one target's are one range.
+fn signature_key(target: &str, sig: &str) -> String {
+    format!("{target}\u{0}{sig}")
 }
 
 /// Key a generation so that lexicographic order matches numeric order.

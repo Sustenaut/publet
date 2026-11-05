@@ -390,3 +390,74 @@ fn garbage_collection_leaves_blobs_alone() {
     s.collect_garbage().unwrap();
     assert!(s.get_blob(&cid).unwrap().is_some());
 }
+
+/// A `sig` object signing `target`, by `author`.
+fn sig(target: &Cid, author: &str) -> (Cid, Vec<u8>) {
+    let bytes = Object::builder("sig", author)
+        .created("2026-11-05T12:00:00Z")
+        .field("target", Value::Text(target.to_string()))
+        .field("purpose", Value::Text("authored".into()))
+        .build()
+        .unwrap();
+    (Cid::of(&bytes, HashAlg::Sha2_256), bytes)
+}
+
+#[test]
+fn a_targets_signatures_are_found_by_the_index() {
+    let dir = tempfile::tempdir().unwrap();
+    let s = store(&dir);
+    let (record, record_bytes) = object("a generation record");
+    let (other, _) = object("something else");
+    let author = object("a key").0.to_string();
+    let (one, one_bytes) = sig(&record, &author);
+    let (elsewhere, elsewhere_bytes) = sig(&other, &author);
+    for (cid, bytes) in [
+        (&record, &record_bytes),
+        (&one, &one_bytes),
+        (&elsewhere, &elsewhere_bytes),
+    ] {
+        s.put(cid, bytes).unwrap();
+    }
+    assert_eq!(
+        s.signatures_of(&record.to_string()).unwrap(),
+        vec![(one.to_string(), author.clone())]
+    );
+    assert!(
+        s.signatures_of(&object("unsigned").0.to_string())
+            .unwrap()
+            .is_empty()
+    );
+
+    // Removing a signature takes it out of the index, and so does collecting it.
+    s.remove(&one).unwrap();
+    assert!(s.signatures_of(&record.to_string()).unwrap().is_empty());
+    s.collect_garbage().unwrap();
+    assert!(s.signatures_of(&other.to_string()).unwrap().is_empty());
+}
+
+#[test]
+fn a_store_from_before_the_index_gets_it_built_when_opened() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("objects.redb");
+    let (record, _) = object("a generation record");
+    let author = object("a key").0.to_string();
+    let (one, one_bytes) = sig(&record, &author);
+    // An older store: the signature is in its objects, and it has no index.
+    {
+        const OBJECTS: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("objects");
+        let db = Database::create(&path).unwrap();
+        let tx = db.begin_write().unwrap();
+        {
+            let mut table = tx.open_table(OBJECTS).unwrap();
+            table
+                .insert(one.to_string().as_str(), one_bytes.as_slice())
+                .unwrap();
+        }
+        tx.commit().unwrap();
+    }
+    let s = Store::open(&path).unwrap();
+    assert_eq!(
+        s.signatures_of(&record.to_string()).unwrap(),
+        vec![(one.to_string(), author)]
+    );
+}

@@ -16,7 +16,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use publet_algorithms::membership::{Membership, verify as verify_membership};
-use publet_core::{Cid, HashAlg, Object, cbor::Value};
+use publet_core::{Cid, HashAlg};
 use publet_store::Store;
 
 /// State shared by the handlers.
@@ -176,28 +176,23 @@ async fn delta(
 }
 
 /// The `sig` objects held whose target is one of `records`, and the key
-/// objects of their authors.
+/// objects of their authors: read from the store's signature index, so a
+/// delta costs what it sends, not a walk of everything held.
 fn signatures_of(store: &Store, records: &[String]) -> Result<Vec<Vec<u8>>, StatusCode> {
     let mut out = Vec::new();
     let mut keys = std::collections::BTreeSet::new();
-    for text in store
-        .cids()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    {
-        let Ok(cid) = text.parse::<Cid>() else {
-            continue;
-        };
-        let Ok(Some(bytes)) = store.get(&cid) else {
-            continue;
-        };
-        let Ok(parsed) = Object::parse(&bytes) else {
-            continue;
-        };
-        let object = parsed.peek();
-        let target = object.body().get("target").and_then(Value::as_text);
-        if object.kind() == "sig" && target.is_some_and(|t| records.iter().any(|r| r == t)) {
-            keys.insert(object.author().to_string());
-            out.push(bytes);
+    for record in records {
+        for (sig, author) in store
+            .signatures_of(record)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        {
+            let Ok(cid) = sig.parse::<Cid>() else {
+                continue;
+            };
+            if let Ok(Some(bytes)) = store.get(&cid) {
+                keys.insert(author);
+                out.push(bytes);
+            }
         }
     }
     for key in keys.iter().filter_map(|k| k.parse::<Cid>().ok()) {
