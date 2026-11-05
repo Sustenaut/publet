@@ -89,6 +89,38 @@ pub struct Graph {
     dropped: Vec<Dropped>,
 }
 
+/// The purpose an author signs what they publish for (Section 4.4).
+pub const AUTHORED: &str = "authored";
+
+/// Whether an object's author signed it, as a reader shows it (Section 4.4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SignatureStatus {
+    /// A signature by the key the object names as `author` verifies.
+    Verified,
+    /// No signature by its author is held, so it counts for nothing yet.
+    Missing,
+    /// A signature names the object and its author, and does not verify.
+    Invalid,
+    /// A signature or a key, which is not itself signed for publishing: a
+    /// signature is the attestation, and a key is what one is checked
+    /// against.
+    NotApplicable,
+}
+
+impl SignatureStatus {
+    /// The identifier a reader or a bundle shows.
+    #[must_use]
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Verified => "verified",
+            Self::Missing => "missing",
+            Self::Invalid => "invalid",
+            Self::NotApplicable => "not-applicable",
+        }
+    }
+}
+
 /// An object a load left out because it is inadmissible given the others,
 /// though the rest of what was loaded stands (Section 5.2).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -516,6 +548,30 @@ impl Graph {
             }
         }
         false
+    }
+
+    /// Whether `cid`'s author signed it (Section 4.4). Unknown objects read as
+    /// [`SignatureStatus::Missing`].
+    #[must_use]
+    pub fn signature_status(&self, cid: &Cid) -> SignatureStatus {
+        let Some(object) = self.object(cid) else {
+            return SignatureStatus::Missing;
+        };
+        if matches!(object.kind(), "sig" | "key") {
+            return SignatureStatus::NotApplicable;
+        }
+        if self.signed_by(object.author(), cid, AUTHORED) {
+            return SignatureStatus::Verified;
+        }
+        let by_author = self.signatures_of(cid).into_iter().any(|s| {
+            s.author() == object.author()
+                && s.body().get("purpose").and_then(Value::as_text) == Some(AUTHORED)
+        });
+        if by_author {
+            SignatureStatus::Invalid
+        } else {
+            SignatureStatus::Missing
+        }
     }
 
     /// Every `sig` object in this graph whose `target` is `target`, whoever

@@ -614,6 +614,9 @@ impl<'g> Bundles<'g> {
             "cid": text,
             "held": true,
             "type": object.kind(),
+            // Section 4.4: whether its author signed it, so a page can say
+            // whether it counts.
+            "signature": self.graph.signature_status(cid).id(),
             "class": claim.map(|c| c.class().id()),
             "sort": defines.map(Definition::sort),
             "name": self.term_of.get(&text),
