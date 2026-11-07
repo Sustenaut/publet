@@ -40,3 +40,6 @@ render.json
 # upstream jtex template, or our own thin wrapper around a Typst
 # Universe package).
 !/templates/**
+
+# Local secrets, such as the Bitwarden token ./with-secrets reads: never committed.
+.env
