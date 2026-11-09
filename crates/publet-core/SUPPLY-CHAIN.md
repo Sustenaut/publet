@@ -33,7 +33,7 @@ procedural macro (P): code that runs while compiling.
 | `signature` | 3.0.0 | - | not audited (exempt) | Ships in publet-core (via ed25519 3). Zcash audited 2.1.0 and the delta to 2.2.0; nothing covers 2.2.0 to 3.0.0 (12 files, +649/-451). forbid(unsafe_code). No advisory. As of 2026-10-28. Review by 2027-01-28. |
 | `subtle` | 2.6.1 | - | audited by isrg |  |
 | `syn` | 2.0.119 | - | trusted publisher (dtolnay) | Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing. |
-| `syn` | 3.0.9 | - | trusted publisher (dtolnay) | Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing. |
+| `syn` | 3.0.10 | - | trusted publisher (dtolnay) | Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing. |
 | `thiserror` | 2.0.21 | B | trusted publisher (dtolnay) | Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing. |
 | `thiserror-impl` | 2.0.21 | P | trusted publisher (dtolnay) | Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing. |
 | `tinyvec` | 1.13.3 | - | audited by mozilla |  |
