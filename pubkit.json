@@ -42,5 +42,10 @@
     {"path": "corpus/.publet/signing.key", "bitwarden": {"project": {"id": "377de170-5487-40f7-9a01-b4f50064e1c5", "name": "Pub"}, "name": "pub-signing-key-publet"}},
     {"path": "corpus/.publet/retired/signing.key.m2smuezcqpjeyy6iofa2pjl47lgbwu254hohndyhs2do34fcrcma", "bitwarden": {"project": {"id": "377de170-5487-40f7-9a01-b4f50064e1c5", "name": "Pub"}, "name": "pub-signing-key-publet-retired-m2smuezc"}},
     {"path": "~/git/publet-corpus/.publet/signing.key", "bitwarden": {"project": {"id": "377de170-5487-40f7-9a01-b4f50064e1c5", "name": "Pub"}, "name": "pub-signing-key-publet-corpus"}}
-  ]
+  ],
+  "mirror": {
+    "wheels": "https://storage.sustenaut.eu/wheels",
+    "terraform": "https://storage.sustenaut.eu/terraform",
+    "pypi": "https://storage.sustenaut.eu/pypi"
+  }
 }
