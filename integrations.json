@@ -41,5 +41,8 @@
       "host": "typst.app",
       "reason": "A link to Typst's documentation in a template's description"
     }
+  ],
+  "own_hosts": [
+    "sustenaut.eu"
   ]
 }
