@@ -1,0 +1,4 @@
+{
+  "category": "internal",
+  "change": "Cargo.lock moves rustix to 1.1.6 for RUSTSEC-2026-0486; rustix is only a dev and build dependency here, so no released binary changes"
+}
