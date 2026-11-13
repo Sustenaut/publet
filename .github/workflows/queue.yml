@@ -11,46 +11,46 @@ permissions:
 jobs:
   gates:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-gates.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-gates.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
     with: {"gates": "guard-floats guard-deps guard-rules guard-msrv", "required": "fmt-check lint doc doc-coverage-check publish-check"}
 
   test:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-test.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-test.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
     with: {"test-args": "--workspace --all-features"}
 
   functional:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-functional.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-functional.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
     with: {"apt-packages": "jq", "functional": "guard-eval conformance coverage-check script-tests", "required": "functional vectors-check supply-chain-check"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   msrv:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-msrv.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-msrv.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
 
   fuzz:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-fuzz.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-fuzz.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
 
   cross:
     name: ci
     needs: [gates]
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-cross.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-cross.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
     with: {"cross-test-args": "--workspace --all-features"}
 
   audit:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-rust-audit.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-rust-audit.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
     with: {"required": "deny vet"}
 
   osv:
     name: ci
-    uses: Sustenaut/pubkit/.github/workflows/job-osv.yml@ec25e7ea8a86d688a626b0326fb131c11b6da081 # v0.36.0
+    uses: Sustenaut/pubkit/.github/workflows/job-osv.yml@2ed3af00875f91f6130a6ad7e8841554e0a6b8fc # v0.37.1
 
   # The one check a ruleset requires: it passes only when every job
   # above succeeded. None of them is ever skipped for not being asked for.
