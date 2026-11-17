@@ -9,8 +9,8 @@ auditor: rust-crate-quality
 
 # Audit: publet-cli 0.2.2
 
-This report audits publet-cli against the Rust crate standard that pubkit
-0.14.6 ships (`pubkit audit --standard` above). The tree is `main` at
+This report audits publet-cli against the Rust crate standard that pubrules
+0.14.6 ships (`pubrules audit --standard` above). The tree is `main` at
 `f60d996`, with the documentation fixes listed under "Resolved on this
 branch". The version to release is 0.2.2 (`pubrel next --package
 publet-cli`). This file should be committed with the release's changes.
@@ -48,7 +48,7 @@ None.
    publet-graph, publet-store or publet-net on crates.io, and publet-cli
    depends on them by path. The README says so ("from git, until the
    workspace's crates are published on crates.io"). Whether to publish them,
-   or to declare an exception in `pubkit.json`, is for a person to decide.
+   or to declare an exception in `pubrules.json`, is for a person to decide.
 6. **Section 9, README: "Why this tool" and "Related tools".** The README
    explains its design choices one by one. It has no section saying what
    `pub` does that a general-purpose tool would get wrong, and no table of
@@ -204,7 +204,7 @@ internal "..."`.
   `publet-cli`'s supported versions, and describes what fuzzing found.
   `cargo deny` and `cargo vet` cover the whole workspace.
 - **8, cross-platform:** the `cross` job runs `--workspace --all-features`
-  (`pubkit.json`), so it includes `pub`.
+  (`pubrules.json`), so it includes `pub`.
 - **9, module docs:** `main.rs` and every module in `porcelain/src/` has
   `//!` docs saying what it does and why. So does every plumbing command's
   `main.rs`. `// covers:` comments are optional for a binary, and

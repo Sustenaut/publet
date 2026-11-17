@@ -4,14 +4,14 @@ version: 0.1.4
 standard: bc3c5b6eeba4757b5d96bc00be2d0a1d3221bef89072b06a271c2b28e2205e34
 blocking: 0
 date: 2026-10-28
-auditor: Claude Code, following the rust-crate-quality agent (pubkit 0.14.0)
+auditor: Claude Code, following the rust-crate-quality agent (pubrules 0.14.0)
 ---
 
 # Audit: publet-core 0.1.4
 
 This report was produced in a Claude Code session by following the
 rust-crate-quality agent's definition and the Rust crate standard exactly as
-pubkit v0.14.0 ships them (`plugins/rust-crate-quality/`). The agent itself was
+pubrules v0.14.0 ships them (`plugins/rust-crate-quality/`). The agent itself was
 not installed on the machine. The audit covers `main` at `f2071fc`, which is
 publet-core 0.1.3 plus the move to ed25519-dalek 3 and sha2 0.11 (#61), with
 the documentation fixes listed under "Resolved on this branch" (#62). The

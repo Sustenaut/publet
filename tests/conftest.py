@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from pubkit.plugin import Completed
+from pubtest.core import Completed
 
 # The suite imports its own helpers from `support/`; it never imports the
 # implementation. Adding the suite root to the path keeps that explicit.

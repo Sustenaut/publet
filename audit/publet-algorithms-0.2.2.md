@@ -10,7 +10,7 @@ auditor: rust-crate-quality
 # Audit: publet-algorithms 0.2.2
 
 This report was produced by the rust-crate-quality agent, against the Rust
-crate standard as pubkit 0.14.6 ships it (`pubkit audit --standard` prints
+crate standard as pubrules 0.14.6 ships it (`pubrules audit --standard` prints
 the hash in the header above). The audit covers `f60d996` (origin/main of
 schryer/publet, on branch `claude/release-cli`). That is publet-algorithms
 0.2.1 plus the `h3` module and the move to sha2 0.11. It also covers the
@@ -215,7 +215,7 @@ publet-algorithms, as `internal`.
   entry. The supported-version table names the `publet-algorithms-vX.Y.Z`
   tags, which exist (`publet-algorithms-v0.1.0` to `v0.2.1`).
 - **8, cross-platform:** the log's absurd-size regression tests build and
-  run on 32-bit targets (CHANGELOG 0.2.0). The `cross` job is pubkit's.
+  run on 32-bit targets (CHANGELOG 0.2.0). The `cross` job is pubrules's.
 
 ## Claims verified
 

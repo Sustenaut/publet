@@ -43,7 +43,7 @@ None. The machine's blocking finding is reclassified as finding 1, as in the
    publet-cli depends by path on crates that are not on crates.io. It is never
    published there, so this cannot break a publish. Carried forward from 0.3.0,
    finding 1, including the decision it asks of a person: `publish = false` with
-   an exception in `pubkit.json`, or publishing the workspace crates.
+   an exception in `pubrules.json`, or publishing the workspace crates.
 2. **Section 9, metadata (`porcelain/Cargo.toml`).** No `documentation`,
    `keywords`, `categories`, `readme`, `include` or `publish = false`. Carried
    forward from 0.3.0, finding 2.
@@ -137,14 +137,14 @@ None. The machine's blocking finding is reclassified as finding 1, as in the
 
 | Check | Result |
 |---|---|
-| `cargo doc -p publet-cli --no-deps` | pass, by `pubkit audit prepare` |
-| `cargo clippy -p publet-cli --all-targets` | pass, by `pubkit audit prepare` |
-| `cargo clippy -p publet-cli -- -W clippy::missing_docs_in_private_items` | 0 undocumented private items, by `pubkit audit prepare` |
-| `pub --help` | exit 2, by `pubkit audit prepare` |
+| `cargo doc -p publet-cli --no-deps` | pass, by `pubrules audit prepare` |
+| `cargo clippy -p publet-cli --all-targets` | pass, by `pubrules audit prepare` |
+| `cargo clippy -p publet-cli -- -W clippy::missing_docs_in_private_items` | 0 undocumented private items, by `pubrules audit prepare` |
+| `pub --help` | exit 2, by `pubrules audit prepare` |
 | `cargo test -p publet-cli` | pass, 46 tests |
 | `cargo publish --dry-run --locked -p publet-cli` | fails, see finding 1 |
-| `cargo +1.98 check --locked -p publet-cli` (MSRV) | pass, by `pubkit audit prepare` |
-| `make vectors-check`, `make supply-chain-check`, `make deny`, `make vet` | pass, by `pubkit audit prepare` |
+| `cargo +1.98 check --locked -p publet-cli` (MSRV) | pass, by `pubrules audit prepare` |
+| `make vectors-check`, `make supply-chain-check`, `make deny`, `make vet` | pass, by `pubrules audit prepare` |
 | `make check` on this branch | see the pull request |
 
 ## Checks not run

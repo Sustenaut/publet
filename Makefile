@@ -1,11 +1,11 @@
 # Single entry point. Every target resolves its own tools, so nothing here
 # depends on the caller's PATH, shell profile, or which machine this is.
 #
-# The shared targets come from pubkit.mk, which pubkit manages: the ones the
+# The shared targets come from pubrules.mk, which pubrules manages: the ones the
 # Rust crate standard requires (`make required` lists what CI runs), and
 # help, venv, lock, sync-check, fmt, test, build and supply-chain. This file
 # sets their scope and adds publet's own.
-include pubkit.mk
+include pubrules.mk
 
 .DEFAULT_GOAL := help
 export PUBLET_BIN_DIR := $(CURDIR)/target/debug
@@ -61,7 +61,7 @@ release-pr: ## Cut a release: publish the package publet and open a release PR
 # The crates released on their own: what each would publish, packaged and
 # compiled exactly as crates.io would receive it.
 PUBLISHED := publet-core publet-algorithms
-# pubkit.mk writes and checks SUPPLY-CHAIN.md for these.
+# pubrules.mk writes and checks SUPPLY-CHAIN.md for these.
 SUPPLY_CHAIN_CRATES = $(PUBLISHED)
 
 # The published crates' minimum Rust version, as their manifests declare it.
