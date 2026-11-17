@@ -30,12 +30,12 @@ Builds must not depend on how any particular machine is configured.
 | Python dependencies | `tests/requirements.lock` pins exact versions with sha256 hashes, installed with `--require-hashes` |
 | Tool discovery | `tools/env.sh` and the `Makefile` resolve the toolchain themselves; no target depends on the caller's `PATH` |
 | CI parity | `Containerfile` builds the same environment hermetically |
-| Shared test setup | `pubkit.mk`, `rust-toolchain.toml` and `tests/requirements-pubkit.txt` are managed by [pubkit](https://github.com/schryer/pubkit), as in every package; `make sync-check` fails if they drift, and CI runs pubkit's `rust-ci.yml` |
+| Shared test setup | `pubrules.mk`, `rust-toolchain.toml` and `tests/requirements-pubrules.txt` are managed by [pubrules](https://github.com/schryer/pubrules), as in every package; `make sync-check` fails if they drift, and CI runs pubrules's `rust-ci.yml` |
 
 Regenerate the Python lock with `make lock` after editing
 `tests/requirements.txt`; it pins every platform's files. The functional
 suite's binary runner, result type, common steps (`it succeeds`, `the exit
-code is N`, ...) and tag markers come from pubkit's pytest plugin.
+code is N`, ...) and tag markers come from pubrules's pytest plugin.
 
 ## Layout
 

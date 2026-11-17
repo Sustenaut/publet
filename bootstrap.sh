@@ -33,7 +33,7 @@ install_cargo_tool() {
   fi
 }
 # The versions CI runs: the cargo-deny-version and cargo-vet-version
-# defaults of pubkit's job-rust-audit.yml, at the pubkit tag the workflows
+# defaults of pubrules's job-rust-audit.yml, at the pubrules tag the workflows
 # pin. deny.toml needs cargo-deny 0.20 or later.
 install_cargo_tool cargo-deny 0.20.2
 install_cargo_tool cargo-vet 0.10.2

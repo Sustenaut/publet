@@ -95,14 +95,14 @@ None.
 
 | Check | Result |
 |---|---|
-| `cargo doc -p publet-core --no-deps` | pass, by `pubkit audit prepare` |
-| `cargo clippy -p publet-core --all-targets` | pass, by `pubkit audit prepare` |
+| `cargo doc -p publet-core --no-deps` | pass, by `pubrules audit prepare` |
+| `cargo clippy -p publet-core --all-targets` | pass, by `pubrules audit prepare` |
 | `cargo test -p publet-core` | pass, 94 tests |
 | `cargo test --doc -p publet-core` | pass, 53 doctests |
-| docs.rs build of the packaged crate on nightly, with docs.rs's flags | pass, no warnings, by `pubkit audit prepare` |
-| `cargo publish --dry-run --locked -p publet-core` | pass, by `pubkit audit prepare` |
-| `cargo +1.85 check --locked -p publet-core` (MSRV) | pass, by `pubkit audit prepare` |
-| `make doc-coverage-check`, `make vectors-check`, `make supply-chain-check`, `make deny`, `make vet` | pass, by `pubkit audit prepare` |
+| docs.rs build of the packaged crate on nightly, with docs.rs's flags | pass, no warnings, by `pubrules audit prepare` |
+| `cargo publish --dry-run --locked -p publet-core` | pass, by `pubrules audit prepare` |
+| `cargo +1.85 check --locked -p publet-core` (MSRV) | pass, by `pubrules audit prepare` |
+| `make doc-coverage-check`, `make vectors-check`, `make supply-chain-check`, `make deny`, `make vet` | pass, by `pubrules audit prepare` |
 
 ## Checks not run
 

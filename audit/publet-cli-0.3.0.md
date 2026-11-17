@@ -43,7 +43,7 @@ finding 1, as in the 0.2.2 and 0.2.3 audits.
    cannot break a publish. Carried forward from 0.2.3, finding 1, including what
    still falls short: no `msrv` or `SUPPLY-CHAIN.md` covers `pub`, and a package
    of `porcelain/` would not ship the licence. A person should decide between
-   `publish = false` with an exception in `pubkit.json`, and publishing the
+   `publish = false` with an exception in `pubrules.json`, and publishing the
    workspace crates.
 2. **Section 9, metadata (`porcelain/Cargo.toml`).** No `documentation`,
    `keywords`, `categories`, `readme`, `include` or `publish = false`. Carried
@@ -187,15 +187,15 @@ Run with `target/debug/pub` and plumbing built from this tree:
 
 | Check | Result |
 |---|---|
-| `cargo doc -p publet-cli --no-deps` | pass, by `pubkit audit prepare` |
-| `cargo clippy -p publet-cli --all-targets` | pass, by `pubkit audit prepare` |
-| `cargo clippy -p publet-cli -- -W clippy::missing_docs_in_private_items` | 0 undocumented private items, by `pubkit audit prepare` |
+| `cargo doc -p publet-cli --no-deps` | pass, by `pubrules audit prepare` |
+| `cargo clippy -p publet-cli --all-targets` | pass, by `pubrules audit prepare` |
+| `cargo clippy -p publet-cli -- -W clippy::missing_docs_in_private_items` | 0 undocumented private items, by `pubrules audit prepare` |
 | `cargo test -p publet-cli` | pass, 44 tests |
 | `make check` at #93's last commit, `3c2de23` | pass, 522 functional scenarios |
 | `conformance/verify-suite.sh` at `3c2de23` | pass, every break detected |
 | `cargo publish --dry-run --locked -p publet-cli` | fails, see finding 1 |
-| `cargo +1.98 check --locked -p publet-cli` (MSRV) | pass, by `pubkit audit prepare` |
-| `make vectors-check`, `make supply-chain-check`, `make deny`, `make vet` | pass, by `pubkit audit prepare` |
+| `cargo +1.98 check --locked -p publet-cli` (MSRV) | pass, by `pubrules audit prepare` |
+| `make vectors-check`, `make supply-chain-check`, `make deny`, `make vet` | pass, by `pubrules audit prepare` |
 
 ## Checks not run
 

@@ -12,7 +12,7 @@ last-release: v0.2.2
 # Quality audit: publet-cli 0.2.3
 
 This report audits publet-cli against the Rust crate standard named above.
-It started from the draft `pubkit audit prepare` (pubkit 0.15.2) wrote, and
+It started from the draft `pubrules audit prepare` (pubrules 0.15.2) wrote, and
 each rule that draft left for review was judged by reading the code and
 docs. 0.2.3 is the version to release (`pubrel next --package publet-cli`),
 after `v0.2.2`. This file should be committed with the release's changes.
@@ -54,7 +54,7 @@ fixed on this branch (see "Resolved on this branch", R1).
 
    The check the rule names passes. `make publish-check` packages
    `PUBLISHED := publet-core publet-algorithms` (`Makefile:63`,
-   `pubkit.mk:102-105`), and `pubkit.json` lists only those two under
+   `pubrules.mk:102-105`), and `pubrules.json` lists only those two under
    `published`. publet-cli is never published to crates.io. It is installed
    from git, and the README says so (`README.md:375-376`, "from git, until
    the workspace's crates are published on crates.io"). So the failure
@@ -74,7 +74,7 @@ fixed on this branch (see "Resolved on this branch", R1).
      package of it would not ship the licence.
 
    A person should decide between `publish = false` together with an
-   exception in `pubkit.json` for RS-PKG-01 and RS-PKG-02 (section 11:
+   exception in `pubrules.json` for RS-PKG-01 and RS-PKG-02 (section 11:
    rule, reason, date), and publishing the workspace crates.
 2. **Section 9, metadata (`porcelain/Cargo.toml:1-8`).** It sets
    `description`, `license`, `repository` and `rust-version`. It has no
@@ -257,7 +257,7 @@ These changes alter documentation and code, and are recorded in
   fuzzing found. It names what is fuzzed without claiming more, and says
   that `wire::unpack` has no target.
 - **Section 8, cross-platform:** the `cross` job runs `--workspace
-  --all-features` (`pubkit.json`), so it includes `pub`.
+  --all-features` (`pubrules.json`), so it includes `pub`.
 - **Section 9, the README's coverage:** it says what the tool is for and
   gives its central use, an overview of its commands, the minimum Rust
   version and versioning. #74's `pub require` is listed (`README.md:193`)
