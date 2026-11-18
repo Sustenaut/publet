@@ -3,5 +3,8 @@ Feature: The functional harness is wired correctly
   # later phase can defer writing its scenarios.
 
   Scenario: Binaries are resolved from the environment, not a build path
-    Given the binary directory is configured
-    Then it is the directory named by PUBLET_BIN_DIR
+    Given the program under test is "pub"
+    When I run "pub --version"
+    Then it succeeds
+    And it prints a line matching "pub *"
+    And the program it ran is the one in the directory PUBLET_BIN_DIR names

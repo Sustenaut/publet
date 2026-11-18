@@ -6,21 +6,38 @@ Feature: Vouching and triage bear on the graph without authority in it
 
   Scenario: An assumption is not authorship
     Given a key assuming accountability for another
-    Then the assumed key remains the author of its own publets
+    When I list the claims authored by the assumed key
+    Then it succeeds
+    And it lists only the assumed key's own publet
+
+  Scenario: An assumer takes no byline
+    Given a key assuming accountability for another
+    When I list the claims authored by the assumer
+    Then it succeeds
+    And stdout is empty
 
   Scenario: Assumptions are counted, because fronting is visible only in aggregate
     Given a key assuming accountability for three others
-    Then the count of assumptions it holds is 3
+    When I list the assumptions the assumer holds
+    Then it succeeds
+    And it lists 3 assumptions, each of a different key
 
   Scenario: No linkage between assumer and assumed holder is recorded
     Given a key assuming accountability for another
-    Then the assumption records no identity for the assumed key
+    When I list the assumptions the assumer holds
+    Then it succeeds
+    And it lists 1 assumption, each of a different key
+    And each assumption it lists records only the two keys and the grounds
 
   Scenario: A triage annotation changes no standing
     Given a claim with a standing
     And a triage annotation calling it redundant
-    Then the standing is unchanged
+    When I ask why again
+    Then it succeeds
+    And the standing is unchanged
 
   Scenario: A triage annotation without its disclosure block is not read
     Given a triage annotation with no engine declared
-    Then it is not treated as a triage finding
+    When I list the triage findings on the claim
+    Then it succeeds
+    And stdout is empty

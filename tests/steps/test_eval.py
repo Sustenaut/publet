@@ -93,16 +93,6 @@ def _parsed(result):
     return json.loads(result.stdout)
 
 
-@then(parsers.parse('the result is "{outcome}"'))
-def result_is(result, outcome: str):
-    assert _parsed(result)["result"] == outcome
-
-
-@then(parsers.parse('the result is not "{outcome}"'))
-def result_is_not(result, outcome: str):
-    assert _parsed(result)["result"] != outcome
-
-
 @then(parsers.parse('the delta is "{value}"'))
 def delta_is(result, value: str):
     assert _parsed(result)["delta"] == value
@@ -144,18 +134,14 @@ def weights_are_six_places(result):
         assert re.fullmatch(r"-?\d+\.\d{6}", parsed[field]), parsed[field]
 
 
-@then("the two evaluations disagree about the outcome")
-def evaluations_disagree(runner, vector: Path, relaxed: Path):
-    strict = json.loads(
-        runner.run("pub-eval", f"--vector={vector}").stdout
-    )["result"]
-    lenient = json.loads(
-        runner.run("pub-eval", f"--vector={relaxed}").stdout
-    )["result"]
-    assert strict != lenient, (
-        "identical evidence must be able to yield different outcomes under "
-        f"different policies, got {strict} both times"
-    )
+@when("I evaluate it under each policy")
+def evaluate_under_each(pubtest_ctx, runner, vector: Path, relaxed: Path):
+    """Identical evidence must be able to yield different outcomes under
+    different policies: the outcome of each evaluation, by its policy."""
+    def outcomes():
+        return {policy: _parsed(runner.run("pub-eval", f"--vector={path}"))["result"]
+                for policy, path in (("as given", vector), ("with a floor of zero", relaxed))}
+    pubtest_ctx.attempt(outcomes)
 
 
 @then("the affirm weight equals that of a single affirmation")
@@ -163,13 +149,3 @@ def one_signer_counts_once(runner, result):
     single = runner.run("pub-eval", f"--vector={VECTORS / '13-single-signer.cbor'}")
     assert single.code == 0, single.stderr
     assert json.loads(result.stdout)["affirm"] == json.loads(single.stdout)["affirm"]
-
-
-@then("it says a policy must declare at least one root")
-def says_roots_required(result):
-    assert "at least one root" in result.stderr, result.stderr
-
-
-@then("it says iterations exceed the limit")
-def says_iterations_bounded(result):
-    assert "exceeds the limit" in result.stderr, result.stderr

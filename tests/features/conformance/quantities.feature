@@ -10,7 +10,9 @@ Feature: A number names its unit, its kind, how sure it is, and how it was compu
 
   @must-5.9.1
   Scenario: A definition states what it defines in checkable form
-    Then reading the tray dimension shows "class     definitional"
+    When I read the tray dimension
+    Then it succeeds
+    And it prints "class     definitional"
 
   @must-5.9.1
   Scenario: Only a definitional claim may carry defines
@@ -67,7 +69,7 @@ Feature: A number names its unit, its kind, how sure it is, and how it was compu
   Scenario: A column's unit definition missing from depends is refused by the loader
     Given a store holding a claim whose column cites a unit claim not in depends
     When I load the store
-    Then loading the store fails
+    Then it fails
     And stderr mentions "must also be listed in `depends`"
 
   @must-5.9.1
@@ -80,7 +82,7 @@ Feature: A number names its unit, its kind, how sure it is, and how it was compu
   Scenario: A concept whose kind is missing from depends is refused by the loader
     Given a store holding a concept whose kind is not in depends
     When I load the store
-    Then loading the store fails
+    Then it fails
     And stderr mentions "defines.kind cites"
 
   @must-5.9.1

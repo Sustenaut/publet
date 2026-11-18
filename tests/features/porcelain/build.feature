@@ -22,7 +22,7 @@ Feature: A tree of named publet sources is built into objects and a lock
     When I build the source tree
     And I build the source tree again
     Then it succeeds
-    And it reports "0 object(s) published"
+    And it prints "0 object(s) published"
     And the lock is byte-identical to the first build's
 
   Scenario: A changed child revises the publets that cite it

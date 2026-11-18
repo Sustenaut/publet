@@ -442,10 +442,9 @@ def _energy(ctx, cell) -> dict:
 ESTIMATE = {"low": "0.8", "likely": "1.1", "high": "1.4"}
 
 
-@then(parsers.parse('reading the tray dimension shows "{fragment}"'))
-def reading_tray(runner, ctx, fragment: str):
-    shown = _read(runner, ctx["q"]["tray"])
-    assert fragment in shown, shown
+@when("I read the tray dimension", target_fixture="result")
+def read_tray(runner, ctx):
+    return runner.act("pub", "read", ctx["q"]["tray"])
 
 
 @when("I compose a normative claim defining", target_fixture="result")

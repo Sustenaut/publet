@@ -94,11 +94,6 @@ def does_not_weigh(result):
     assert _affirm(result) == "0.000000", result.stdout
 
 
-@then("no evidence is reported as not counted")
-def none_reported(result):
-    assert "not counted" not in result.stderr, result.stderr
-
-
 @then("the affirmation is reported as not counted")
 def reported(result, ws):
     assert f"not counted: {ws['affirmation']}" in result.stderr, result.stderr

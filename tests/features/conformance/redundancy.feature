@@ -8,7 +8,7 @@ Feature: A dispute adding nothing new carries no weight
   Scenario: A dispute whose grounds a resolution already covers is redundant
     Given a claim disputed on grounds a sustained resolution already covers
     When I ask why
-    Then the divergence factor is zero
+    Then it prints "delta          0.000000"
 
   Scenario: A dispute on new grounds still counts
     Given a claim disputed on grounds no resolution covers

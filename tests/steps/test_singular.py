@@ -71,12 +71,6 @@ def _compose(runner, *args: str) -> str:
     return out.stdout.split()[0]
 
 
-def _depends(runner, cid: str) -> str:
-    out = runner.run("pub", "read", cid)
-    assert out.code == 0, out.stderr
-    return out.stdout.split("presupposes:", 1)[1] if "presupposes:" in out.stdout else ""
-
-
 def _fact_table(about, value, *, concept=FLOOR_AREA, about_extra=None, kind, measure):
     column = {"name": "about", **(about_extra or {})}
     return {"columns": [column,
@@ -109,17 +103,30 @@ GOLDEN_AUTHOR = "pub:sha2-256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 GOLDEN = Path(__file__).resolve().parent.parent / "golden" / "tallinn.json"
 
 
-@given("a workspace authored by a fixed key with the Tallinn basement", target_fixture="ctx")
-def golden_tallinn(runner):
-    return _tallinn(runner, author=GOLDEN_AUTHOR)
+@given("a workspace authored by a fixed key")
+def golden_workspace(runner):
+    _workspace(runner, author=GOLDEN_AUTHOR)
 
 
-def _tallinn(runner, author=None):
+@when("I compose the Tallinn basement and its floor area")
+def compose_golden(pubtest_ctx, runner):
+    pubtest_ctx.attempt(lambda: _compose_tallinn(runner)["s"])
+
+
+def _workspace(runner, author=None):
     assert runner.run("pub", "init").code == 0
     if author:
         config = runner.cwd / ".publet" / "config"
         config.write_text("".join(f"author={author}\n" if line.startswith("author=") else line + "\n"
                                   for line in config.read_text().splitlines()))
+
+
+def _tallinn(runner, author=None):
+    _workspace(runner, author)
+    return _compose_tallinn(runner)
+
+
+def _compose_tallinn(runner):
     s = {}
     s["ucum"] = _defined(runner, "ucum", "UCUM: the Unified Code for Units of Measure, version 2.2.", UCUM)
     s["area_kind"] = _defined(runner, "area_kind", "area: the size of a surface.", AREA_KIND, s["ucum"])
@@ -203,12 +210,14 @@ def retract_assessment(runner, ctx):
 
 
 @then("each object composed has the identifier committed for it")
-def golden(ctx):
+def golden(pubtest_ctx):
     """Bytes for the same input must not drift between pub versions: a
     change here re-mints every fact gathered with an earlier pub. When a
     change is deliberate, rerun with PUBLET_UPDATE_GOLDEN=1 and say why in
     the changelog."""
-    got = {name: cid for name, cid in sorted(ctx["s"].items())}
+    pubtest_ctx.refusal_read = True
+    assert pubtest_ctx.refused is None, f"composing was refused: {pubtest_ctx.refused.message}"
+    got = dict(sorted(pubtest_ctx.result.items()))
     if os.environ.get("PUBLET_UPDATE_GOLDEN"):
         GOLDEN.parent.mkdir(exist_ok=True)
         GOLDEN.write_text(json.dumps({"comment": golden.__doc__.split(":")[0] + ".", "author": GOLDEN_AUTHOR,
@@ -308,26 +317,21 @@ def get(runner, path: str):
 # --- thens -------------------------------------------------------------------
 
 
-@then(parsers.parse('reading the basement shows "{fragment}"'))
-def reading_basement(runner, ctx, fragment: str):
-    out = runner.run("pub", "read", ctx["s"]["basement"])
-    assert fragment in out.stdout, out.stdout
+@when(parsers.parse("I read the {name}"), target_fixture="result")
+def read_named(runner, ctx, name: str):
+    return runner.act("pub", "read", ctx["s"][NAMES[name]])
 
 
-@then("the basement presupposes the Tallinn site and the Place concept")
-def basement_presupposes(runner, ctx):
-    s = ctx["s"]
-    listed = _depends(runner, s["basement"])
-    assert s["tallinn"] in listed and s["place"] in listed, listed
+# What the scenarios call the objects of the Tallinn workspace.
+NAMES = {"basement": "basement", "floor area fact": "fact", "Tallinn site": "tallinn",
+         "Place concept": "place"}
 
 
-@then("the floor area fact presupposes the basement")
-def fact_presupposes(runner, ctx):
-    s = ctx["s"]
-    listed = _depends(runner, s["fact"])
-    assert s["basement"] in listed, listed
+@then(parsers.parse("what it read presupposes the {names}"))
+def read_presupposes(result, ctx, names: str):
+    out = result.stdout
+    listed = out.split("presupposes:", 1)[1] if "presupposes:" in out else ""
+    for name in names.split(" and the "):
+        assert ctx["s"][NAMES[name]] in listed, (name, listed)
 
 
-@then(parsers.parse('it does not print "{text}"'))
-def does_not_print(result, text: str):
-    assert text not in result.stdout, result.stdout

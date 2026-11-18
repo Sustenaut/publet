@@ -6,17 +6,19 @@ Feature: Standing is relative to a declared viewpoint
   Scenario: A claim's outcome depends on the policy evaluating it
     Given the "02-unreplicated" vector
     And the same vector evaluated under a policy with a replication floor of zero
-    Then the two evaluations disagree about the outcome
+    When I evaluate it under each policy
+    Then the result's "as given" is "unreplicated"
+    And the result's "with a floor of zero" is "accepted"
 
   Scenario: A policy with no roots is refused
     Given an evaluation vector whose policy declares no roots
     When I evaluate it
     Then it fails
-    And it says a policy must declare at least one root
+    And stderr mentions "at least one root"
 
   @must-16
   Scenario: An unbounded iteration count is refused
     Given an evaluation vector whose policy asks for 5000 iterations
     When I evaluate it
     Then it fails
-    And it says iterations exceed the limit
+    And stderr mentions "exceeds the limit"

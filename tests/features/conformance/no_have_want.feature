@@ -11,6 +11,8 @@ Feature: Synchronization discloses one integer
     And no request carries any other identifier
 
   Scenario: The interface has exactly one accepting route
-    Given the served route table
-    Then only one route accepts a body
-    And that route takes a single object, not a list
+    When I read which routes the node serves accept a body
+    Then the result is:
+      """
+      ["/pub/v1/object"]
+      """

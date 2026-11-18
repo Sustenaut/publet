@@ -7,7 +7,6 @@ reaches into the store; what a user would see is what is asserted.
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -33,49 +32,42 @@ COHORT = (
 class Pub:
     """Run `pub` in a working directory, as a user would."""
 
-    def __init__(self, bin_dir: Path, cwd: Path):
-        self.bin = bin_dir / "pub"
-        self.store_bin = bin_dir / "pub-store"
-        self.cwd = cwd
+    def __init__(self, runner):
+        self.runner = runner
+        self.cwd = runner.cwd
 
     def run(self, *args: str):
-        proc = subprocess.run(
-            [str(self.bin), *args], capture_output=True, cwd=self.cwd, check=False
-        )
-        return proc
+        return self.runner.run("pub", *args)
 
     def add(self, data: bytes) -> str:
-        proc = subprocess.run(
-            [str(self.store_bin), "--store=.publet/objects.redb", "add"],
-            input=data, capture_output=True, cwd=self.cwd, check=False,
-        )
-        assert proc.returncode == 0, proc.stderr
-        return proc.stdout.decode().strip()
+        proc = self.runner.run("pub-store", "--store=.publet/objects.redb", "add", stdin=data)
+        assert proc.code == 0, proc.stderr
+        return proc.stdout.strip()
 
 
 def text_of(proc) -> str:
-    return (proc.stdout + proc.stderr).decode("utf-8", "replace")
+    return proc.stdout + proc.stderr
 
 
 @given("an empty directory", target_fixture="pub")
-def empty_dir(bin_dir: Path, tmp_path: Path):
-    return Pub(bin_dir, tmp_path)
+def empty_dir(runner):
+    return Pub(runner)
 
 
 @given("a workspace", target_fixture="pub")
-def workspace(bin_dir: Path, tmp_path: Path):
-    p = Pub(bin_dir, tmp_path)
+def workspace(runner):
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     return p
 
 
 @given("a workspace containing the cohort claim", target_fixture="pub")
-def workspace_with_claim(bin_dir: Path, tmp_path: Path):
-    p = Pub(bin_dir, tmp_path)
+def workspace_with_claim(runner):
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     # A key the policy trusts, so the affirmations below can be signed and
     # count (Section 4.4).
-    key = p.run("sign", "--generate-key", "--principal=human").stdout.decode().split()[1]
+    key = p.run("sign", "--generate-key", "--principal=human").stdout.split()[1]
     assert p.run("policy", f"--root={key}").returncode == 0
     out = p.run(
         "compose", "--class=empirical", f"--content={COHORT}",
@@ -83,7 +75,7 @@ def workspace_with_claim(bin_dir: Path, tmp_path: Path):
         f"--method={cid_of(b'the trial protocol')}",
     )
     assert out.returncode == 0, text_of(out)
-    p.claim = out.stdout.decode().strip()
+    p.claim = out.stdout.strip()
     return p
 
 
@@ -144,10 +136,10 @@ def _relation(author, created, kind, frm, to):
 
 @given("a workspace where a claim has been superseded twice",
        target_fixture="pub")
-def superseded_twice(bin_dir: Path, tmp_path: Path):
+def superseded_twice(runner):
     # Two authors each supersede the same claim. The lineage branches, which
     # is permitted; the proposal should say so rather than refuse.
-    p = Pub(bin_dir, tmp_path)
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     a = _author_of(p)
 
@@ -166,8 +158,8 @@ def superseded_twice(bin_dir: Path, tmp_path: Path):
 
 @given("a workspace where a claim depends on an outdated definition",
        target_fixture="pub")
-def depends_on_outdated(bin_dir: Path, tmp_path: Path):
-    p = Pub(bin_dir, tmp_path)
+def depends_on_outdated(runner):
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     a = _author_of(p)
 
@@ -187,8 +179,8 @@ def depends_on_outdated(bin_dir: Path, tmp_path: Path):
 
 @given("a workspace where a dispute targets a resolved question",
        target_fixture="pub")
-def dispute_already_resolved(bin_dir: Path, tmp_path: Path):
-    p = Pub(bin_dir, tmp_path)
+def dispute_already_resolved(runner):
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     a = _author_of(p)
 
@@ -214,27 +206,6 @@ def propose_target(pub):
     return pub.run("propose", pub.target)
 
 
-@then("it reports that the lineage will branch")
-def reports_branch(result):
-    assert "lineage will branch" in text_of(result), text_of(result)
-
-
-@then("it reports the definition has been superseded")
-def reports_superseded_definition(result):
-    body = text_of(result)
-    assert "has been superseded by" in body, body
-
-
-@then("it reports that a resolution already exists")
-def reports_resolution(result):
-    assert "resolutions already exist" in text_of(result), text_of(result)
-
-
-@when(parsers.parse('I run "{command}"'), target_fixture="result")
-def run_command(pub, command: str):
-    return pub.run(*command.split()[1:])
-
-
 @when(parsers.parse('I run "{command}" on any identifier'), target_fixture="result")
 def run_on_identifier(pub, command: str):
     return pub.run(*command.split()[1:], cid_of(b"anything"))
@@ -246,17 +217,17 @@ def read_claim(pub):
 
 
 @given("a workspace with two claims and a relation between them", target_fixture="pub")
-def workspace_with_relation(bin_dir: Path, tmp_path: Path):
-    p = Pub(bin_dir, tmp_path)
+def workspace_with_relation(runner):
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     a = p.run("compose", "--class=definitional", "--scope=unconditional",
-             "--content=alpha: the first thing").stdout.decode().strip()
+             "--content=alpha: the first thing").stdout.strip()
     b = p.run("compose", "--class=definitional", "--scope=unconditional",
-             "--content=beta: the second thing").stdout.decode().strip()
+             "--content=beta: the second thing").stdout.strip()
     rel = p.run("relate", "--scope=unconditional", "--kind=depends", f"--from={a}", f"--to={b}",
                "--aspect=construction")
     assert rel.returncode == 0, text_of(rel)
-    p.relation = rel.stdout.decode().strip()
+    p.relation = rel.stdout.strip()
     return p
 
 
@@ -266,28 +237,28 @@ def read_relation(pub):
 
 
 @given("a workspace with a claim and a usage annotation on it", target_fixture="pub")
-def workspace_with_annotation(bin_dir: Path, tmp_path: Path):
-    p = Pub(bin_dir, tmp_path)
+def workspace_with_annotation(runner):
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     a = p.run("compose", "--class=definitional", "--scope=unconditional",
-             "--content=gamma: the third thing").stdout.decode().strip()
+             "--content=gamma: the third thing").stdout.strip()
     ann = p.run("annotate", "--scope=unconditional", "--kind=usage", f"--target={a}",
                "--source=an external reference", "--locator=section 2")
     assert ann.returncode == 0, text_of(ann)
-    p.annotation = ann.stdout.decode().strip()
+    p.annotation = ann.stdout.strip()
     return p
 
 
 @given("a workspace with an attributive claim and a provenance verdict on it", target_fixture="pub")
-def workspace_with_verdict(bin_dir: Path, tmp_path: Path):
-    p = Pub(bin_dir, tmp_path)
+def workspace_with_verdict(runner):
+    p = Pub(runner)
     assert p.run("init").returncode == 0
     a = p.run("compose", "--class=attributive", "--scope=unconditional",
-             "--content=Smith (2020) reports that the pump uses 26.4 kWh a day.").stdout.decode().strip()
+             "--content=Smith (2020) reports that the pump uses 26.4 kWh a day.").stdout.strip()
     ann = p.run("annotate", "--scope=unconditional", "--kind=verdict", f"--target={a}",
                "--finding=affirm", "--aspect=provenance")
     assert ann.returncode == 0, text_of(ann)
-    p.annotation = ann.stdout.decode().strip()
+    p.annotation = ann.stdout.strip()
     return p
 
 
@@ -343,24 +314,9 @@ def workspace_exists(pub):
     assert (Path(pub.cwd) / ".publet" / "objects.redb").exists()
 
 
-@then("it reports the policy it created")
-def reports_policy(result):
-    assert "policy" in text_of(result)
-
-
-@then("it says the policy trusts only this workspace")
-def says_policy_is_narrow(result):
-    assert "trusts only this workspace" in text_of(result)
-
-
 @then(parsers.parse('it says to run "{command}"'))
 def says_to_run(result, command: str):
     assert command in text_of(result)
-
-
-@then("the content is shown")
-def content_shown(result):
-    assert "2031 cohort" in text_of(result)
 
 
 @then("the scope is shown")
@@ -402,11 +358,6 @@ def mode_reported(result, mode: str):
     assert f"[{mode}]" in text_of(result)
 
 
-@then("the output says nothing was disclosed")
-def nothing_disclosed(result):
-    assert "nothing was disclosed" in text_of(result)
-
-
 @then("the affirm, deny, abstain and active weights are shown")
 def weights_shown(result):
     body = text_of(result)
@@ -414,85 +365,11 @@ def weights_shown(result):
         assert field in body, field
 
 
-@then("the divergence factor and threshold are shown")
-def delta_shown(result):
-    body = text_of(result)
-    assert "delta" in body and "threshold" in body
-
-
 @then("the reproduction counts and the replication floor are shown")
 def reproductions_shown(result):
     body = text_of(result)
     assert "independent consistent" in body
     assert "floor" in body
-
-
-@then(parsers.parse('the result is "{outcome}"'))
-def result_is(result, outcome: str):
-    assert f"result           {outcome}" in text_of(result), text_of(result)
-
-
-@then("the explanation says it is a fact about the viewpoint")
-def explains_viewpoint(result):
-    assert "fact about your viewpoint" in text_of(result)
-
-
-@then("the explanation says no amount of agreement substitutes for replication")
-def explains_dominance(result):
-    assert "substitutes for one replication" in text_of(result)
-
-
-@then("the output says the computation was local")
-def computation_local(result):
-    assert "locally" in text_of(result)
-
-
-@then("it names the policy it used")
-def names_policy(result):
-    assert "policy pub:sha2-256:" in text_of(result)
-
-
-@then("reading never reports a query mode for a held object")
-def held_objects_are_local(pub):
-    out = pub.run("read", pub.claim)
-    assert "[local]" in text_of(out)
-    assert "[query]" not in text_of(out)
-
-
-@then("it says a scope is required")
-def says_scope_required(result):
-    assert "--scope is required" in text_of(result)
-
-
-@then("it says a class is required")
-def says_class_required(result):
-    assert "--class is required" in text_of(result)
-
-
-@then("it warns that endorsement alone cannot accept it")
-def warns_about_replication(result):
-    assert "endorsement alone" in text_of(result)
-
-
-@then("it warns about joining two assertions")
-def warns_compound(result):
-    assert "two assertions" in text_of(result)
-
-
-@then("it says publication is permanent and attributed")
-def says_permanent(result):
-    assert "permanent and attributed" in text_of(result)
-
-
-@then("it says personal data cannot be reliably recalled")
-def says_no_erasure(result):
-    body = text_of(result)
-    assert "no erasure" in body.lower() or "cannot be reliably" in body
-
-
-@then("it says to use separate keys for separate contexts")
-def says_separate_keys(result):
-    assert "separate keys for separate contexts" in text_of(result)
 
 
 @then("no raw count of annotations appears")
@@ -534,24 +411,18 @@ def object_file(pub, naming: str):
 def read_object_file(pub):
     elsewhere = pub.cwd / "elsewhere"
     elsewhere.mkdir()
-    return subprocess.run([str(pub.bin), "read", str(pub.object_file)],
-                          capture_output=True, cwd=elsewhere, check=False)
+    return pub.runner.act("pub", "read", str(pub.object_file), cwd=elsewhere)
 
 
 @then("the identifier shown is the one its bytes hash to")
 def identifier_computed(pub, result):
-    assert result.stdout.decode().splitlines()[0] == pub.file_cid
+    assert result.stdout.splitlines()[0] == pub.file_cid
 
 
 @then("no mode is reported")
 def no_mode(result):
     out = text_of(result)
     assert "[local]" not in out and "[query]" not in out, out
-
-
-@then("it warns that the file was altered or misnamed")
-def warns_misnamed(result):
-    assert "altered or misnamed" in result.stderr.decode()
 
 
 @when("I read the claim as JSON", target_fixture="result")

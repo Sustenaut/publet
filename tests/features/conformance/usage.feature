@@ -14,19 +14,27 @@ Feature: A definition is settled by usage, not by verdict
   Scenario: Usage citations are recorded and shown
     Given a workspace with a composed definition
     When I cite two sources using it
+    And I ask why about the definition
     Then it succeeds
-    And asking why lists both sources
+    And it prints "en.wiktionary.org/wiki/Merkle_tree"
+    And it prints "doc.rust-lang.org/reference"
 
   Scenario: Two citations of one source are one source
     Given a workspace with a composed definition
     When I cite the same source twice
-    Then asking why reports one distinct source
+    And I ask why about the definition
+    Then it succeeds
+    And it prints "1 distinct source"
 
   Scenario: A definition with nothing citing it says so
     Given a workspace with a composed definition
-    Then asking why reports no corpus citations
+    When I ask why about the definition
+    Then it succeeds
+    And it prints "no corpus citations"
 
   Scenario: A citation need not reproduce the text
     Given a workspace with a composed definition
     When I cite two sources using it
-    Then no citation carries the defined text
+    And I ask why about the definition
+    Then it succeeds
+    And no citation carries the defined text

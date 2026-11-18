@@ -8,7 +8,8 @@ Feature: Acyclic relation kinds reject cycle-closing edges
     Given two publets A and B
     And a "<kind>" relation from A to B
     When a "<kind>" relation from B to A is added
-    Then loading the store fails
+    And I load the store
+    Then it fails
     And stderr mentions "closes a cycle"
 
     Examples:
@@ -21,7 +22,8 @@ Feature: Acyclic relation kinds reject cycle-closing edges
     Given two publets A and B
     And a "<kind>" relation from A to B
     When a "<kind>" relation from B to A is added
-    Then loading the store succeeds
+    And I load the store
+    Then it succeeds
 
     Examples:
       | kind       |

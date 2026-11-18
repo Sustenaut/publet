@@ -17,7 +17,7 @@ Feature: A project says which pub it needs, and pub says when it is not that one
     Given an empty directory
     And the directory needs pub "999.0.0+"
     When I run pub with "init"
-    Then it exits 2
+    Then the exit code is 2
     And stderr mentions "this project needs pub 999.0.0+ (from"
     And stderr mentions "--tag v999.0.0"
     And no workspace was created
@@ -31,7 +31,7 @@ Feature: A project says which pub it needs, and pub says when it is not that one
   Scenario: A workspace's requirement is found from a directory inside it
     Given a workspace that needs pub "999.0.0+"
     When I run pub with "read" from a directory inside it
-    Then it exits 2
+    Then the exit code is 2
     And stderr mentions "config)"
 
   Scenario: The check can be skipped on purpose
@@ -46,7 +46,7 @@ Feature: A project says which pub it needs, and pub says when it is not that one
     Then it succeeds
     And stderr is empty
     When I run pub with "require 999.0.0+"
-    Then it exits 2
+    Then the exit code is 2
     And stderr mentions "this project needs pub 999.0.0+ (from the command line)"
 
   Scenario: The version is shown even when the requirement is not met
@@ -59,15 +59,15 @@ Feature: A project says which pub it needs, and pub says when it is not that one
     Given an empty directory
     And the directory needs pub "latest"
     When I run pub with "init"
-    Then it exits 2
+    Then the exit code is 2
     And stderr mentions "which is not a version requirement"
     When I run pub with "require latest"
-    Then it exits 2
+    Then the exit code is 2
 
   Scenario: pub require with nothing given checks the requirement declared here, or says there is none
     Given an empty directory
     When I run pub with "require"
-    Then it exits 2
+    Then the exit code is 2
     And stderr mentions "no requirement given, and none declared here"
     Given the directory needs pub "0.1+"
     When I run pub with "require"

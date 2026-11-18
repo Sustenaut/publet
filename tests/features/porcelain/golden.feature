@@ -7,5 +7,6 @@ Feature: The same input composes to the same bytes, release after release
   unless it is deliberate.
 
   Scenario: The Tallinn fixtures compose to the committed identifiers
-    Given a workspace authored by a fixed key with the Tallinn basement
+    Given a workspace authored by a fixed key
+    When I compose the Tallinn basement and its floor area
     Then each object composed has the identifier committed for it

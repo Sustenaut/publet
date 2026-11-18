@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import os
 import stat
-import subprocess
 from pathlib import Path
 
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -84,9 +83,7 @@ def _env(ctx) -> dict:
 
 def _pub(runner, ctx, *args):
     """Run `pub` with the stub tool on PATH."""
-    proc = subprocess.run([str(runner.path_to("pub")), *args], capture_output=True,
-                          cwd=runner.cwd, env=_env(ctx), text=True, check=False)
-    return proc
+    return runner.run("pub", *args, env=_env(ctx))
 
 
 def _write_stub(ctx, version: str) -> None:

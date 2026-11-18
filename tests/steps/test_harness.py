@@ -5,16 +5,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from pytest_bdd import given, scenarios, then
+from pytest_bdd import scenarios, then
 
 scenarios("../features/harness.feature")
 
 
-@given("the binary directory is configured", target_fixture="configured_dir")
-def configured_dir(bin_dir: Path) -> Path:
-    return bin_dir
-
-
-@then("it is the directory named by PUBLET_BIN_DIR")
-def matches_environment(configured_dir: Path) -> None:
-    assert configured_dir == Path(os.environ["PUBLET_BIN_DIR"])
+@then("the program it ran is the one in the directory PUBLET_BIN_DIR names")
+def ran_from_bin_dir(result) -> None:
+    ran = Path(result.argv[0])
+    assert ran.parent.resolve() == Path(os.environ["PUBLET_BIN_DIR"]).resolve(), ran

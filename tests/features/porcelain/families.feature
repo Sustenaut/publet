@@ -101,4 +101,4 @@ Feature: Families are bundled for a theme, one bundle per family and per code
     Given a directory of objects and a workspace with no key
     When I make a domain of the directory
     Then it succeeds
-    And stdout mentions "unsigned: this workspace has no key"
+    And it prints "unsigned: this workspace has no key"

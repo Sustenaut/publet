@@ -6,18 +6,21 @@ Feature: What a user is told before they publish anything
 
   Scenario: Creating a workspace states the permanence
     Given an empty directory
+    And the program under test is "pub"
     When I run "pub init"
-    Then it says publication is permanent and attributed
+    Then it prints "permanent and attributed"
 
   Scenario: Creating a workspace states that there is no erasure
     Given an empty directory
+    And the program under test is "pub"
     When I run "pub init"
-    Then it says personal data cannot be reliably recalled
+    Then it prints "cannot be reliably"
 
   Scenario: Creating a workspace advises separate keys per context
     Given an empty directory
+    And the program under test is "pub"
     When I run "pub init"
-    Then it says to use separate keys for separate contexts
+    Then it prints "separate keys for separate contexts"
 
   Scenario: Reading states which mode was used
     Given a workspace containing the cohort claim

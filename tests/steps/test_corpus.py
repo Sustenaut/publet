@@ -7,7 +7,6 @@ workspace and key, as a parent corpus and a project corpus would have.
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -22,8 +21,7 @@ class Corpora:
         self.child = runner.cwd / "proj"
 
     def pub(self, where: Path, *args: str):
-        return subprocess.run([str(self.runner.path_to("pub")), *args],
-                              capture_output=True, text=True, cwd=where, check=False)
+        return self.runner.run("pub", *args, cwd=where)
 
     def ok(self, where: Path, *args: str):
         proc = self.pub(where, *args)
@@ -227,16 +225,6 @@ def reads_alone(corpora):
         assert "[local]" in out.stdout
     finally:
         corpora.parent.with_name("away").rename(corpora.parent)
-
-
-@then(parsers.parse('it reports "{text}"'))
-def reports(result, text: str):
-    assert text in result.stdout, result.stdout + result.stderr
-
-
-@then("the child's publet is published again")
-def child_republished(result):
-    assert "published  doc" in result.stdout, result.stdout
 
 
 @then(parsers.parse('the superseding publet is reported "{status}"'))

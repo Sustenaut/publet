@@ -1,0 +1,4 @@
+{
+  "category": "internal",
+  "change": "The functional suite's scenarios are Given/When/Then on pubtest's steps"
+}

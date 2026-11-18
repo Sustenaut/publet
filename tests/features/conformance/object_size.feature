@@ -12,4 +12,4 @@ Feature: Objects are bounded
     Given canonical bytes of 1048577 bytes
     When I run "pub-canon" with that object on stdin
     Then the exit code is 1
-    And stderr names the violated rule "object size limit"
+    And stderr mentions "object size limit"

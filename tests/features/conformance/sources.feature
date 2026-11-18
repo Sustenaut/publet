@@ -35,10 +35,10 @@ Feature: Values say where they were read from
   Scenario: A source claim missing from depends is refused by the loader
     Given a store holding a claim whose source claim is not in depends
     When I load the store
-    Then loading the store fails
+    Then it fails
     And stderr mentions "must also be listed in `depends`"
 
   Scenario: A source claim listed in depends is accepted by the loader
     Given a store holding a claim whose source claim is in depends
     When I load the store
-    Then loading the store succeeds
+    Then it succeeds

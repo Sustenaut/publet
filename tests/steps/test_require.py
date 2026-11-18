@@ -42,11 +42,6 @@ def run_pub_inside(runner, args: str):
     return runner.run("pub", *args.split())
 
 
-@then("it exits 2")
-def exits_2(result):
-    assert result.code == 2, (result.code, result.stderr)
-
-
 @then("no workspace was created")
 def no_workspace(runner):
     assert not (runner.cwd / ".publet").exists()

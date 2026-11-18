@@ -12,7 +12,6 @@ import json
 import os
 import shutil
 import stat
-import subprocess
 from pathlib import Path
 
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -139,8 +138,7 @@ class Env:
                     XDG_CACHE_HOME=str(self.cache))
 
     def pub(self, *args: str):
-        return subprocess.run([str(self.runner.path_to("pub")), *args], capture_output=True,
-                              text=True, cwd=self.root, env=self.env(), check=False)
+        return self.runner.run("pub", *args, cwd=self.root, env=self.env())
 
     def ok(self, *args: str):
         proc = self.pub(*args)
@@ -240,11 +238,6 @@ def output_names_doc(env):
 @then("the environment is not provisioned")
 def not_provisioned(env):
     assert env.records() == []
-
-
-@then(parsers.parse('it reports "{text}"'))
-def reports(result, text: str):
-    assert text in result.stdout, result.stdout + result.stderr
 
 
 @then("the path ends with the environment's identifier")
