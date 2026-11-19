@@ -1,0 +1,4 @@
+{
+  "category": "fixed",
+  "change": "the README and crate docs link to the specification at its new path, design/spec/specification.md"
+}
