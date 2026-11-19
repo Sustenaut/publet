@@ -91,13 +91,26 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         }
     }
 
-    if [do_generate, do_rotate, do_restore].iter().filter(|&&on| on).count() > 1 {
+    if [do_generate, do_rotate, do_restore]
+        .iter()
+        .filter(|&&on| on)
+        .count()
+        > 1
+    {
         return Err(
-            "--generate-key, --rotate and --restore-key are different commands; give one".to_owned(),
+            "--generate-key, --rotate and --restore-key are different commands; give one"
+                .to_owned(),
         );
     }
     if do_restore {
-        return restore(&ws, &here, principal, label.as_deref(), &created, expect.as_deref());
+        return restore(
+            &ws,
+            &here,
+            principal,
+            label.as_deref(),
+            &created,
+            expect.as_deref(),
+        );
     }
     if do_generate {
         return generate(&ws, &here, principal, label.as_deref(), &created);
