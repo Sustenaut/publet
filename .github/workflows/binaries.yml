@@ -28,6 +28,12 @@ on:
 permissions:
   contents: read
 
+# One run at a time, queued not cancelled: main's run after a merge and a
+# run by hand can start together, and only one should build and upload.
+concurrency:
+  group: binaries
+  cancel-in-progress: false
+
 jobs:
   pub:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
@@ -84,6 +90,11 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
           ARCHIVE: ${{ steps.release.outputs.archive }}
         run: |
+          # Another run may have attached it while this one built: then there
+          # is nothing to do.
+          if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx "$ARCHIVE"; then
+            echo "$ARCHIVE was attached while this run built; leaving it"; exit 0
+          fi
           tar -czf "$ARCHIVE" -C "target/$TARGET/release" pub
           sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
           cat "$ARCHIVE.sha256"
