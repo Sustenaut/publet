@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Written by `pubdoc init`. It names no release: it runs the pubdoc that
+# requirements-pubdoc.txt, beside it, pins. Change that line, or let pubrules's nightly
+# move it, to move this repository to another release.
+#
+# Run this repository's pubdoc from its root, or from anywhere through this
+# script's path:
+#
+#   ./pubdoc check
+#   ./pubdoc build job-applications/veriff
+#
+# uvx fetches that release's wheel once and keeps it in uv's cache; nothing
+# is installed into the repository or the system.
+set -euo pipefail
+
+pin="$(dirname "${BASH_SOURCE[0]}")/requirements-pubdoc.txt"
+if [ ! -f "$pin" ]; then
+  echo "pubdoc: no $pin, which pins the pubdoc ./pubdoc runs; run pubdoc init again" >&2
+  exit 1
+fi
+url="$(sed -n 's/^pubdoc @ //p' "$pin" | head -n 1)"
+if [ -z "$url" ]; then
+  echo "pubdoc: $pin has no line "pubdoc @ URL"; run pubdoc init again" >&2
+  exit 1
+fi
+
+if ! command -v uvx >/dev/null 2>&1; then
+  echo "pubdoc: ./pubdoc runs pubdoc with uv, which is not installed: curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
+  exit 127
+fi
+
+exec uvx --from "$url" pubdoc "$@"

@@ -46,7 +46,17 @@ porcelain/  the `pub` multi-call binary
 tests/      Python and Gherkin functional suite
 vectors/    committed byte-level test vectors
 tools/      environment resolution and the CI guards
+spec/       the specification, MyST, with its own myst.yml
+design/     plans for this implementation: a pubdoc document project
 ```
+
+`design/` holds one doc per plan (`rust-plan/`, `selfhosting-plan/`), each
+a `plan.md`, under `design/project.yml`. `./pubdoc` runs the
+[pubdoc](https://github.com/Sustenaut/pubdoc) release that
+`requirements-pubdoc.txt` pins: `./pubdoc build design/rust-plan` writes
+`design/rust-plan/build/general/lapreprint.pdf`, and `make design`, which CI's
+functional job runs, checks the project and builds every plan. Building needs
+uv, Node.js and typst.
 
 ## Testing
 
