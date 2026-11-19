@@ -5,7 +5,7 @@ suite exercises. Gaps are listed rather than hidden: a report
 that showed only what passes would say nothing about what is
 untested.
 
-- specification: `spec/index.md`
+- specification: `design/spec/specification.md`
 - sections with normative language: 59
 - sections with at least one scenario: 56 (94%)
 

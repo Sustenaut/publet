@@ -1,16 +1,18 @@
-# The design documents for this implementation of the Publet Protocol, built
-# with pubdoc (./pubdoc, which runs the release requirements-pubdoc.txt pins).
-# The specification itself is spec/, which builds with its own myst.yml.
+# The specification of the Publet Protocol and the design documents for this
+# implementation, built with pubdoc (./pubdoc, which runs the release
+# requirements-pubdoc.txt pins). Each doc holds one of the two parts.
 project: design
-purpose: Plans for implementing the Publet Protocol and for making it describe itself
+purpose: The Publet Protocol's specification, and plans for implementing it and for making it describe itself
 parts:
-  plan: {required: true}
+  specification: {required: false}
+  plan: {required: false}
 roles:
   contributors: [schryer]
   reviewers: [schryer]
 variants:
   general: {audience: Publet Protocol implementers}
 layouts:
+  classicthesis: {part: specification, template: ../templates/classicthesis-typst, format: pdf}
   lapreprint: {part: plan, template: lapreprint-typst, format: pdf}
 review:
   - step: checks
@@ -19,5 +21,5 @@ review:
     human: {reviewers: 1}
 publish:
   - place: storage
-    layouts: [lapreprint]
+    layouts: [classicthesis, lapreprint]
     readers: named

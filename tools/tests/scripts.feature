@@ -1,18 +1,18 @@
-Feature: The maintainer scripts in tools/ and spec/
+Feature: The maintainer scripts in tools/
   These scripts are not protocol code and the functional suite in tests/
   never runs them, so these scenarios load each one as a module and run it
   in-process. `make script-tests` runs them under coverage for SonarQube
   Cloud.
 
   Scenario: Audit finds the specification consistent
-    When the script "spec/audit.py" runs
+    When the script "tools/spec-audit.py" runs
     Then the result is "0"
-    And it prints "index.md: consistent"
+    And it prints "specification.md: consistent"
 
   Scenario: Audit reads a path given
     Given a scratch directory
-    And a file "index.md" copied from "spec/index.md"
-    When the script "spec/audit.py" runs with "index.md"
+    And a file "index.md" copied from "design/spec/specification.md"
+    When the script "tools/spec-audit.py" runs with "index.md"
     Then the result is "0"
     And it prints "consistent"
 
@@ -24,17 +24,17 @@ Feature: The maintainer scripts in tools/ and spec/
 
       See Section 9.
       """
-    When the script "spec/audit.py" runs with "index.md"
+    When the script "tools/spec-audit.py" runs with "index.md"
     Then the result is "1"
     And it prints "finding(s)"
 
   Scenario: Audit refuses a path outside
-    When the script "spec/audit.py" runs with "/etc/hostname"
+    When the script "tools/spec-audit.py" runs with "/etc/hostname"
     Then it is refused, saying "the specification"
 
   Scenario: Must coverage writes the report
     Given a scratch directory
-    And a file "index.md" copied from "spec/index.md"
+    And a file "index.md" copied from "design/spec/specification.md"
     When the script "tools/must-coverage.py" runs with "--spec index.md --report COVERAGE.md"
     Then the result is "0"
     And the file "COVERAGE.md" includes "# Conformance coverage"
@@ -124,7 +124,7 @@ Feature: The maintainer scripts in tools/ and spec/
 
     Examples:
       | script                 |
-      | spec/audit.py          |
+      | tools/spec-audit.py    |
       | tools/must-coverage.py |
       | tools/wiki-seed.py     |
 
@@ -134,7 +134,7 @@ Feature: The maintainer scripts in tools/ and spec/
 
     Examples:
       | script                 |
-      | spec/audit.py          |
+      | tools/spec-audit.py    |
       | tools/must-coverage.py |
       | tools/wiki-seed.py     |
 
@@ -145,10 +145,10 @@ Feature: The maintainer scripts in tools/ and spec/
 
     Examples:
       | script                 | path                          |
-      | spec/audit.py          | /etc/passwd                   |
+      | tools/spec-audit.py    | /etc/passwd                   |
       | tools/must-coverage.py | /etc/passwd                   |
       | tools/wiki-seed.py     | /etc/passwd                   |
-      | spec/audit.py          | ../../../../../../etc/passwd  |
+      | tools/spec-audit.py    | ../../../../../../etc/passwd  |
       | tools/must-coverage.py | ../../../../../../etc/passwd  |
       | tools/wiki-seed.py     | ../../../../../../etc/passwd  |
 

@@ -18,15 +18,8 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# The specification lives in this repository (spec/index.md). The sibling
-# docs checkout is where it used to live, and is kept as a fallback so an
-# older layout still finds it.
-DEFAULT_SPEC = next(
-    (p for p in (ROOT / "spec" / "index.md",
-                 ROOT.parent / "docs" / "publet-specification" / "index.md")
-     if p.exists()),
-    ROOT / "spec" / "index.md",
-)
+# The specification is a doc of the design project, built with pubdoc.
+DEFAULT_SPEC = ROOT / "design" / "spec" / "specification.md"
 
 NORMATIVE = re.compile(r"\b(MUST NOT|MUST|SHALL NOT|SHALL|REQUIRED)\b")
 # Top-level headings are written "## 6. Relations" -- number, period, space --

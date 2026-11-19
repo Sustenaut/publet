@@ -8,6 +8,10 @@ keywords:
   - trust propagation
   - reproducibility
   - protocol specification
+authors:
+  - name: David Schryer
+    email: schryer@gmail.com
+  - name: Claude (Anthropic)
 ---
 
 **Internet-Draft** — `draft-schryer-publet-protocol-01`

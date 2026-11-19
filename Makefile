@@ -24,7 +24,7 @@ spec-coverage: ## Report which normative statements have scenarios
 coverage-check: spec-coverage ## Fail if the committed coverage report is stale
 	git diff --exit-code conformance/COVERAGE.md
 
-# The tests of the maintainer scripts in tools/ and spec/, under coverage.
+# The tests of the maintainer scripts in tools/, under coverage.
 # The Cobertura report is what SonarQube Cloud reads for their Python.
 script-tests: ## Test the maintainer scripts; Cobertura XML in coverage/scripts.xml
 	mkdir -p coverage
