@@ -1,4 +1,4 @@
-"""Steps for scripts.feature: the maintainer scripts in tools/ and spec/,
+"""Steps for scripts.feature: the maintainer scripts in tools/,
 each loaded as a module and run in-process, as pubtest's `attempt`, so that
 pubtest's steps read what each returned, raised and printed."""
 
@@ -31,12 +31,12 @@ def load(relative: str):
     return module
 
 
-audit = load("spec/audit.py")
+audit = load("tools/spec-audit.py")
 must_coverage = load("tools/must-coverage.py")
 wiki_seed = load("tools/wiki-seed.py")
 vectors = load("tools/vectors/generate.py")
 
-SCRIPTS = {"spec/audit.py": audit, "tools/must-coverage.py": must_coverage, "tools/wiki-seed.py": wiki_seed}
+SCRIPTS = {"tools/spec-audit.py": audit, "tools/must-coverage.py": must_coverage, "tools/wiki-seed.py": wiki_seed}
 
 
 # --- running a script --------------------------------------------------------

@@ -23,7 +23,7 @@ assert_eq!(object.object().kind(), "claim.prose");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-[Publet Protocol]: https://github.com/Sustenaut/publet/blob/main/spec/index.md
+[Publet Protocol]: https://github.com/Sustenaut/publet/blob/main/design/spec/specification.md
 
 # Overview
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Internal-consistency audit for index.md (the PUB specification).
+"""Internal-consistency audit for the PUB specification, design/spec/specification.md.
 
 This document cross-references itself heavily: numbered sections, rule IDs
 (R1..Rn), assumed-environment IDs (L1..Ln), open-problem IDs (B.n), and an
@@ -7,7 +7,7 @@ IANA registry that must list every object type the text actually uses. Past
 that scale, consistency does not survive hand-editing - every check here
 corresponds to a real defect found after the fact.
 
-Usage:  ./audit.py [path-to-index.md]     (exit 0 clean, 1 on findings)
+Usage:  tools/spec-audit.py [path-to-specification.md]     (exit 0 clean, 1 on findings)
 """
 
 import re
@@ -141,7 +141,7 @@ def confined(path, what):
 
 def main():
     path = (confined(sys.argv[1], "the specification") if len(sys.argv) > 1
-            else Path(__file__).with_name("index.md"))
+            else Path(__file__).resolve().parent.parent / "design" / "spec" / "specification.md")
     findings = audit(path.read_text())
     if findings:
         print("%s: %d finding(s)\n" % (path.name, len(findings)))

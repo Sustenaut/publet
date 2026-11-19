@@ -46,17 +46,20 @@ porcelain/  the `pub` multi-call binary
 tests/      Python and Gherkin functional suite
 vectors/    committed byte-level test vectors
 tools/      environment resolution and the CI guards
-spec/       the specification, MyST, with its own myst.yml
-design/     plans for this implementation: a pubdoc document project
+design/     the specification and the plans for this implementation: a pubdoc project
 ```
 
-`design/` holds one doc per plan (`rust-plan/`, `selfhosting-plan/`), each
-a `plan.md`, under `design/project.yml`. `./pubdoc` runs the
-[pubdoc](https://github.com/Sustenaut/pubdoc) release that
-`requirements-pubdoc.txt` pins: `./pubdoc build design/rust-plan` writes
-`design/rust-plan/build/general/lapreprint.pdf`, and `make design`, which CI's
-functional job runs, checks the project and builds every plan. Building needs
-uv, Node.js and typst.
+`design/` is a pubdoc project, `design/project.yml`: the specification,
+`design/spec/specification.md` (beside it, `DESIGN-*.md` working notes that are
+not part of it), and one doc per plan (`rust-plan/`, `selfhosting-plan/`),
+each a `plan.md`. The specification builds with `templates/classicthesis-typst`,
+this repository's own template; the plans with pubdoc's lapreprint.
+`./pubdoc` runs the [pubdoc](https://github.com/Sustenaut/pubdoc) release
+that `requirements-pubdoc.txt` pins: `./pubdoc build design/spec` writes
+`design/spec/build/general/classicthesis.pdf`, and `make design`, which CI's
+functional job runs, checks the project and builds every doc. Building needs
+uv, Node.js and typst. `tools/spec-audit.py` checks the specification's
+internal consistency.
 
 ## Testing
 
