@@ -26,6 +26,13 @@
         ".github/workflows/queue.yml"
       ],
       "mode": "required"
+    },
+    {
+      "plugin": "github.repo-ops",
+      "paths": [
+        ".github/workflows/binaries.yml"
+      ],
+      "mode": "required"
     }
   ],
   "other_hosts": [

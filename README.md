@@ -406,6 +406,19 @@ published on crates.io:
 cargo install --locked --git https://github.com/Sustenaut/publet --tag v0.2.0 publet-cli
 ```
 
+Or download it: from 0.4.0, each release carries a static `pub` for
+x86-64 Linux, `pub-X.Y.Z-x86_64-unknown-linux-musl.tar.gz`, and its
+`.sha256`, which `.github/workflows/binaries.yml` builds at the tag once
+main has released it (and attaches to an earlier release when run by hand
+with its tag). Pin the sha256 where you download it, as a CI runner that
+drives `pub` should:
+
+```sh
+curl -fsSLO https://github.com/Sustenaut/publet/releases/download/v0.4.0/pub-0.4.0-x86_64-unknown-linux-musl.tar.gz
+echo "<pinned sha256>  pub-0.4.0-x86_64-unknown-linux-musl.tar.gz" | sha256sum -c -
+tar -xzf pub-0.4.0-x86_64-unknown-linux-musl.tar.gz pub
+```
+
 That installs `pub`. Each plumbing command is a package of its own under
 `bin/`, named as the command is (`pub-sync`, `pub-verify`, ...), and is
 installed the same way with its name in place of `publet-cli`.
