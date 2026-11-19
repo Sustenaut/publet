@@ -19,6 +19,12 @@ review:
     automatic: [build]
   - step: approval
     human: {reviewers: 1}
+# Approved renders go to storage's public publet-design tenant (the repository
+# is public), and versions are signed in design/corpus with a key of its own,
+# never the one that signs publet's releases: made on 2026-11-19, backed up as
+# pub-signing-key-publet-design.
+storage: {tenant: publet-design}
+corpus: {path: corpus, key: pub:sha2-256:s26mmpjds7nfh4bdtzwgso4udnjlzglg2symwt5jodeu6xcllh5a}
 publish:
   - place: storage
     layouts: [classicthesis, lapreprint]

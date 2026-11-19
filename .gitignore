@@ -43,3 +43,7 @@ render.json
 
 # Local secrets, such as the Bitwarden token ./with-secrets reads: never committed.
 .env
+
+# The design project's corpus key and working store: only on the approver's machine.
+/design/corpus/.publet/
+/design/corpus/.draft-discards

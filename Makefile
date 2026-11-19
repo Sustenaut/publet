@@ -55,9 +55,10 @@ guard-rules: ## Enforce that every operating rule is traceable to its code
 # The design documents (design/), a pubdoc project: checked and every plan
 # built, as CI's functional job runs it. Under CI, tools/doc-ci-setup.sh first
 # installs the pinned uv and typst into ~/.local/bin; a laptop uses its own.
-design: ## Check and build the design documents in design/ with pubdoc
+design: ## Check, verify the signed versions of, and build the design documents in design/
 	$(if $(CI),./tools/doc-ci-setup.sh)
 	PATH="$$HOME/.local/bin:$$PATH" ./pubdoc check design
+	PATH="$$HOME/.local/bin:$$PATH" ./pubdoc verify design
 	PATH="$$HOME/.local/bin:$$PATH" ./pubdoc build design
 
 release-check: ## Check this branch records its changes, or is a correct release (BASE=origin/main)
