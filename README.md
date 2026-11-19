@@ -66,9 +66,10 @@ with a key of its own (not the one that signs publet's releases), and its
 renders are in storage's public `publet-design` tenant: `./pubdoc approve
 design/spec`, then commit `design/corpus/` and the doc's `versions/`. CI's
 `make design` runs `./pubdoc verify design`, with the `pub` that
-`pubrules.json`'s `ci.tools` installs. `scripts/go-live-design.sh` makes the
-corpus and its key once, names the key in `design/project.yml`'s
-`corpus.key`, and backs it up to Bitwarden.
+`pubrules.json`'s `ci.tools` installs. The key was made on 2026-11-19; it
+lives only in `design/corpus/.publet/` on the machine that approves, is named
+by `design/project.yml`'s `corpus.key`, and is backed up to Bitwarden as
+`pub-signing-key-publet-design` (`pubsec signing-key backup`).
 
 ## Testing
 
