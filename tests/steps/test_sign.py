@@ -90,3 +90,46 @@ def signs(runner, here, kept):
     claim = out.stdout.strip()
     signed = runner.run("pub", "sign", "--purpose=authored", f"--target={claim}", cwd=here)
     assert signed.returncode == 0, signed.stderr
+
+
+SOURCE = """{"slug": "doc.a", "tag": "DOC-AAAAAA-11-2026", "title": "a", "created": "2026-11-19T00:00:00Z",
+ "claims": {"identity": {"class": "archival", "scope": "a test", "content": "A test.",
+                         "sources": [{"ref": "t", "revision": "x"}]}},
+ "sections": [{"heading": "I", "items": [{"ref": "#identity"}]}]}
+"""
+
+
+@given(parsers.parse('a corpus whose key, labelled "{label}", signed a publish, and its secret kept'),
+       target_fixture="kept")
+def published_corpus(runner, scratch, label):
+    corpus = scratch / "corpus"
+    (corpus / "publets" / "doc.a").mkdir(parents=True)
+    assert runner.run("pub", "corpus", "init", cwd=corpus).returncode == 0
+    out = runner.run("pub", "sign", "--generate-key", "--principal=human", f"--label={label}", cwd=corpus)
+    assert out.returncode == 0, out.stderr
+    (corpus / "publets" / "doc.a" / "publet.json").write_text(SOURCE)
+    assert runner.run("pub", "build", cwd=corpus).returncode == 0
+    published = runner.run("pub", "publish", "doc.a", cwd=corpus)
+    assert published.returncode == 0, published.stderr
+    secret = scratch / "kept.key"
+    shutil.copy(corpus / ".publet" / "signing.key", secret)
+    return {"key": out.stdout.split()[1], "secret": secret, "corpus": corpus}
+
+
+def _fresh_store(runner, corpus):
+    shutil.rmtree(corpus / ".publet")
+    assert runner.run("pub", "init", cwd=corpus).returncode == 0
+
+
+@given("the corpus's store is gone, its secret put back", target_fixture="here")
+def store_gone_secret_back(runner, kept):
+    _fresh_store(runner, kept["corpus"])
+    shutil.copy(kept["secret"], kept["corpus"] / ".publet" / "signing.key")
+    return kept["corpus"]
+
+
+@given("the corpus's store is gone, another secret in its place", target_fixture="here")
+def store_gone_other_secret(runner, kept):
+    _fresh_store(runner, kept["corpus"])
+    (kept["corpus"] / ".publet" / "signing.key").write_text("ab" * 32 + "\n")
+    return kept["corpus"]

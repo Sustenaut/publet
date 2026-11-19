@@ -13,12 +13,16 @@
 //! on cites as `author`). `--purpose`/`--target` signs an object already in
 //! this workspace's store.
 //!
-//! `--restore-key` rebuilds the `key` object of a secret already in
+//! `--restore-key` gives back the `key` object of a secret already in
 //! `.publet/signing.key`, one put back from a backup that holds the secret
-//! alone: the object is a function of the secret and the `--principal`,
-//! `--label` and `--created` it was made with, so it comes out identical,
-//! and `author` names it again. `--expect=CID` refuses any other result. It
-//! never replaces an `author` that names another key the store holds.
+//! alone, and makes `author` name it again. With `--expect=CID` naming a key
+//! object committed in `objects/` (a corpus exports its key at its first
+//! publish), that object is the key, once the secret is shown to be its
+//! secret, and no other setting is needed. Otherwise the object is rebuilt
+//! from the secret and the `--principal`, `--label` and `--created` it was
+//! made with, which comes out identical, and `--expect` refuses any other
+//! result. It never replaces an `author` that names another key the store
+//! holds.
 //!
 //! `--rotate` replaces this workspace's key the way Section 10.5 says: a
 //! new `key` object with `rotates` naming the current key, signed by
@@ -197,26 +201,69 @@ fn restore(
     created: &str,
     expect: Option<&str>,
 ) -> Result<(), String> {
-    let principal = principal.ok_or(format!(
-        "--principal is required: one of {}, as the key was made with",
-        PRINCIPALS.join(", ")
-    ))?;
-    if !PRINCIPALS.contains(&principal.as_str()) {
-        return Err(format!("unknown principal: {principal}"));
-    }
     let path = key_path(here);
     let seed = read_key_file(&path).map_err(|e| format!("nothing to restore: {e}"))?;
-    let (cid, bytes) = key_object(&seed, &principal, label, None, created)?;
-    if let Some(wanted) = expect
-        && wanted != cid.to_string()
-    {
-        return Err(format!(
-            "the secret at {} with --principal={principal}{} and --created={created} is the key \
-             {cid}, not {wanted}; check them; nothing was changed",
-            path.display(),
-            label.map(|l| format!(" --label={l}")).unwrap_or_default()
-        ));
-    }
+    // After a corpus's first publish its key object is committed in
+    // objects/: with --expect naming it, that object is the key, and the
+    // secret need only be its secret; no setting has to be remembered.
+    let committed = expect
+        .and_then(|e| e.parse::<Cid>().ok())
+        .map(|c| {
+            (
+                here.join("objects")
+                    .join(format!("{}.cbor", c.to_string().replace(':', "_"))),
+                c,
+            )
+        })
+        .filter(|(file, _)| file.is_file());
+    let (cid, bytes) = if let Some((file, wanted)) = committed {
+        let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
+        let object = Object::parse(&bytes)
+            .and_then(|o| o.verify(&wanted))
+            .map_err(|e| format!("{} is not the key object {wanted}: {e}", file.display()))?
+            .into_inner();
+        if object.kind() != "key" {
+            return Err(format!(
+                "{} is a {}, not a key",
+                file.display(),
+                object.kind()
+            ));
+        }
+        let held = publet_core::verifying_key(SigAlg::Ed25519, &seed).map_err(|e| e.to_string())?;
+        match object.body().get("pubkey") {
+            Some(Value::Bytes(stated)) if *stated == held => {}
+            _ => {
+                return Err(format!(
+                    "the secret at {} is not the secret of {wanted}, the key {} describes; \
+                     nothing was changed",
+                    path.display(),
+                    file.display()
+                ));
+            }
+        }
+        (wanted, bytes)
+    } else {
+        let principal = principal.ok_or(format!(
+            "--principal is required: one of {}, as the key was made with (or --expect=CID \
+             naming a key object committed in objects/)",
+            PRINCIPALS.join(", ")
+        ))?;
+        if !PRINCIPALS.contains(&principal.as_str()) {
+            return Err(format!("unknown principal: {principal}"));
+        }
+        let (cid, bytes) = key_object(&seed, &principal, label, None, created)?;
+        if let Some(wanted) = expect
+            && wanted != cid.to_string()
+        {
+            return Err(format!(
+                "the secret at {} with --principal={principal}{} and --created={created} is the key \
+                 {cid}, not {wanted}; check them; nothing was changed",
+                path.display(),
+                label.map(|l| format!(" --label={l}")).unwrap_or_default()
+            ));
+        }
+        (cid, bytes)
+    };
     let store = ws.store()?;
     // `pub init` seeds `author` with a placeholder no key object backs; a key
     // `author` names that the store holds is another identity, never replaced.

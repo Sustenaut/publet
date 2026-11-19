@@ -41,3 +41,19 @@ Feature: pub sign --restore-key rebuilds a key from its secret
     When I run pub "sign" "--restore-key" "--generate-key" "--principal=human"
     Then it fails
     And stderr mentions "are different commands; give one"
+
+  Scenario: After a corpus publishes, its committed key object is the key, and needs no settings
+    Given a corpus whose key, labelled "docs", signed a publish, and its secret kept
+    And the corpus's store is gone, its secret put back
+    When I run pub "sign" "--restore-key" "--expect={key}"
+    Then it succeeds
+    And it prints "key      {key}"
+    And the workspace's author is that key
+
+  Scenario: A secret that is not the committed key's is refused, naming objects/
+    Given a corpus whose key, labelled "docs", signed a publish, and its secret kept
+    And the corpus's store is gone, another secret in its place
+    When I run pub "sign" "--restore-key" "--expect={key}"
+    Then it fails
+    And stderr mentions "describes; nothing was changed"
+    And stderr mentions "objects/"
