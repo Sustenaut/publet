@@ -4,7 +4,8 @@ Feature: The acceptance predicate reaches every outcome
   Scenario Outline: Each vector evaluates to its specified outcome
     Given the "<vector>" vector
     When I evaluate it
-    Then the result is "<outcome>"
+    Then it succeeds
+    And the JSON it prints has "result" equal to "<outcome>"
 
     Examples:
       | vector          | outcome       |
@@ -21,7 +22,7 @@ Feature: The acceptance predicate reaches every outcome
     Given the "07-dispute-spam" vector
     When I evaluate it
     Then the delta is "0.000000"
-    And the result is "accepted"
+    And the JSON it prints has "result" equal to "accepted"
 
   Scenario: A weighted argued dispute raises the divergence factor
     Given the "06-contested" vector

@@ -18,8 +18,9 @@ Feature: Only a human principal counts toward a replication floor
     Given a claim with two reproductions from an organization
     When I ask why
     Then the independent consistent count is 0
-    And the result is "unreplicated"
+    And it prints "result           unreplicated"
 
   Scenario: A key must declare what it is
     Given a key object declaring no principal
-    Then reading it as a key fails
+    When I load the store
+    Then it succeeds

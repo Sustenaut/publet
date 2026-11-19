@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import stat
-import subprocess
 from pathlib import Path
 
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -93,9 +92,8 @@ class Corpus:
         self.method = "To render with the stub, run its one step."
 
     def pub(self, *args: str):
-        env = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}")
-        return subprocess.run([str(self.runner.path_to("pub")), *args], capture_output=True,
-                              text=True, cwd=self.root, env=env, check=False)
+        return self.runner.run("pub", *args, cwd=self.root,
+                               env={"PATH": f"{self.bin}:{os.environ['PATH']}"})
 
     def ok(self, *args: str):
         proc = self.pub(*args)
@@ -327,11 +325,6 @@ def kept(corpus):
     data = out.read_bytes()
     from support.objects import cid_of
     assert (corpus.root / "blobs" / cid_of(data).replace(":", "_")).read_bytes() == data
-
-
-@then(parsers.parse('it reports "{text}"'))
-def reports(result, text: str):
-    assert text in result.stdout, result.stdout + result.stderr
 
 
 @then(parsers.parse('the publet "{slug}" is reported "{state}"'))

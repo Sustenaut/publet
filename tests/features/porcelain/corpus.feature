@@ -26,12 +26,12 @@ Feature: Project corpora build on parent corpora they are pinned to
     When I publish the child
     And the parent's "tool.x" becomes version "1.1" and the parent is rebuilt
     And I ask the child's corpus status
-    Then it reports "1 generation(s) ahead"
-    And it reports "base:tool.x#identity has a newer version"
+    Then it prints "1 generation(s) ahead"
+    And it prints "base:tool.x#identity has a newer version"
     When I publish the child again
-    Then it reports "membership unchanged"
+    Then it prints "membership unchanged"
     When I upgrade the child and publish it again
-    Then the child's publet is published again
+    Then it prints "published  doc"
     And the child's generation is 1
 
   Scenario: An import newer than the pin is refused until the child upgrades

@@ -124,38 +124,16 @@ def gen_accounted():
     )
 
 
-def _read_generation(runner, gen_bytes, tmp_path):
-    """Ask a tool to read the record, which is where the rules live."""
+@when("I read the generation", target_fixture="result")
+def read_generation(runner, gen_bytes, tmp_path):
+    """Ask a tool to read the record, which is where the rules live. A
+    well-formed record parses; the root will not match this arbitrary
+    membership, and that is a different failure from a malformed record."""
     (tmp_path / "g1.cbor").write_bytes(gen_bytes)
-    return runner.run(
+    return runner.act(
         "pub-delta", f"--dir={tmp_path}", "--from=0",
         f"--member={cid_of(b'anything')}",
     )
-
-
-@then("the generation is malformed")
-def generation_malformed(runner, gen_bytes, tmp_path, request):
-    out = _read_generation(runner, gen_bytes, tmp_path)
-    assert out.code != 0, (
-        "a record with an unaccounted removal must be refused, "
-        f"got exit 0 with {out.stdout!r}"
-    )
-    request.node.stash_stderr = out.stderr
-
-
-@then("the generation is well formed")
-def generation_well_formed(runner, gen_bytes, tmp_path):
-    out = _read_generation(runner, gen_bytes, tmp_path)
-    # The record parses; the root will not match this arbitrary membership,
-    # and that is a different failure from a malformed record.
-    assert "no `ref` accounting" not in out.stderr, out.stderr
-    assert "unknown cause" not in out.stderr, out.stderr
-
-
-@then(parsers.parse('the reason mentions "{fragment}"'))
-def reason_mentions(runner, gen_bytes, tmp_path, fragment: str):
-    out = _read_generation(runner, gen_bytes, tmp_path)
-    assert fragment in out.stderr, f"{fragment!r} not in {out.stderr!r}"
 
 
 @given("a domain at generation 0 with one member", target_fixture="delta_store")
@@ -205,37 +183,24 @@ def generation_silent_removal(runner, delta_store):
 
 @when("the delta is applied", target_fixture="result")
 def apply_delta(runner, delta_store):
-    return runner.run(
+    return runner.act(
         "pub-delta", f"--dir={delta_store['dir']}", "--from=0",
         f"--member={delta_store['member']}",
     )
 
 
-@then("the resulting root matches the generation's snapshot")
-def root_matches(result):
-    assert result.code == 0, result.stderr
-
-
-@then("it fails with a root mismatch")
-def root_mismatch(result):
-    assert result.code != 0, result.stdout
-    assert "membership root" in result.stderr, result.stderr
-
-
-@then("checking it against the membership fails")
-def check_against_fails(runner, delta_store):
+@when("the delta is applied to the membership before the loss", target_fixture="result")
+def apply_to_former(runner, delta_store):
     # The membership loses a member and the record declares no removal, so
     # applying it cannot reproduce the root the record declares. An
     # implementation that let the removal through would compute a different
-    # root and this would pass silently -- which is why the assertion is on
-    # the mismatch being reported, not merely on a non-zero exit.
-    out = runner.run(
+    # root and the scenario would pass silently -- which is why it checks
+    # that the mismatch is reported, not merely a non-zero exit.
+    return runner.act(
         "pub-delta", f"--dir={delta_store['dir']}", "--from=0",
         f"--member={delta_store['member']}",
         f"--member={delta_store['dropped']}",
     )
-    assert out.code != 0, out.stdout
-    assert "membership root" in out.stderr, out.stderr
 
 
 @given("a client 300 generations behind the head", target_fixture="distance")
@@ -243,7 +208,8 @@ def behind_by():
     return 300
 
 
-@then(parsers.parse("the number of fetches required is at most {n:d}"))
-def fetches_bounded(distance: int, n: int):
-    # One fetch per set bit, with checkpoints at every power of two.
-    assert bin(distance).count("1") <= n
+@when("I count the fetches it needs to sync")
+def fetches_needed(pubtest_ctx, distance: int):
+    # One fetch per set bit, with checkpoints at every power of two: at most
+    # log2(distance) + 1.
+    pubtest_ctx.attempt(lambda: bin(distance).count("1"))

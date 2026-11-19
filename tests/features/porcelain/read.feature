@@ -7,13 +7,13 @@ Feature: An assertion is shown with the scope it was made under
 
   Scenario: The claim and its scope are shown together
     When I read the claim
-    Then the content is shown
+    Then it prints "2031 cohort"
     And the scope is shown
 
   Scenario: Reading from the replica discloses nothing
     When I read the claim
     Then the mode is reported as "local"
-    And the output says nothing was disclosed
+    And it prints "nothing was disclosed"
 
   Scenario: A relation is read as what it asserts, not as an empty header
     Given a workspace with two claims and a relation between them
@@ -34,7 +34,7 @@ Feature: An assertion is shown with the scope it was made under
     Given an object file holding the cohort claim, named for its identifier
     When I read the object file from a directory with no workspace
     Then it succeeds
-    And the content is shown
+    And it prints "2031 cohort"
     And the identifier shown is the one its bytes hash to
     And no mode is reported
 
@@ -43,7 +43,7 @@ Feature: An assertion is shown with the scope it was made under
     When I read the object file from a directory with no workspace
     Then it succeeds
     And the identifier shown is the one its bytes hash to
-    And it warns that the file was altered or misnamed
+    And stderr mentions "altered or misnamed"
 
   Scenario: The whole object can be read as JSON
     When I read the claim as JSON

@@ -250,11 +250,6 @@ def index_twice(runner, store):
     ]
 
 
-@then("it says a viewpoint must be declared")
-def says_viewpoint_required(result):
-    assert "viewpoint" in result.stderr, result.stderr
-
-
 @then("every result names the policy")
 def results_name_policy(result, store):
     assert result.code == 0, result.stderr

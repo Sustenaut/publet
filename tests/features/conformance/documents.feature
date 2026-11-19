@@ -8,23 +8,23 @@ Feature: A document composes, it does not assert
   Scenario: A tracking citation must record what its author read
     Given a document citing a lineage without recording the head
     When I load the store
-    Then loading the store fails
+    Then it fails
     And stderr mentions "must record `at`"
 
   Scenario: A tracking citation recording the head is accepted
     Given a document citing a lineage and recording the head
     When I load the store
-    Then loading the store succeeds
+    Then it succeeds
 
   Scenario: A fixed citation needs no head
     Given a document citing one object
     When I load the store
-    Then loading the store succeeds
+    Then it succeeds
 
   Scenario: An unknown role is refused
     Given a document citing an object with role "endorse-strongly"
     When I load the store
-    Then loading the store fails
+    Then it fails
 
   Scenario: Including a publet as a counterpoint is not endorsing it
     Given a document citing one object as a counterpoint

@@ -261,17 +261,30 @@ Feature: A family defines the classes under one class, and an edition pins a rel
   @must-5.9.1
   Scenario: The steward's next version of a family is authoritative
     Given the family vector "accept-family-revised-by-its-steward"
-    Then the next version is in the family's authoritative lineage
+    When I list the family's authoritative lineage
+    Then it succeeds
+    And it lists the next version
 
   @must-5.9.1
   Scenario: A lineage delegate's next version of a family is authoritative
     Given the family vector "accept-family-revised-by-a-delegate"
-    Then the next version is in the family's authoritative lineage
+    When I list the family's authoritative lineage
+    Then it succeeds
+    And it lists the next version
 
   @must-5.9.1
   Scenario: Another key's next version of a family is only a proposal
     Given the family vector "accept-family-change-proposed-by-another-key"
-    Then the next version is in the family's full lineage and not its authoritative one
+    When I list the family's authoritative lineage
+    Then it succeeds
+    And it does not list the next version
+
+  @must-5.9.1
+  Scenario: Another key's next version of a family is in its full lineage
+    Given the family vector "accept-family-change-proposed-by-another-key"
+    When I list the family's full lineage
+    Then it succeeds
+    And it lists the next version
 
   @must-5.9.1
   Scenario: Usage of one class targets the family with the code as aspect
@@ -364,7 +377,8 @@ Feature: A family defines the classes under one class, and an edition pins a rel
   @must-5.9.1
   Scenario: Another key's supersedes relation does not bind an edition
     Given a store where another key files a supersedes from an edition to one it shrinks against
-    Then loading the store succeeds
+    When I load the store
+    Then it succeeds
 
   @must-5.9.1
   Scenario Outline: Each family vector is decided as its table says
@@ -430,4 +444,5 @@ Feature: A family defines the classes under one class, and an edition pins a rel
       | accept-family-change-proposed-by-another-key |
 
   Scenario: The family vectors are what their generator makes
-    Then every family vector is what the generator makes
+    When the generator makes the family vectors
+    Then they are the family vectors committed

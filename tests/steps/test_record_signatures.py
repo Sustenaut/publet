@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pytest_bdd import given, parsers, scenarios, then, when
+from pytest_bdd import given, scenarios, when
 
 from support.objects import cid_of, head, obj, text, uint
 from support.signing import CREATED, Key
@@ -123,16 +123,3 @@ def apply_records(runner, domain):
                       *(f"--member={m}" for m in domain["members"]))
 
 
-@then("it succeeds")
-def it_succeeds(result):
-    assert result.code == 0, result.stderr
-
-
-@then("it fails")
-def it_fails(result):
-    assert result.code == 1, (result.code, result.stdout, result.stderr)
-
-
-@then(parsers.parse('stderr does not mention "{fragment}"'))
-def stderr_lacks(result, fragment: str):
-    assert fragment not in result.stderr, result.stderr

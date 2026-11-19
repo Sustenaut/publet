@@ -7,16 +7,16 @@ Feature: A stale basis is disclosed, never a refusal
     Given a workspace where a claim has been superseded twice
     When I propose the second successor
     Then it succeeds
-    And it reports that the lineage will branch
+    And it prints "lineage will branch"
 
   Scenario: Depending on a superseded definition
     Given a workspace where a claim depends on an outdated definition
     When I propose that claim
     Then it succeeds
-    And it reports the definition has been superseded
+    And it prints "has been superseded by"
 
   Scenario: Disputing something already resolved
     Given a workspace where a dispute targets a resolved question
     When I propose the dispute
     Then it succeeds
-    And it reports that a resolution already exists
+    And it prints "resolutions already exist"

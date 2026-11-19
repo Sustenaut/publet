@@ -8,7 +8,7 @@ Feature: An index publishes what its ranking rests on
     Given a store containing the Appendix A fixture
     When I run the index without naming a policy
     Then it fails
-    And it says a viewpoint must be declared
+    And stderr mentions "viewpoint"
 
   Scenario: Every result names its policy and snapshot
     Given a store with a policy

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import copy
 import json
-import subprocess
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -95,16 +94,6 @@ def workspace(runner):
 @given("a kind")
 def a_kind(runner, ctx):
     ctx["kind"] = _first(_define(runner, "area: the size of a surface.", KIND))
-
-
-@then("it succeeds")
-def it_succeeds(result):
-    assert result.code == 0, result.stderr
-
-
-@then("it fails")
-def it_fails(result):
-    assert result.code != 0, f"expected failure, got {result.stdout!r}"
 
 
 @then(parsers.parse('reading it shows "{line}"'))
@@ -687,28 +676,25 @@ def vector_outcome(result, vector: str):
         assert rule in result.stderr, result.stderr
 
 
-def _lineage(runner, vector: str, *mode: str) -> list[str]:
-    family = cid_of(fv.claim(fv.content_of("6"), fv.FAMILIES["6"]))
-    out = runner.run("pub-lineage", f"--dir={fv.VECTORS / vector}", *mode, family)
-    assert out.code == 0, out.stderr
-    return out.stdout.split()
-
-
 def _next_version(vector: str) -> str:
     author = fv.STEWARD if vector.endswith("steward") else fv.OTHER_KEY
     return cid_of(fv.revision(author)[1])
 
 
-@then("the next version is in the family's authoritative lineage")
-def next_version_authoritative(runner, vector: str):
-    assert _next_version(vector) in _lineage(runner, vector, "--authoritative")
+@when(parsers.parse("I list the family's {mode} lineage"), target_fixture="result")
+def list_lineage(runner, vector: str, mode: str):
+    family = cid_of(fv.claim(fv.content_of("6"), fv.FAMILIES["6"]))
+    return runner.act("pub-lineage", f"--dir={fv.VECTORS / vector}", f"--{mode}", family)
 
 
-@then("the next version is in the family's full lineage and not its authoritative one")
-def next_version_proposed(runner, vector: str):
-    newer = _next_version(vector)
-    assert newer in _lineage(runner, vector, "--full")
-    assert newer not in _lineage(runner, vector, "--authoritative")
+@then("it lists the next version")
+def lists_next_version(result, vector: str):
+    assert _next_version(vector) in result.stdout.split(), result.stdout
+
+
+@then("it does not list the next version")
+def omits_next_version(result, vector: str):
+    assert _next_version(vector) not in result.stdout.split(), result.stdout
 
 
 @then("the terms name each class and nothing for the edition")
@@ -720,9 +706,16 @@ def terms_are_classes(result):
     assert terms == codes, terms
 
 
-@then("every family vector is what the generator makes")
-def vectors_current():
-    cases = fv.cases()
+@when("the generator makes the family vectors")
+def make_vectors(pubtest_ctx):
+    pubtest_ctx.attempt(fv.cases)
+
+
+@then("they are the family vectors committed")
+def vectors_current(pubtest_ctx):
+    pubtest_ctx.refusal_read = True
+    assert pubtest_ctx.refused is None, f"the generator was refused: {pubtest_ctx.refused.message}"
+    cases = pubtest_ctx.result
     table = (fv.VECTORS / "EXPECTED.tsv").read_text()
     assert table == "".join(f"{n}\t{r or 'accepted'}\n" for n, (_, r) in sorted(cases.items()))
     for name, (objects, _) in cases.items():
@@ -854,8 +847,7 @@ def family_no_anchor(runner, ctx, parent: str):
 
 
 def _pub(runner, where, *args):
-    return subprocess.run([str(runner.path_to("pub")), *args], capture_output=True, text=True,
-                          cwd=where, check=False)
+    return runner.run("pub", *args, cwd=where)
 
 
 def _publet(where, content: str):
@@ -1121,6 +1113,3 @@ def domain_generation_signed(runner, ctx, result, purpose: str):
     _assert_signed(runner, ctx["domain"], line.split()[1], purpose)
 
 
-@then(parsers.parse('stdout mentions "{fragment}"'))
-def stdout_mentions(result, fragment: str):
-    assert fragment in result.stdout, result.stdout

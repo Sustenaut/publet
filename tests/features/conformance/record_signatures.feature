@@ -23,28 +23,28 @@ Feature: A generation record is trusted only when its publisher signed it
   Scenario: A record unsigned after a signed one is refused
     Given two records, the first signed by the publisher and the second unsigned
     When I apply the records
-    Then it fails
+    Then the exit code is 1
     And stderr mentions "is unsigned, after an earlier generation of this domain was signed"
 
   Scenario: A record signed by another key is refused
     Given two records, the second signed by another key
     When I apply the records
-    Then it fails
+    Then the exit code is 1
     And stderr mentions "carries a signature that does not verify by its author"
 
   Scenario: A record whose signature was altered is refused
     Given two records, the second with its signature altered
     When I apply the records
-    Then it fails
+    Then the exit code is 1
     And stderr mentions "carries a signature that does not verify by its author"
 
   Scenario: A record whose bytes were altered after signing loses its signature
     Given two records, both signed, and the second altered after signing
     When I apply the records
-    Then it fails
+    Then the exit code is 1
 
   Scenario: A record signed by a key that does not continue the publisher's is refused
     Given two records, the second written and signed by another key
     When I apply the records
-    Then it fails
+    Then the exit code is 1
     And stderr mentions "does not continue"

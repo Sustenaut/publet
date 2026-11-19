@@ -32,7 +32,7 @@ Feature: Verdicts respect claim classes
     Given a "<class>" publet
     And a verdict annotation targeting it with no aspect
     When I load the store
-    Then loading the store succeeds
+    Then it succeeds
 
     Examples:
       | class      |

@@ -160,13 +160,19 @@ def request_checkpoints(runner, node):
     )
 
 
-@given("the served route table", target_fixture="routes")
-def route_table():
+def accepting_routes() -> list[str]:
+    """The paths of the routes in the served route table that accept a body
+    (a POST), read from the source that declares them."""
     source = Path(__file__).resolve().parents[2] / "crates/publet-net/src/server.rs"
-    return [
-        line.strip() for line in source.read_text().splitlines()
-        if line.strip().startswith(".route(")
-    ]
+    routes = [line.strip() for line in source.read_text().splitlines()
+              if line.strip().startswith(".route(")]
+    assert routes, "the server declares no route"
+    return [route.split('"')[1] for route in routes if "post(" in route]
+
+
+@when("I read which routes the node serves accept a body")
+def read_accepting_routes(pubtest_ctx):
+    pubtest_ctx.attempt(accepting_routes)
 
 
 @then("the requests carry the domain identifier")
@@ -182,17 +188,6 @@ def no_other_identifiers(result, node):
     payload = json.loads(result.stdout)
     assert payload["domain"] == node["domain"]
     assert set(payload) == {"domain", "from", "to", "stored"}
-
-
-@then("only one route accepts a body")
-def one_accepting_route(routes):
-    assert sum(1 for r in routes if "post(" in r) == 1, routes
-
-
-@then("that route takes a single object, not a list")
-def accepting_route_is_singular(routes):
-    accepting = [r for r in routes if "post(" in r]
-    assert accepting[0].count("/pub/v1/object") == 1, accepting
 
 
 @then(parsers.parse("the replica holds {n:d} objects"))
@@ -234,11 +229,6 @@ def checkpoints_spaced(result):
     assert gaps <= {1, 2, 4, 8, 16}, gaps
 
 
-@then("it succeeds")
-def sync_succeeds(result):
-    assert result.code == 0, result.stderr
-
-
 @then("it is refused, and nothing is stored")
 def sync_refused(runner, result, node):
     assert result.code == 1, (result.stdout, result.stderr)
@@ -246,13 +236,4 @@ def sync_refused(runner, result, node):
     listed = runner.run("pub-store", f"--store={node['replica']}", "list")
     assert listed.stdout.split() == [], listed.stdout
 
-
-@then(parsers.parse('stderr says "{fragment}"'))
-def sync_stderr(result, fragment: str):
-    assert fragment in result.stderr, result.stderr
-
-
-@then(parsers.parse('stderr does not say "{fragment}"'))
-def sync_stderr_lacks(result, fragment: str):
-    assert fragment not in result.stderr, result.stderr
 

@@ -9,18 +9,30 @@ and it is what lets the same scenarios run against any implementation.
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from pubtest.core import Completed
+from pubtest.core import Completed, Result, bin_var, program
+from pubtest.plugin import run_program
 
 # The suite imports its own helpers from `support/`; it never imports the
 # implementation. Adding the suite root to the path keeps that explicit.
 sys.path.insert(0, str(Path(__file__).parent))
+
+BIN_VAR = "PUBLET_BIN_DIR"
+
+
+def pytest_configure(config):
+    """Serve every built binary to pubtest's `Given the program under test
+    is "NAME"`, which reads NAME's own `<NAME>_BIN_DIR`, from the one
+    variable a second implementation sets. A variable already set wins."""
+    raw = os.environ.get(BIN_VAR)
+    if raw and Path(raw).is_dir():
+        for path in Path(raw).iterdir():
+            if path.name.startswith("pub") and path.is_file() and os.access(path, os.X_OK):
+                os.environ.setdefault(bin_var(path.stem), raw)
 
 
 @pytest.fixture(scope="session")
@@ -30,7 +42,7 @@ def bin_dir() -> Path:
     Resolved only from PUBLET_BIN_DIR so that a second implementation, in
     any language, runs this suite by setting one environment variable.
     """
-    raw = os.environ.get("PUBLET_BIN_DIR")
+    raw = os.environ.get(BIN_VAR)
     if not raw:
         pytest.fail(
             "PUBLET_BIN_DIR is not set. Run the suite through `make functional`, "
@@ -42,27 +54,53 @@ def bin_dir() -> Path:
     return path
 
 
+@pytest.fixture(autouse=True)
+def scratch(pubtest_ctx, tmp_path: Path) -> Path:
+    """The scenario's scratch directory is its tmp_path, for the suite's own
+    steps and pubtest's alike: pubtest's `I run` runs there, its file steps
+    read and write there, and `nothing was written` watches it."""
+    pubtest_ctx.directory = tmp_path
+    return tmp_path
+
+
+class Ran(Completed):
+    """pubtest's record of a run, read by the suite's older steps as a
+    `subprocess.CompletedProcess` too."""
+
+    @property
+    def returncode(self) -> int:
+        return self.code
+
+
 @dataclass
 class Runner:
-    """Runs binaries from the directory under test."""
+    """Runs binaries from the directory under test, in the scratch directory."""
 
     bin_dir: Path
     cwd: Path
+    ctx: object = None
 
     def path_to(self, name: str) -> Path:
-        candidate = self.bin_dir / name
-        if not candidate.exists():
+        # A binary this build does not ship is a layer it omits, such as
+        # settlement (Section 12.1): what needs it does not apply.
+        if not (self.bin_dir / name).exists():
             pytest.skip(f"{name} is not built yet")
-        return candidate
+        return program(name, BIN_VAR)
 
     def run(self, name: str, *args: str, stdin: bytes | None = None,
-            env: dict[str, str] | None = None) -> Completed:
-        argv = [str(self.path_to(name)), *args]
-        proc = subprocess.run(
-            argv, input=stdin, capture_output=True, cwd=self.cwd, check=False,
-            env=dict(os.environ, **env) if env else None,
-        )
-        return Completed(argv, proc.returncode, proc.stdout, proc.stderr)
+            env: dict[str, str] | None = None, cwd: Path | None = None) -> Ran:
+        """Run a binary under test, in the scratch directory unless `cwd`
+        names another; `env` is merged over the environment."""
+        done = run_program([str(self.path_to(name)), *map(str, args)], stdin, cwd or self.cwd, env, 120)
+        return Ran(done.argv, done.code, done.out, done.err)
+
+    def act(self, name: str, *args: str, stdin: bytes | None = None,
+            env: dict[str, str] | None = None, cwd: Path | None = None) -> Result:
+        """Run a binary as the scenario's action: what it did is pubtest's
+        result, which pubtest's Thens read."""
+        self.ctx.acting()
+        done = self.run(name, *args, stdin=stdin, env=env, cwd=cwd)
+        return self.ctx.ran(Result(code=done.code, stdout=done.stdout, stderr=done.stderr, argv=done.argv))
 
     def pipeline(self, stages: list[str], stdin: bytes | None = None) -> Completed:
         """Run shell stages joined by pipes.
@@ -71,23 +109,14 @@ class Runner:
         tested as behaviour rather than assumed.
         """
         script = " | ".join(stages)
-        env = dict(os.environ, PATH=f"{self.bin_dir}:{os.environ['PATH']}")
-        proc = subprocess.run(
-            ["bash", "-o", "pipefail", "-c", script],
-            input=stdin, capture_output=True, cwd=self.cwd, env=env, check=False,
-        )
-        return Completed([script], proc.returncode, proc.stdout, proc.stderr)
+        env = {"PATH": f"{self.bin_dir}:{os.environ['PATH']}"}
+        return run_program(["bash", "-o", "pipefail", "-c", script], stdin, self.cwd, env, 120)
 
 
 @pytest.fixture
-def runner(bin_dir: Path, tmp_path: Path) -> Runner:
-    """A runner rooted in a scratch directory unique to the test."""
-    return Runner(bin_dir=bin_dir, cwd=tmp_path)
-
-
-@pytest.fixture(scope="session")
-def has_jq() -> bool:
-    return shutil.which("jq") is not None
+def runner(bin_dir: Path, scratch: Path, pubtest_ctx) -> Runner:
+    """A runner rooted in the scenario's scratch directory."""
+    return Runner(bin_dir=bin_dir, cwd=scratch, ctx=pubtest_ctx)
 
 
 # --- steps shared across feature files -------------------------------------
@@ -145,22 +174,9 @@ def run_pipeline(runner, store, pipeline: str):
     return runner.pipeline(stages)
 
 
-@then(parsers.parse('stderr names the violated rule "{rule}"'))
-def stderr_names_rule(result: Completed, rule: str) -> None:
-    assert rule in result.stderr, f"{rule!r} not named in stderr: {result.stderr!r}"
-
-
 @when("I load the store", target_fixture="result")
-@when("loading the store", target_fixture="result")
 def load_store(runner, store):
-    return runner.run("pub-ls", f"--dir={store['dir']}")
-
-
-@then("loading the store fails")
-def load_fails(runner, store):
-    out = runner.run("pub-ls", f"--dir={store['dir']}")
-    assert out.code != 0, f"expected failure, got {out.stdout!r}"
-    store["last"] = out
+    return runner.act("pub-ls", f"--dir={store['dir']}")
 
 
 @then("the load leaves out one object and reports it")
@@ -170,35 +186,6 @@ def load_drops_one(result, store):
     held = len(list(store["dir"].glob("*.cbor")))
     assert len(result.stdout.split()) == held - 1, result.stdout
     assert "warning: dropped" in result.stderr, result.stderr
-
-
-@then("loading the store succeeds")
-def load_succeeds(runner, store):
-    out = runner.run("pub-ls", f"--dir={store['dir']}")
-    assert out.code == 0, f"expected success, stderr: {out.stderr!r}"
-
-
-@then(parsers.parse('stderr mentions "{fragment}"'))
-def stderr_mentions(request, fragment: str) -> None:
-    """Assert on stderr from whichever the scenario produced.
-
-    Some scenarios run a command directly and have a `result`; others build
-    a store and assert on loading it. Resolving the fixture lazily lets one
-    step phrase serve both rather than forcing two near-identical wordings
-    into the feature files.
-    """
-    try:
-        result = request.getfixturevalue("result")
-    except pytest.FixtureLookupError:
-        result = None
-    if result is not None:
-        assert fragment in result.stderr, result.stderr
-        return
-
-    store = request.getfixturevalue("store")
-    runner = request.getfixturevalue("runner")
-    out = store.get("last") or runner.run("pub-ls", f"--dir={store['dir']}")
-    assert fragment in out.stderr, out.stderr
 
 
 def _code(result) -> int:

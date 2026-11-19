@@ -11,7 +11,7 @@ Feature: Only what its author signed counts towards a standing
     When the affirmation is signed by its author
     And I ask why the claim stands as it does
     Then the affirmation weighs on the claim
-    And no evidence is reported as not counted
+    And stderr does not mention "not counted"
 
   Scenario Outline: An affirmation not signed by its author does not count
     When the affirmation is <how>

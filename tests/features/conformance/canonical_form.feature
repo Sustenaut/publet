@@ -8,7 +8,7 @@ Feature: Canonical form is rejected, never repaired
     Given an object encoded with <defect>
     When I run "pub-canon" with that object on stdin
     Then the exit code is 1
-    And stderr names the violated rule "<rule>"
+    And stderr mentions "<rule>"
     And stdout is empty
 
     Examples:

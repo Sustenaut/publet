@@ -41,71 +41,25 @@ def write_one(tmp_path: Path, data: bytes, name: str) -> Path:
 
 # --- settlement ------------------------------------------------------------
 
-@given("no ledger is configured", target_fixture="bounty_file")
-def no_ledger(tmp_path):
-    return write_one(
-        tmp_path,
-        bounty(KA, "2026-09-12T10:00:00Z", TARGET, POLICY, 6000),
-        "bounty.cbor",
-    )
+@given("this build carries settlement")
+def carries_settlement(bin_dir):
+    # A deployment may omit settlement entirely (Section 12.1), and ship no
+    # settlement binary: there is then nothing here to test.
+    if not (bin_dir / "pub-settle").exists():
+        pytest.skip("settlement is not present in this build")
 
 
-@given("a bounty naming no policy", target_fixture="bounty_file")
+@given("a bounty naming no policy")
 def bounty_no_policy(tmp_path):
-    return write_one(
-        tmp_path,
-        bounty(KA, "2026-09-12T10:00:00Z", TARGET, None, 6000),
-        "bounty.cbor",
-    )
+    write_one(tmp_path, bounty(KA, "2026-09-12T10:00:00Z", TARGET, None, 6000), "bounty.cbor")
 
 
-@given(parsers.parse("a bounty with a review share of {share:d} basis points"),
-       target_fixture="bounty_file")
+@given(parsers.parse("a bounty with a review share of {share:d} basis points"))
 def bounty_share(tmp_path, share: int):
-    return write_one(
-        tmp_path,
-        bounty(KA, "2026-09-12T10:00:00Z", TARGET, POLICY, share),
-        "bounty.cbor",
-    )
+    write_one(tmp_path, bounty(KA, "2026-09-12T10:00:00Z", TARGET, POLICY, share), "bounty.cbor")
 
 
-@when("a bounty is settled", target_fixture="result")
-def settle(runner, bounty_file):
-    return runner.run("pub-settle", f"--settle={bounty_file}")
-
-
-@then("reading it fails", target_fixture="result")
-def reading_fails(runner, bounty_file):
-    out = runner.run("pub-settle", f"--bounty={bounty_file}")
-    assert out.code != 0, f"expected a refusal, got {out.stdout!r}"
-    return out
-
-
-@then("reading it succeeds", target_fixture="result")
-def reading_succeeds(runner, bounty_file):
-    out = runner.run("pub-settle", f"--bounty={bounty_file}")
-    assert out.code == 0, out.stderr
-    return out
-
-
-@then("the reason says settlement is optional")
-def reason_optional(result):
-    assert "settlement is optional" in result.stderr, result.stderr
-
-
-@then("the reason says a bounty must name the policy it settles against")
-def reason_no_policy(result):
-    assert "policy" in result.stderr.lower(), result.stderr
-
-
-@given("the settlement prohibitions", target_fixture="result")
-def prohibitions(runner):
-    out = runner.run("pub-settle", "--prohibitions")
-    assert out.code == 0, out.stderr
-    return out
-
-
-@then("each names what it forbids and why")
+@then("each line it prints names what it forbids and why")
 def each_prohibition_explained(result):
     rows = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
     assert len(rows) >= 4, rows
@@ -114,9 +68,9 @@ def each_prohibition_explained(result):
         assert len(row["reason"].split()) >= 5, row
 
 
-@given("the ledger trait", target_fixture="ledger_surface")
-def ledger_trait():
-    """The trait's whole surface, read from the source that defines it.
+def ledger_methods() -> str:
+    """The trait's whole surface, read from the source that defines it: one
+    method signature a line.
 
     A rule about what an interface *cannot express* is a rule about the
     interface, so the interface is what gets read. There is no run-time
@@ -130,51 +84,17 @@ def ledger_trait():
         pytest.skip("settlement is not present in this build")
     source = path.read_text()
     body = source.split("pub trait Ledger {", 1)[1].split("\n}", 1)[0]
-    return [line.strip() for line in body.splitlines()
-            if line.strip().startswith("fn ")]
+    methods = [line.strip() for line in body.splitlines() if line.strip().startswith("fn ")]
+    assert methods, "the ledger trait declares no method"
+    return "\n".join(methods)
 
 
-@then("it offers no way to report or influence a standing")
-def no_standing_method(ledger_surface):
-    for signature in ledger_surface:
-        assert "standing" not in signature, signature
-        assert "weight" not in signature, signature
-
-
-@then("it offers no way to gate a retrieval")
-def no_retrieval_method(ledger_surface):
-    for signature in ledger_surface:
-        for word in ("read", "fetch", "serve", "retriev", "access"):
-            assert word not in signature, signature
+@when("I read the methods of the ledger interface")
+def read_ledger_methods(pubtest_ctx):
+    pubtest_ctx.attempt(ledger_methods)
 
 
 # --- personhood ------------------------------------------------------------
-
-@given("an implementation carrying one personhood scheme",
-       target_fixture="schemes")
-def one_scheme():
-    return ["--scheme=demo-unlinkable"]
-
-
-@given("an implementation carrying two personhood schemes",
-       target_fixture="schemes")
-def two_schemes():
-    return ["--scheme=demo-unlinkable", "--scheme=demo-issuer-linkable"]
-
-
-@then("it does not meet the scheme minimum")
-def below_minimum(runner, schemes):
-    out = runner.run("pub-person", *schemes, "--schemes")
-    assert out.code != 0, out.stdout
-    assert "at least" in out.stderr, out.stderr
-
-
-@then("it meets the scheme minimum", target_fixture="result")
-def meets_minimum(runner, schemes):
-    out = runner.run("pub-person", *schemes, "--schemes")
-    assert out.code == 0, out.stderr
-    return out
-
 
 @then("their declared anonymity differs")
 def anonymity_differs(result):
@@ -223,12 +143,6 @@ def same_nullifier_other_scope(runner, person):
     )
     return runner.run("pub-person", "--scheme=demo-unlinkable",
                       f"--attest={person['first']}", f"--attest={second}")
-
-
-@then("it is refused as the same person")
-def refused_same_person(result):
-    assert result.code != 0, result.stdout
-    assert "already holds a key" in result.stderr, result.stderr
 
 
 @then("it is accepted")
@@ -283,42 +197,48 @@ def three_assumptions(tmp_path):
     return {"dir": tmp_path, "assumer": KA}
 
 
-@then("the assumed key remains the author of its own publets")
-def still_the_author(runner, store):
-    # Vouching moves no authorship. The publet is still listed under the
-    # key that signed it, and listing by the assumer's key returns nothing:
-    # the assumer has staked their standing, not taken the byline.
-    by_assumed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.prose",
-                            f"--author={store['assumed']}")
-    assert by_assumed.code == 0, by_assumed.stderr
-    assert by_assumed.stdout.split() == [store["publet"]], by_assumed.stdout
-
-    by_assumer = runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.prose",
-                            f"--author={store['assumer']}")
-    assert by_assumer.code == 0, by_assumer.stderr
-    assert by_assumer.stdout.strip() == "", by_assumer.stdout
+@when("I list the claims authored by the assumed key", target_fixture="result")
+def list_by_assumed(runner, store):
+    return runner.act("pub-ls", f"--dir={store['dir']}", "--type=claim.prose",
+                      f"--author={store['assumed']}")
 
 
-@then(parsers.parse("the count of assumptions it holds is {n:d}"))
-def assumption_count(runner, store, n: int):
-    out = runner.run("pub-ann", f"--dir={store['dir']}",
-                     f"--assumptions-by={store['assumer']}")
-    assert out.code == 0, out.stderr
-    rows = [json.loads(line) for line in out.stdout.splitlines() if line.strip()]
+@when("I list the claims authored by the assumer", target_fixture="result")
+def list_by_assumer(runner, store):
+    # Vouching moves no authorship: the assumer has staked their standing,
+    # not taken the byline.
+    return runner.act("pub-ls", f"--dir={store['dir']}", "--type=claim.prose",
+                      f"--author={store['assumer']}")
+
+
+@then("it lists only the assumed key's own publet")
+def lists_own_publet(result, store):
+    assert result.stdout.split() == [store["publet"]], result.stdout
+
+
+@when("I list the assumptions the assumer holds", target_fixture="result")
+def list_assumptions(runner, store):
+    return runner.act("pub-ann", f"--dir={store['dir']}",
+                      f"--assumptions-by={store['assumer']}")
+
+
+def _rows(result) -> list[dict]:
+    return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+
+
+@then(parsers.parse("it lists {n:d} {noun}, each of a different key"))
+def assumption_count(result, n: int, noun: str):
+    rows = _rows(result)
     assert len(rows) == n, rows
     assert len({row["assumed"] for row in rows}) == n, rows
 
 
-@then("the assumption records no identity for the assumed key")
-def no_identity_recorded(runner, store):
-    out = runner.run("pub-ann", f"--dir={store['dir']}",
-                     f"--assumptions-by={store['assumer']}")
-    assert out.code == 0, out.stderr
-    rows = [json.loads(line) for line in out.stdout.splitlines() if line.strip()]
-    assert len(rows) == 1, rows
+@then("each assumption it lists records only the two keys and the grounds")
+def no_identity_recorded(result):
     # Two keys and the grounds. A field for who holds the assumed key is the
     # one thing the record must never carry.
-    assert set(rows[0]) == {"assumer", "assumed", "grounds"}, rows[0]
+    for row in _rows(result):
+        assert set(row) == {"assumer", "assumed", "grounds"}, row
 
 
 @given("a claim with a standing", target_fixture="workspace")
@@ -340,20 +260,20 @@ def add_triage(runner, workspace):
     added = runner.run("pub-store", "--store=.publet/objects.redb", "add",
                        stdin=data)
     assert added.code == 0, added.stderr
-    workspace["triage"] = added.stdout.strip()
+    # The comparison below proves nothing unless the annotation landed.
+    held = runner.run("pub-store", "--store=.publet/objects.redb", "list")
+    assert held.code == 0, held.stderr
+    assert added.stdout.strip() in held.stdout, held.stdout
+
+
+@when("I ask why again", target_fixture="result")
+def ask_why_again(runner, workspace):
+    return runner.act("pub", "why", workspace["target"])
 
 
 @then("the standing is unchanged")
-def standing_unchanged(runner, workspace):
-    # The comparison proves nothing unless the annotation really landed.
-    held = runner.run("pub-store", "--store=.publet/objects.redb", "list")
-    assert held.code == 0, held.stderr
-    assert workspace["triage"] in held.stdout, held.stdout
-
-    after = runner.run("pub", "why", workspace["target"])
-    assert after.code == 0, after.stderr
-    assert after.stdout == workspace["before"], (
-        workspace["before"], after.stdout)
+def standing_unchanged(result, workspace):
+    assert result.stdout == workspace["before"], (workspace["before"], result.stdout)
 
 
 @given("a triage annotation with no engine declared", target_fixture="store")
@@ -368,9 +288,6 @@ def triage_without_engine(tmp_path):
     return {"dir": tmp_path, "target": cid_of(claim)}
 
 
-@then("it is not treated as a triage finding")
-def not_read_as_triage(runner, store):
-    out = runner.run("pub-ann", f"--dir={store['dir']}",
-                     f"--triage-of={store['target']}")
-    assert out.code == 0, out.stderr
-    assert out.stdout.strip() == "", out.stdout
+@when("I list the triage findings on the claim", target_fixture="result")
+def list_triage(runner, store):
+    return runner.act("pub-ann", f"--dir={store['dir']}", f"--triage-of={store['target']}")

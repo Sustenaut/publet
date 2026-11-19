@@ -11,9 +11,12 @@ Feature: The mode in use is visible, not assumed
   Scenario: Evaluation happens locally and says so
     Given a workspace containing the cohort claim
     When I ask why
-    Then the output says the computation was local
-    And it names the policy it used
+    Then it prints "locally"
+    And it prints "policy pub:sha2-256:"
 
   Scenario: Syncing says what it disclosed
     Given a workspace containing the cohort claim
-    Then reading never reports a query mode for a held object
+    When I read the claim
+    Then it prints "[local]"
+    And it does not print "[query]"
+    And stderr does not mention "[query]"

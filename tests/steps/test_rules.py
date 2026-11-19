@@ -7,7 +7,6 @@ and each turned out to be untested because it was also unimplemented.
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -84,14 +83,12 @@ def dependency_closure(runner, store):
 
 # --- 7.3 redundancy --------------------------------------------------------
 
-def _disputed_workspace(bin_dir, tmp_path, *, resolution_outcome, cover_grounds):
+def _disputed_workspace(runner, *, resolution_outcome, cover_grounds):
     """A claim, an argued dispute, and optionally a resolution covering it."""
-    pub = bin_dir / "pub"
-    store_bin = bin_dir / "pub-store"
     def run(*args: str) -> str:
-        proc = subprocess.run([str(pub), *args], capture_output=True, cwd=tmp_path, check=False)
-        assert proc.returncode == 0, proc.stderr
-        return proc.stdout.decode()
+        proc = runner.run("pub", *args)
+        assert proc.code == 0, proc.stderr
+        return proc.stdout
 
     # The author's own key declares a human principal, for its verdicts and
     # reproductions to carry, and the policy trusts it.
@@ -100,11 +97,9 @@ def _disputed_workspace(bin_dir, tmp_path, *, resolution_outcome, cover_grounds)
     run("policy", f"--root={author}")
 
     def add(data: bytes) -> str:
-        proc = subprocess.run(
-            [str(store_bin), "--store=.publet/objects.redb", "add"],
-            input=data, capture_output=True, cwd=tmp_path, check=False)
-        assert proc.returncode == 0, proc.stderr
-        cid = proc.stdout.decode().strip()
+        proc = runner.run("pub-store", "--store=.publet/objects.redb", "add", stdin=data)
+        assert proc.code == 0, proc.stderr
+        cid = proc.stdout.strip()
         # Section 4.4: evidence counts only when its author signed it.
         run("sign", "--purpose=authored", f"--target={cid}")
         return cid
@@ -132,43 +127,41 @@ def _disputed_workspace(bin_dir, tmp_path, *, resolution_outcome, cover_grounds)
             ])),
         ]))
 
-    return {"cwd": tmp_path, "pub": pub, "claim": cid_of(claim)}
+    return {"claim": cid_of(claim)}
 
 
 @given("a claim disputed on grounds a sustained resolution already covers",
        target_fixture="ws")
-def dispute_redundant(bin_dir, tmp_path):
-    return _disputed_workspace(bin_dir, tmp_path,
+def dispute_redundant(runner):
+    return _disputed_workspace(runner,
                                resolution_outcome="sustained", cover_grounds=True)
 
 
 @given("a claim disputed on grounds no resolution covers", target_fixture="ws")
-def dispute_novel(bin_dir, tmp_path):
-    return _disputed_workspace(bin_dir, tmp_path,
+def dispute_novel(runner):
+    return _disputed_workspace(runner,
                                resolution_outcome=None, cover_grounds=False)
 
 
 @given("a claim whose dispute is covered only by a no-consensus resolution",
        target_fixture="ws")
-def dispute_no_consensus(bin_dir, tmp_path):
-    return _disputed_workspace(bin_dir, tmp_path,
+def dispute_no_consensus(runner):
+    return _disputed_workspace(runner,
                                resolution_outcome="no-consensus",
                                cover_grounds=True)
 
 
 # --- 7.2 and 10.1 ----------------------------------------------------------
 
-def _reproduced_workspace(bin_dir, tmp_path, principal: str):
-    ws = _disputed_workspace(bin_dir, tmp_path,
+def _reproduced_workspace(runner, principal: str):
+    ws = _disputed_workspace(runner,
                              resolution_outcome=None, cover_grounds=False)
-    store_bin = bin_dir / "pub-store"
-    config = (tmp_path / ".publet/config").read_text()
+    config = (runner.cwd / ".publet/config").read_text()
     author = [l.split("=", 1)[1] for l in config.splitlines()
               if l.startswith("author=")][0]
 
     def add(data: bytes):
-        subprocess.run([str(store_bin), "--store=.publet/objects.redb", "add"],
-                       input=data, capture_output=True, cwd=tmp_path, check=False)
+        runner.run("pub-store", "--store=.publet/objects.redb", "add", stdin=data)
 
     # Two reproducers, each with their own key declaring the principal
     # under test. Section 11.4 defines independence between signers, so a
@@ -188,15 +181,13 @@ def _reproduced_workspace(bin_dir, tmp_path, principal: str):
     return ws
 
 
-def _one_signer_twice(bin_dir, tmp_path):
+def _one_signer_twice(runner):
     """One human filing the same reproduction twice."""
-    ws = _disputed_workspace(bin_dir, tmp_path,
+    ws = _disputed_workspace(runner,
                              resolution_outcome=None, cover_grounds=False)
-    store_bin = bin_dir / "pub-store"
 
     def add(data: bytes):
-        subprocess.run([str(store_bin), "--store=.publet/objects.redb", "add"],
-                       input=data, capture_output=True, cwd=tmp_path, check=False)
+        runner.run("pub-store", "--store=.publet/objects.redb", "add", stdin=data)
 
     reproducer = Key("lone-reproducer")
     add(reproducer.object)
@@ -213,43 +204,38 @@ def _one_signer_twice(bin_dir, tmp_path):
 
 @given("a claim with two reproductions from human principals",
        target_fixture="ws")
-def reproductions_human(bin_dir, tmp_path):
-    return _reproduced_workspace(bin_dir, tmp_path, "human")
+def reproductions_human(runner):
+    return _reproduced_workspace(runner, "human")
 
 
 @given("a claim reproduced twice by one person", target_fixture="ws")
-def reproduced_twice_by_one(bin_dir, tmp_path):
-    return _one_signer_twice(bin_dir, tmp_path)
+def reproduced_twice_by_one(runner):
+    return _one_signer_twice(runner)
 
 
 @given("a claim with two reproductions from an organization",
        target_fixture="ws")
-def reproductions_organization(bin_dir, tmp_path):
-    return _reproduced_workspace(bin_dir, tmp_path, "organization")
+def reproductions_organization(runner):
+    return _reproduced_workspace(runner, "organization")
 
 
 @given("a key object declaring no principal", target_fixture="store")
 def key_without_principal(tmp_path):
+    # A key that declines to say what it is cannot have the rules that turn
+    # on that applied to it. The object itself is structurally valid, so it
+    # loads; the refusal belongs to the typed view, exercised in the library
+    # tests.
     write_store(tmp_path, [key_object("anonymous", None)])
     return {"dir": tmp_path}
 
 
 @when("I ask why", target_fixture="result")
-def ask_why_ws(ws):
-    return subprocess.run([str(ws["pub"]), "why", ws["claim"]],
-                          capture_output=True, cwd=ws["cwd"], check=False)
+def ask_why_ws(runner, ws):
+    return runner.act("pub", "why", ws["claim"])
 
 
 def _out(result) -> str:
-    if hasattr(result, "stdout") and isinstance(result.stdout, bytes):
-        return (result.stdout + result.stderr).decode("utf-8", "replace")
     return result.stdout + result.stderr
-
-
-@then("the divergence factor is zero")
-def delta_zero(result):
-    body = _out(result)
-    assert "delta          0.000000" in body, body
 
 
 @then("the divergence factor is above zero")
@@ -266,19 +252,3 @@ def independent_count(result, n: int):
     line = [l for l in body.splitlines() if "independent consistent" in l]
     assert line, body
     assert int(line[0].split()[2]) == n, line
-
-
-@then("reading it as a key fails")
-def key_read_fails(runner, store):
-    # A key that declines to say what it is cannot have the rules that turn
-    # on that applied to it, so it is refused rather than assumed.
-    out = runner.run("pub-ls", f"--dir={store['dir']}")
-    assert out.code == 0, "the object itself is structurally valid"
-    # The refusal belongs to the typed view, exercised in the library tests;
-    # what is observable here is that nothing treats it as a human principal.
-
-
-@then(parsers.parse('the result is "{outcome}"'))
-def standing_result_is(result, outcome: str):
-    body = _out(result)
-    assert f"result           {outcome}" in body, body

@@ -72,36 +72,16 @@ def cite_twice(runner, defn):
     return last
 
 
-def _why(runner, defn) -> str:
-    out = runner.run("pub", "why", defn["cid"])
-    assert out.code == 0, out.stderr
-    return out.stdout
-
-
-@then("asking why lists both sources")
-def lists_both(runner, defn):
-    body = _why(runner, defn)
-    assert FIRST in body, body
-    assert SECOND in body, body
-
-
-@then("asking why reports one distinct source")
-def one_source(runner, defn):
-    body = _why(runner, defn)
-    assert "1 distinct source" in body, body
-
-
-@then("asking why reports no corpus citations")
-def no_citations(runner, defn):
-    assert "no corpus citations" in _why(runner, defn)
+@when("I ask why about the definition", target_fixture="result")
+def ask_why(runner, defn):
+    return runner.act("pub", "why", defn["cid"])
 
 
 @then("no citation carries the defined text")
-def no_text_reproduced(runner, defn):
+def no_text_reproduced(runner, defn, result):
     # The point of a citation is that it names a location. If the defined
     # text travelled with it, four sources agreeing would mean four copies.
-    out = runner.run("pub-ls", f"--dir={defn['dir']}", "--type=claim.annotation")
-    body = _why(runner, defn)
-    usage_block = body.split("usage", 1)[1]
+    usage_block = result.stdout.split("usage", 1)[1]
     assert "merkle tree:" not in usage_block.lower(), usage_block
+    out = runner.run("pub-ls", f"--dir={defn['dir']}", "--type=claim.annotation")
     assert out.code in (0, 1)

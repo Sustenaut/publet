@@ -6,6 +6,7 @@ Feature: Concentrated access cannot manufacture established knowledge
   Scenario: Restricted reproducibility caps standing at unreplicated
     Given the "04-restricted" vector
     When I evaluate it
-    Then the result is "unreplicated"
+    Then it succeeds
+    And the JSON it prints has "result" equal to "unreplicated"
     And the reported reproducibility class is "restricted"
     And the reported independent consistent reproductions are 99

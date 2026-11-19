@@ -183,11 +183,6 @@ def tool_tagged(runner):
     assert "TOOL-DEMOTL-10-2026" in _tags_of(runner, lock["tool.demo"]["genesis"])
 
 
-@then(parsers.parse('it reports "{text}"'))
-def reports(result, text: str):
-    assert text in result.stdout, result.stdout
-
-
 @then("the lock is byte-identical to the first build's")
 def lock_identical(runner, ctx):
     assert (runner.cwd / "publets" / "publets.lock").read_bytes() == ctx["first_lock"]

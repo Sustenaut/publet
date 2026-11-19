@@ -11,8 +11,10 @@ Feature: A singular is one particular thing, and a fact is a value about it
 
   @must-5.9.1 @must-5.9.6
   Scenario: A singular names its class and what it is part of, which it presupposes
-    Then reading the basement shows "class     definitional"
-    And the basement presupposes the Tallinn site and the Place concept
+    When I read the basement
+    Then it succeeds
+    And it prints "class     definitional"
+    And what it read presupposes the Tallinn site and the Place concept
 
   @must-5.9.1
   Scenario Outline: A singular of the wrong shape is refused
@@ -46,7 +48,9 @@ Feature: A singular is one particular thing, and a fact is a value about it
 
   @must-5.9.6
   Scenario: A fact presupposes the singular its row is about
-    Then the floor area fact presupposes the basement
+    When I read the floor area fact
+    Then it succeeds
+    And what it read presupposes the basement
 
   @must-5.9.6
   Scenario: An about cell that is not a CID is refused

@@ -33,7 +33,7 @@ Feature: Build freely, publish deliberately
   Scenario: Re-rendering identical output and publishing again files nothing
     When I render the document and publish it
     And I render the document and publish it
-    Then it reports "nothing filed"
+    Then it prints "nothing filed"
     And one rendering is pinned for the document
 
   Scenario: A tool upgrade within the constraint revises neither the pipeline nor the document
@@ -44,7 +44,7 @@ Feature: Build freely, publish deliberately
     And the publet "demo-doc" is reported "published"
     And the publet "tool.stub#identity" is reported "draft"
     When I publish everything, render the document, and publish it
-    Then it reports "nothing filed"
+    Then it prints "nothing filed"
 
   Scenario: A machine ahead of the identity claim is refused before anything runs
     When the stub tool becomes "1.0.1" but its identity claim does not
@@ -62,11 +62,11 @@ Feature: Build freely, publish deliberately
     When I render the document and publish it
     And I edit the document, build, render it, and publish it
     And I list the corpus's renderings
-    Then it reports "active"
-    And it reports "held"
+    Then it prints "active"
+    And it prints "held"
     When I prune the corpus's renderings
-    Then it reports "pruned"
-    And it reports "Re-render"
+    Then it prints "pruned"
+    And it prints "Re-render"
     And the first rendering's output is gone from blobs/ but its records remain
 
   Scenario: Revising the pipeline leaves a document citing its lineage untouched

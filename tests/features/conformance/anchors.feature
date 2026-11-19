@@ -7,10 +7,10 @@ Feature: An anchor points inside the lineage it names
   Scenario: An anchor naming a member of its lineage is accepted
     Given an anchor recommending a member of the lineage it names
     When I load the store
-    Then loading the store succeeds
+    Then it succeeds
 
   Scenario: An anchor naming something outside its lineage is refused
     Given an anchor recommending an object outside the lineage it names
     When I load the store
-    Then loading the store fails
+    Then it fails
     And stderr mentions "not in the lineage"

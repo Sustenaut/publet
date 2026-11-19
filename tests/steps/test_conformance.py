@@ -51,7 +51,7 @@ def sized_payload(n: int) -> bytes:
     raise AssertionError(f"cannot build a {n}-byte object")
 
 
-@given("a store where a claim has been revised", target_fixture="revision")
+@given("a store where a claim has been revised", target_fixture="store")
 def revised_store(tmp_path):
     ka = author_key("K_a")
     original = publet(ka, "2026-09-12T10:00:00Z", "empirical", "the original")
@@ -158,18 +158,13 @@ def identifiers_differ(two_results):
     assert first.out != second.out
 
 
-@then("both the original and the revision are present")
-def both_present(runner, revision):
-    listed = runner.run("pub-ls", f"--dir={revision['dir']}")
-    assert listed.code == 0, listed.stderr
-    assert cid_of(revision["original"]) in listed.lines
-    assert cid_of(revision["revision"]) in listed.lines
+@then("it lists both the original and the revision")
+def both_present(result, store):
+    listed = result.stdout.splitlines()
+    assert cid_of(store["original"]) in listed, listed
+    assert cid_of(store["revision"]) in listed, listed
 
 
-@then("the original still verifies against its own identifier")
-def original_intact(runner, revision):
-    out = runner.run(
-        "pub-verify", f"--cid={cid_of(revision['original'])}",
-        stdin=revision["original"],
-    )
-    assert out.code == 0, out.stderr
+@when("I verify the original against its own identifier", target_fixture="result")
+def verify_original(runner, store):
+    return runner.act("pub-verify", f"--cid={cid_of(store['original'])}", stdin=store["original"])

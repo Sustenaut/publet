@@ -45,7 +45,7 @@ Feature: A pipeline runs only inside the environment it names
   Scenario: Provisioning twice does nothing the second time
     When I build and provision the environment
     And I provision the environment again
-    Then it reports "already provisioned"
+    Then it prints "already provisioned"
 
   Scenario: A runtime host requirement that has changed stops rendering
     When I build and provision the environment

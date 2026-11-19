@@ -12,18 +12,22 @@ Feature: Personhood bounds keys per person and decides nothing else
     And no personhood attestation was required
 
   Scenario: One scheme is not enough
-    Given an implementation carrying one personhood scheme
-    Then it does not meet the scheme minimum
+    Given the program under test is "pub-person"
+    When I run "pub-person --scheme=demo-unlinkable --schemes"
+    Then it fails
+    And stderr mentions "at least"
 
   Scenario: Two schemes declaring different anonymity are both carried
-    Given an implementation carrying two personhood schemes
-    Then it meets the scheme minimum
+    Given the program under test is "pub-person"
+    When I run "pub-person --scheme=demo-unlinkable --scheme=demo-issuer-linkable --schemes"
+    Then it succeeds
     And their declared anonymity differs
 
   Scenario: A person holds one key per scope
     Given a verified personhood attestation in a scope
     When a second key presents the same nullifier in that scope
-    Then it is refused as the same person
+    Then it fails
+    And stderr mentions "already holds a key"
 
   Scenario: The same person is unlinkable across scopes
     Given a verified personhood attestation in a scope

@@ -121,44 +121,42 @@ def pipe_cid(runner, store, name: str, command: str):
                       stdin=(store[name] + "\n").encode())
 
 
-@when(parsers.parse('I run "{command}"'), target_fixture="result")
-def run_plain(runner, store, command: str):
-    parts = command.split()
-    return runner.run(parts[0], f"--dir={store['dir']}", *parts[1:])
-
-
 # --- Then ------------------------------------------------------------------
+
+def _lines(result) -> list[str]:
+    return result.stdout.splitlines()
+
 
 @then(parsers.re(r"^stdout lists (?P<a>\S+) and (?P<b>\S+) in that order$"))
 def lists_in_order(result, store, a: str, b: str):
-    assert result.lines == [store[a], store[b]], result.lines
+    assert _lines(result) == [store[a], store[b]], _lines(result)
 
 
 @then(parsers.re(r"^stdout lists (?P<name>\S+)$"))
 def lists_name(result, store, name: str):
-    assert store[name] in result.lines, result.lines
+    assert store[name] in _lines(result), _lines(result)
 
 
 @then(parsers.re(r"^stdout does not list (?P<name>\S+)$"))
 def does_not_list(result, store, name: str):
-    assert store[name] not in result.lines, result.lines
+    assert store[name] not in _lines(result), _lines(result)
 
 
 @then(parsers.re(r"^stdout is exactly (?P<name>\S+)$"))
 def stdout_exactly(result, store, name: str):
-    assert result.lines == [store[name]], result.lines
+    assert _lines(result) == [store[name]], _lines(result)
 
 
 @then(parsers.parse('a finding of "{finding}" names the term "{term}"'))
 def finding_names_term(result, finding: str, term: str):
-    rows = [json.loads(line) for line in result.lines if line.strip()]
+    rows = [json.loads(line) for line in _lines(result) if line.strip()]
     matches = [r for r in rows if r["finding"] == finding and r["term"] == term]
     assert matches, f"no {finding} finding for {term!r} in {rows}"
 
 
 @then('no term appears as both "stale" and "divergent"')
 def no_overlap(result):
-    rows = [json.loads(line) for line in result.lines if line.strip()]
+    rows = [json.loads(line) for line in _lines(result) if line.strip()]
     stale = {r["term"] for r in rows if r["finding"] == "stale"}
     divergent = {r["term"] for r in rows if r["finding"] == "divergent"}
     assert not (stale & divergent), f"overlap: {stale & divergent}"
@@ -166,14 +164,14 @@ def no_overlap(result):
 
 @then(parsers.parse('every line of stdout is a JSON object with a "{field}" field'))
 def lines_are_json(result, field: str):
-    for line in result.lines:
+    for line in _lines(result):
         if line.strip():
             assert field in json.loads(line)
 
 
 @then("every line of stdout is a CID")
 def lines_are_cids(result):
-    for line in result.lines:
+    for line in _lines(result):
         assert line.startswith("pub:sha2-256:"), line
 
 
@@ -182,8 +180,8 @@ def each_of_type(runner, store, result, kind: str):
     # Read each object back rather than comparing the listing with itself:
     # an empty listing would otherwise pass, and did while the fixture's
     # type names no longer matched any object.
-    assert result.lines, "the filter listed nothing"
-    for cid in result.lines:
+    assert _lines(result), "the filter listed nothing"
+    for cid in _lines(result):
         shown = runner.run("pub", "read", f"--dir={store['dir']}", cid)
         assert shown.code == 0, shown.stderr
         assert f"type      {kind}" in shown.stdout, shown.stdout
