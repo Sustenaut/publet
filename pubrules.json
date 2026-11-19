@@ -11,7 +11,10 @@
     },
     "release": {
       "pubrel": "0.7.1"
-    }
+    },
+    "tools": [
+      {"crate": "publet-cli", "git": "https://github.com/Sustenaut/publet", "tag": "v0.4.0"}
+    ]
   },
   "bin": "publet",
   "published": [
@@ -39,6 +42,16 @@
     }
   },
   "signing_keys": [
+    {
+      "path": "design/corpus/.publet/signing.key",
+      "bitwarden": {
+        "project": {
+          "id": "377de170-5487-40f7-9a01-b4f50064e1c5",
+          "name": "Pub"
+        },
+        "name": "pub-signing-key-publet-design"
+      }
+    },
     {
       "path": "corpus/.publet/signing.key",
       "bitwarden": {

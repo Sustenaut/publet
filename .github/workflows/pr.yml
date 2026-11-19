@@ -24,7 +24,7 @@ jobs:
     name: ci
     needs: [gates]
     uses: Sustenaut/pubrules/.github/workflows/job-rust-functional.yml@36b8b556ff838eb1e24c4e995350f10fdbdf26f3 # v0.45.0
-    with: {"apt-packages": "jq", "functional": "guard-eval conformance coverage-check script-tests design", "required": "functional vectors-check supply-chain-check"}
+    with: {"apt-packages": "jq", "functional": "guard-eval conformance coverage-check script-tests design", "required": "functional vectors-check supply-chain-check", "tools": "[{\"crate\": \"publet-cli\", \"git\": \"https://github.com/Sustenaut/publet\", \"tag\": \"v0.4.0\"}]"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   audit:

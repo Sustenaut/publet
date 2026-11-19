@@ -61,6 +61,15 @@ functional job runs, checks the project and builds every doc. Building needs
 uv, Node.js and typst. `tools/spec-audit.py` checks the specification's
 internal consistency.
 
+An approved version of a design doc is a publet signed in `design/corpus/`,
+with a key of its own (not the one that signs publet's releases), and its
+renders are in storage's public `publet-design` tenant: `./pubdoc approve
+design/spec`, then commit `design/corpus/` and the doc's `versions/`. CI's
+`make design` runs `./pubdoc verify design`, with the `pub` that
+`pubrules.json`'s `ci.tools` installs. `scripts/go-live-design.sh` makes the
+corpus and its key once, names the key in `design/project.yml`'s
+`corpus.key`, and backs it up to Bitwarden.
+
 ## Testing
 
 Testing is split by what it tests, and the split is strict.
