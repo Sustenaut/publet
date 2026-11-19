@@ -1,0 +1,1 @@
+pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/v0.2.0/pubdoc-0.2.0-py3-none-any.whl

@@ -6,7 +6,7 @@
       "gates": "guard-floats guard-deps guard-rules guard-msrv",
       "test-args": "--workspace --all-features",
       "apt-packages": "jq",
-      "functional": "guard-eval conformance coverage-check script-tests",
+      "functional": "guard-eval conformance coverage-check script-tests design",
       "cross-test-args": "--workspace --all-features"
     },
     "release": {
