@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pub sign --restore-key --principal=P [--label=L] [--created=T] [--expect=CID]: rebuilds the key object of a secret put back in .publet/signing.key from a backup that holds the secret alone, the same object and identifier as when it was generated, and makes author name it again; --expect refuses any other identifier, and an author naming another key the store holds is never replaced"
+}

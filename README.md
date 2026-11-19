@@ -208,6 +208,7 @@ pub delegate --to=KEY                     # let another key continue this key's 
 pub relate --kind=... --from=CID --to=CID --scope=...      # a relation between two objects
 pub annotate --kind=... --target=CID --scope=...           # say something about an object
 pub sign --generate-key --principal=... | --rotate --principal=... | --purpose=... --target=CID
+pub sign --restore-key --principal=... [--expect=CID]          # rebuild the key of a secret put back from a backup
 pub policy --root=CID[:WEIGHT]...                          # author a policy, and adopt it
 pub domain --dir=DIR --label=... --bound=BYTES             # a domain's manifest and genesis generation
 pub propose CID... [--basis=N]   # what has moved under these objects since the basis
