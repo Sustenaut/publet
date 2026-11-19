@@ -41,7 +41,6 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 0
       - name: Which release, and whether it needs its binary
         id: release
         env:
@@ -51,7 +50,7 @@ jobs:
           if [ -z "$TAG" ]; then
             TAG="v$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "publet-cli") | .version')"
           fi
-          case "$TAG" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::$TAG is not a vX.Y.Z tag"; exit 1 ;; esac
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::$TAG is not a vX.Y.Z tag"; exit 1; }
           archive="pub-${TAG#v}-$TARGET.tar.gz"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
@@ -62,12 +61,14 @@ jobs:
             echo "$archive already attached"; echo "build=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           echo "build=true" >> "$GITHUB_OUTPUT"
-      # At the tag, from a clean tree: then `pub --version` claims the release.
+      # At the tag, from a clean tree (only that tag fetched): then `pub --version`
+      # claims the release.
       - if: steps.release.outputs.build == 'true'
         name: Build pub at the tag, static
         env:
           TAG: ${{ steps.release.outputs.tag }}
         run: |
+          git fetch --quiet --depth 1 origin tag "$TAG"
           git checkout --quiet "$TAG"
           sudo apt-get update -qq && sudo apt-get install -y -qq musl-tools
           rustup target add "$TARGET"
