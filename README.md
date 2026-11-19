@@ -208,6 +208,7 @@ pub delegate --to=KEY                     # let another key continue this key's 
 pub relate --kind=... --from=CID --to=CID --scope=...      # a relation between two objects
 pub annotate --kind=... --target=CID --scope=...           # say something about an object
 pub sign --generate-key --principal=... | --rotate --principal=... | --purpose=... --target=CID
+pub sign --restore-key [--expect=CID] [--principal=...]       # the key of a secret put back from a backup
 pub policy --root=CID[:WEIGHT]...                          # author a policy, and adopt it
 pub domain --dir=DIR --label=... --bound=BYTES             # a domain's manifest and genesis generation
 pub propose CID... [--basis=N]   # what has moved under these objects since the basis
@@ -432,6 +433,15 @@ tar -xzf pub-0.4.0-x86_64-unknown-linux-musl.tar.gz pub
 That installs `pub`. Each plumbing command is a package of its own under
 `bin/`, named as the command is (`pub-sync`, `pub-verify`, ...), and is
 installed the same way with its name in place of `publet-cli`.
+
+A backup of a signing key holds its secret alone. Put back in
+`.publet/signing.key`, `pub sign --restore-key --expect=CID` makes `author`
+name the key again: from the key object a corpus commits in `objects/` at
+its first publish, once the secret is shown to be that key's, with no other
+setting; before the first publish nothing committed describes the key, so
+the object is rebuilt from the secret and the settings it was made with,
+`--principal` and pub's defaults (no `--label`, `--created`
+2026-09-16T00:00:00Z) unless others were given, and must come out as CID.
 
 `pub --version` prints `pub X.Y.Z` and the package publet's identifier only
 for a clean build at that release's tag; any other build reports itself as

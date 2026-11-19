@@ -13,6 +13,17 @@
 //! on cites as `author`). `--purpose`/`--target` signs an object already in
 //! this workspace's store.
 //!
+//! `--restore-key` gives back the `key` object of a secret already in
+//! `.publet/signing.key`, one put back from a backup that holds the secret
+//! alone, and makes `author` name it again. With `--expect=CID` naming a key
+//! object committed in `objects/` (a corpus exports its key at its first
+//! publish), that object is the key, once the secret is shown to be its
+//! secret, and no other setting is needed. Otherwise the object is rebuilt
+//! from the secret and the `--principal`, `--label` and `--created` it was
+//! made with, which comes out identical, and `--expect` refuses any other
+//! result. It never replaces an `author` that names another key the store
+//! holds.
+//!
 //! `--rotate` replaces this workspace's key the way Section 10.5 says: a
 //! new `key` object with `rotates` naming the current key, signed by
 //! **both** keys for the rotation purpose, which transfers continuity. The
@@ -52,6 +63,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 
     let mut do_generate = false;
     let mut do_rotate = false;
+    let mut do_restore = false;
+    let mut expect = None;
     let mut principal = None;
     let mut label = None;
     let mut purpose = None;
@@ -63,6 +76,10 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             do_generate = true;
         } else if arg == "--rotate" {
             do_rotate = true;
+        } else if arg == "--restore-key" {
+            do_restore = true;
+        } else if let Some(v) = arg.strip_prefix("--expect=") {
+            expect = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--principal=") {
             principal = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--label=") {
@@ -78,8 +95,26 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         }
     }
 
-    if do_generate && do_rotate {
-        return Err("--generate-key and --rotate are different commands; give one".to_owned());
+    if [do_generate, do_rotate, do_restore]
+        .iter()
+        .filter(|&&on| on)
+        .count()
+        > 1
+    {
+        return Err(
+            "--generate-key, --rotate and --restore-key are different commands; give one"
+                .to_owned(),
+        );
+    }
+    if do_restore {
+        return restore(
+            &ws,
+            &here,
+            principal,
+            label.as_deref(),
+            &created,
+            expect.as_deref(),
+        );
     }
     if do_generate {
         return generate(&ws, &here, principal, label.as_deref(), &created);
@@ -152,18 +187,115 @@ fn generate(
     Ok(())
 }
 
-/// A new key object for a fresh secret, rotating from `rotates` if given:
-/// (seed, key object CID, key object bytes).
-fn new_key(
+/// Rebuild the key object of the secret already in `.publet/signing.key`
+/// (one restored from a backup, which holds the secret alone): the object is
+/// a function of the secret, the principal, the label and the creation time
+/// it was made with, so given those it is the same object, with the same
+/// identifier, and `author` names it again. `--expect` is the identifier it
+/// must come to; nothing is changed when it does not.
+fn restore(
+    ws: &Workspace,
+    here: &std::path::Path,
+    principal: Option<String>,
+    label: Option<&str>,
+    created: &str,
+    expect: Option<&str>,
+) -> Result<(), String> {
+    let path = key_path(here);
+    let seed = read_key_file(&path).map_err(|e| format!("nothing to restore: {e}"))?;
+    // After a corpus's first publish its key object is committed in
+    // objects/: with --expect naming it, that object is the key, and the
+    // secret need only be its secret; no setting has to be remembered.
+    let committed = expect
+        .and_then(|e| e.parse::<Cid>().ok())
+        .map(|c| {
+            (
+                here.join("objects")
+                    .join(format!("{}.cbor", c.to_string().replace(':', "_"))),
+                c,
+            )
+        })
+        .filter(|(file, _)| file.is_file());
+    let (cid, bytes) = if let Some((file, wanted)) = committed {
+        let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
+        let object = Object::parse(&bytes)
+            .and_then(|o| o.verify(&wanted))
+            .map_err(|e| format!("{} is not the key object {wanted}: {e}", file.display()))?
+            .into_inner();
+        if object.kind() != "key" {
+            return Err(format!(
+                "{} is a {}, not a key",
+                file.display(),
+                object.kind()
+            ));
+        }
+        let held = publet_core::verifying_key(SigAlg::Ed25519, &seed).map_err(|e| e.to_string())?;
+        match object.body().get("pubkey") {
+            Some(Value::Bytes(stated)) if *stated == held => {}
+            _ => {
+                return Err(format!(
+                    "the secret at {} is not the secret of {wanted}, the key {} describes; \
+                     nothing was changed",
+                    path.display(),
+                    file.display()
+                ));
+            }
+        }
+        (wanted, bytes)
+    } else {
+        let principal = principal.ok_or(format!(
+            "--principal is required: one of {}, as the key was made with (or --expect=CID \
+             naming a key object committed in objects/)",
+            PRINCIPALS.join(", ")
+        ))?;
+        if !PRINCIPALS.contains(&principal.as_str()) {
+            return Err(format!("unknown principal: {principal}"));
+        }
+        let (cid, bytes) = key_object(&seed, &principal, label, None, created)?;
+        if let Some(wanted) = expect
+            && wanted != cid.to_string()
+        {
+            return Err(format!(
+                "the secret at {} with --principal={principal}{} and --created={created} is the key \
+                 {cid}, not {wanted}; check them; nothing was changed",
+                path.display(),
+                label.map(|l| format!(" --label={l}")).unwrap_or_default()
+            ));
+        }
+        (cid, bytes)
+    };
+    let store = ws.store()?;
+    // `pub init` seeds `author` with a placeholder no key object backs; a key
+    // `author` names that the store holds is another identity, never replaced.
+    if let Some(author) = ws.get("author")
+        && author != cid.to_string()
+        && let Ok(named) = author.parse::<Cid>()
+        && store
+            .get(&named)
+            .map_err(|e| e.to_string())?
+            .and_then(|b| Object::parse(&b).ok())
+            .is_some_and(|o| o.peek().kind() == "key")
+    {
+        return Err(format!(
+            "`author` names the key {author}, and this secret's key is {cid}; nothing was changed"
+        ));
+    }
+    store.put(&cid, &bytes).map_err(|e| e.to_string())?;
+    ws.set("author", &cid.to_string())?;
+    println!("key      {cid}");
+    println!("restored from {}", path.display());
+    Ok(())
+}
+
+/// The key object of `seed`: (key object CID, key object bytes).
+fn key_object(
+    seed: &[u8; 32],
     principal: &str,
     label: Option<&str>,
     rotates: Option<&Cid>,
     created: &str,
-) -> Result<([u8; 32], Cid, Vec<u8>), String> {
-    let mut seed = [0u8; 32];
-    getrandom::getrandom(&mut seed)
-        .map_err(|e| format!("could not read system randomness: {e}"))?;
-    let pubkey = publet_core::verifying_key(SigAlg::Ed25519, &seed).map_err(|e| e.to_string())?;
+) -> Result<(Cid, Vec<u8>), String> {
+    let pubkey = publet_core::verifying_key(SigAlg::Ed25519, seed).map_err(|e| e.to_string())?;
     let self_author = Cid::of(&pubkey, HashAlg::Sha2_256);
     let mut builder = Object::builder("key", &self_author.to_string())
         .created(created)
@@ -177,7 +309,22 @@ fn new_key(
         builder = builder.field("rotates", Value::Text(previous.to_string()));
     }
     let bytes = builder.build().map_err(|e| e.to_string())?;
-    Ok((seed, Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+    Ok((Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+}
+
+/// A new key object for a fresh secret, rotating from `rotates` if given:
+/// (seed, key object CID, key object bytes).
+fn new_key(
+    principal: &str,
+    label: Option<&str>,
+    rotates: Option<&Cid>,
+    created: &str,
+) -> Result<([u8; 32], Cid, Vec<u8>), String> {
+    let mut seed = [0u8; 32];
+    getrandom::getrandom(&mut seed)
+        .map_err(|e| format!("could not read system randomness: {e}"))?;
+    let (cid, bytes) = key_object(&seed, principal, label, rotates, created)?;
+    Ok((seed, cid, bytes))
 }
 
 /// A `sig` object (Section 4.4) by the key `author` with `seed`.
