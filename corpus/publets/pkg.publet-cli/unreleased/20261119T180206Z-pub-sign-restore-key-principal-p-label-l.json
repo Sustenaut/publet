@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "pub sign --restore-key [--expect=CID] [--principal=P] [--label=L] [--created=T]: makes author name the key of a secret put back in .publet/signing.key from a backup that holds the secret alone; with --expect naming a key object committed in objects/ (after a corpus's first publish) that object is the key once the secret is shown to be its own, with no other setting, and otherwise the key object is rebuilt from the secret and the settings it was made with and must come out as --expect; an author naming another key the store holds is never replaced"
-}
