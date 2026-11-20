@@ -18,9 +18,11 @@ if [ ! -f "$pin" ]; then
   echo "pubdoc: no $pin, which pins the pubdoc ./pubdoc runs; run pubdoc init again" >&2
   exit 1
 fi
-url="$(sed -n 's/^pubdoc @ //p' "$pin" | head -n 1)"
+# The requirement is named by the distribution: pubdocrules, or pubdoc for a
+# release from before the name changed.
+url="$(sed -n 's/^[A-Za-z0-9_.-]* @ //p' "$pin" | head -n 1)"
 if [ -z "$url" ]; then
-  echo "pubdoc: $pin has no line "pubdoc @ URL"; run pubdoc init again" >&2
+  echo "pubdoc: $pin has no line "pubdocrules @ URL"; run pubdoc init again" >&2
   exit 1
 fi
 

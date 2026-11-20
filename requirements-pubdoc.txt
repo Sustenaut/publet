@@ -1,1 +1,1 @@
-pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/v0.3.0/pubdoc-0.3.0-py3-none-any.whl
+pubdocrules @ https://github.com/Sustenaut/pubdoc/releases/download/v0.5.0/pubdocrules-0.5.0-py3-none-any.whl
