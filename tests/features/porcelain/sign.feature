@@ -4,14 +4,16 @@ Feature: pub sign --restore-key rebuilds a key from its secret
   `pub sign --restore-key` rebuilds the key object from the secret and the
   principal, label and creation time it was made with: the same object, with
   the same identifier, which `author` then names again. It never replaces a
-  key `author` names that the store holds.
+  key `author` names that the store holds. A new key is dated when it is
+  made, so rebuilding one needs that instant: `--created`, unless the key
+  object is committed in objects/.
 
   Background:
     Given a workspace whose key was generated, and its secret kept
 
   Scenario: A restored secret is the same key again, and signs again
     Given a fresh workspace holding only that secret
-    When I run pub "sign" "--restore-key" "--principal=human" "--expect={key}"
+    When I run pub "sign" "--restore-key" "--principal=human" "--created=2026-09-16T00:00:00Z" "--expect={key}"
     Then it succeeds
     And it prints "key      {key}"
     And the workspace's author is that key
@@ -19,14 +21,14 @@ Feature: pub sign --restore-key rebuilds a key from its secret
 
   Scenario: With other settings it is another key, and --expect refuses it
     Given a fresh workspace holding only that secret
-    When I run pub "sign" "--restore-key" "--principal=organization" "--expect={key}"
+    When I run pub "sign" "--restore-key" "--principal=organization" "--created=2026-09-16T00:00:00Z" "--expect={key}"
     Then it fails
     And stderr mentions "not {key}; check them; nothing was changed"
     And the workspace's author is not that key
 
   Scenario: A key the store holds as author is never replaced
     Given a workspace with a key of its own, holding that secret instead
-    When I run pub "sign" "--restore-key" "--principal=human"
+    When I run pub "sign" "--restore-key" "--principal=human" "--created=2026-09-16T00:00:00Z"
     Then it fails
     And stderr mentions "`author` names the key"
 
@@ -57,3 +59,10 @@ Feature: pub sign --restore-key rebuilds a key from its secret
     Then it fails
     And stderr mentions "describes; nothing was changed"
     And stderr mentions "objects/"
+
+  Scenario: Rebuilding a key without its creation time is refused, naming the old default
+    Given a fresh workspace holding only that secret
+    When I run pub "sign" "--restore-key" "--principal=human"
+    Then it fails
+    And stderr mentions "--created is required"
+    And stderr mentions "2026-09-16T00:00:00Z"

@@ -1100,7 +1100,7 @@ fn sign_each(session: &mut Session, targets: &[Cid]) -> Result<Vec<(Cid, Vec<u8>
         let (cid, sig) = crate::sign::signature(
             &session.here,
             &session.author,
-            crate::compose::DEFAULT_CREATED,
+            &crate::sign::created(),
             crate::build::PURPOSE,
             target,
             &bytes,

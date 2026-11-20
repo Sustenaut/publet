@@ -924,7 +924,7 @@ impl Build<'_> {
             let (cid, sig) = crate::sign::signature(
                 here,
                 self.author,
-                crate::compose::DEFAULT_CREATED,
+                &crate::sign::created(),
                 PURPOSE,
                 &target,
                 &bytes,

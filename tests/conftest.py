@@ -24,6 +24,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 BIN_VAR = "PUBLET_BIN_DIR"
 
 
+# pub dates the keys and signatures it makes now, unless $PUB_CREATED pins
+# them: the suite pins it, so the objects it makes, and their identifiers,
+# are the same on every run. A scenario about the default unsets it.
+os.environ.setdefault("PUB_CREATED", "2026-09-16T00:00:00Z")
+
+
 def pytest_configure(config):
     """Serve every built binary to pubtest's `Given the program under test
     is "NAME"`, which reads NAME's own `<NAME>_BIN_DIR`, from the one
