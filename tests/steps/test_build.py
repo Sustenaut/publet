@@ -8,6 +8,7 @@ lock it writes, what it prints, and the objects its store hands back.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -99,6 +100,20 @@ def source_tree(runner, ctx):
     ctx["tool"] = json.loads(json.dumps(TOOL))
     ctx["doc"] = json.loads(json.dumps(DOC))
     _write_tree(runner.cwd, ctx["tool"], ctx["doc"])
+
+
+@given("the workspace has a signing key")
+def has_key(runner):
+    out = runner.run("pub", "sign", "--generate-key", "--principal=human")
+    assert out.code == 0, out.stderr
+
+
+@given("pub dates what it makes now")
+def dated_now(monkeypatch):
+    # The suite pins $PUB_CREATED (conftest.py); unpinned, a signature is
+    # dated the instant it is made, so a second build that signed again
+    # would store a new one.
+    monkeypatch.delenv("PUB_CREATED", raising=False)
 
 
 # --- whens -------------------------------------------------------------------
@@ -215,3 +230,41 @@ def only_tag(runner, tag: str):
 @then("nothing new is stored")
 def nothing_stored(runner, ctx):
     assert _held(runner) == ctx["before"], "a refused build stored objects anyway"
+
+
+@then("the second build stored nothing")
+def second_stored_nothing(runner, ctx):
+    assert _held(runner) == ctx["after_first"], "a rebuild stored new objects"
+
+
+@when("I build and sign the source tree", target_fixture="result")
+def build_signed(runner, ctx):
+    result = runner.run("pub", "build", "--sign", "publets")
+    assert result.code == 0, result.stderr
+    ctx["after_first"] = _held(runner)
+    ctx["first_out"] = result.stdout
+    return result
+
+
+@when("I build and sign the source tree again", target_fixture="result")
+def build_signed_again(runner):
+    return runner.run("pub", "build", "--sign", "publets")
+
+
+@then("the first build signed what it made")
+def first_signed(ctx):
+    assert _signed(ctx["first_out"]) > 0, ctx["first_out"]
+
+
+@then("the second build signed nothing")
+def second_signed_nothing(result):
+    assert _signed(result.stdout) == 0, result.stdout
+
+
+def _signed(out: str) -> int:
+    """How many objects a build's `signed    N object(s)` line counts."""
+    for line in out.splitlines():
+        found = re.match(r"signed\s+(\d+) object\(s\)", line)
+        if found:
+            return int(found.group(1))
+    raise AssertionError(f"no `signed` line in:\n{out}")

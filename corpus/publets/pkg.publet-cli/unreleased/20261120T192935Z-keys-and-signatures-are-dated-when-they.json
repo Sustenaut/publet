@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "Keys and signatures are dated when they are made: pub sign --generate-key, --rotate and --target, and the signatures pub build --sign and pub publish make, set created to now (UTC, to the second) instead of a fixed 2026-09 instant. --created= still dates one, and PUB_CREATED in the environment pins every one. pub sign --restore-key without a committed key object now needs --created: for a key made by pub 0.4.1 or earlier without --created, --created=2026-09-16T00:00:00Z"
+}

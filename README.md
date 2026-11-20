@@ -208,7 +208,7 @@ pub delegate --to=KEY                     # let another key continue this key's 
 pub relate --kind=... --from=CID --to=CID --scope=...      # a relation between two objects
 pub annotate --kind=... --target=CID --scope=...           # say something about an object
 pub sign --generate-key --principal=... | --rotate --principal=... | --purpose=... --target=CID
-pub sign --restore-key [--expect=CID] [--principal=...]       # the key of a secret put back from a backup
+pub sign --restore-key [--expect=CID] [--principal=... --created=...]  # the key of a secret put back from a backup
 pub policy --root=CID[:WEIGHT]...                          # author a policy, and adopt it
 pub domain --dir=DIR --label=... --bound=BYTES             # a domain's manifest and genesis generation
 pub propose CID... [--basis=N]   # what has moved under these objects since the basis
@@ -438,10 +438,18 @@ A backup of a signing key holds its secret alone. Put back in
 `.publet/signing.key`, `pub sign --restore-key --expect=CID` makes `author`
 name the key again: from the key object a corpus commits in `objects/` at
 its first publish, once the secret is shown to be that key's, with no other
-setting; before the first publish nothing committed describes the key, so
-the object is rebuilt from the secret and the settings it was made with,
-`--principal` and pub's defaults (no `--label`, `--created`
-2026-09-16T00:00:00Z) unless others were given, and must come out as CID.
+setting. Before the first publish nothing committed describes the key, so
+the object is rebuilt from the secret and the settings it was made with:
+`--principal`, `--label` if one was given, and `--created`, the instant the
+key was made at, and it must come out as CID. A key made by pub 0.4.1 or
+earlier without `--created` was made at `--created=2026-09-16T00:00:00Z`.
+
+The keys and signatures pub makes are dated when they are made, in UTC to
+the second: `created` is the signer's claim of when it signed (Section
+4.3). `--created=` dates one otherwise, and `PUB_CREATED` in the
+environment pins every one, for tests and reproducible runs. A rebuild
+signs only what its key has not signed yet, so a second `pub build --sign`
+or `pub publish` of unchanged sources makes no new signatures.
 
 `pub --version` prints `pub X.Y.Z` and the package publet's identifier only
 for a clean build at that release's tag; any other build reports itself as

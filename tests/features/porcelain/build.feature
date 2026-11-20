@@ -56,3 +56,13 @@ Feature: A tree of named publet sources is built into objects and a lock
     When I change the document's tag to "semantic drift" and build
     Then it fails
     And stderr mentions "<domain>-<name>-MM-YYYY"
+
+  Scenario: Rebuilding signs nothing new, though signatures are dated now
+    Given the workspace has a signing key
+    And pub dates what it makes now
+    When I build and sign the source tree
+    And I build and sign the source tree again
+    Then it succeeds
+    And the first build signed what it made
+    And the second build signed nothing
+    And the second build stored nothing

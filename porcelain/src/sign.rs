@@ -21,7 +21,8 @@
 //! secret, and no other setting is needed. Otherwise the object is rebuilt
 //! from the secret and the `--principal`, `--label` and `--created` it was
 //! made with, which comes out identical, and `--expect` refuses any other
-//! result. It never replaces an `author` that names another key the store
+//! result. `--created` has no default there: a new key is dated now
+//! (`created`), so only its maker knows the instant. It never replaces an `author` that names another key the store
 //! holds.
 //!
 //! `--rotate` replaces this workspace's key the way Section 10.5 says: a
@@ -69,7 +70,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut label = None;
     let mut purpose = None;
     let mut target = None;
-    let mut created = "2026-09-16T00:00:00Z".to_owned();
+    let mut created: Option<String> = None;
 
     for arg in args {
         if arg == "--generate-key" {
@@ -89,7 +90,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         } else if let Some(v) = arg.strip_prefix("--target=") {
             target = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--created=") {
-            v.clone_into(&mut created);
+            created = Some(v.to_owned());
         } else {
             return Err(format!("unknown argument: {arg}"));
         }
@@ -112,10 +113,13 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             &here,
             principal,
             label.as_deref(),
-            &created,
+            created.as_deref(),
             expect.as_deref(),
         );
     }
+    // A new key or signature is dated now, unless --created or
+    // $PUB_CREATED says otherwise (`created()`).
+    let created = created.unwrap_or_else(self::created);
     if do_generate {
         return generate(&ws, &here, principal, label.as_deref(), &created);
     }
@@ -127,6 +131,24 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .ok_or("--purpose is required; a signature covers a stated purpose (Section 4.4)")?;
     let target = target.ok_or("--target is required: the CID of the object to sign")?;
     sign_target(&ws, &here, &purpose, &target, &created)
+}
+
+/// The instant every key and signature was dated by pub 0.4.1 and earlier
+/// when no `--created` was given.
+const LEGACY_CREATED: &str = "2026-09-16T00:00:00Z";
+
+/// The environment variable that pins the `created` of the keys and
+/// signatures pub makes, for tests and reproducible runs.
+pub(crate) const CREATED_VAR: &str = "PUB_CREATED";
+
+/// When a new key or signature is made: `$PUB_CREATED` when it is set,
+/// else now (RFC 3339 UTC, to the second). `created` is the signer's claim
+/// of when it signed (Section 4.3), so it is the real time unless pinned.
+pub(crate) fn created() -> String {
+    match std::env::var(CREATED_VAR) {
+        Ok(pinned) if !pinned.is_empty() => pinned,
+        _ => crate::corpus::now(),
+    }
 }
 
 fn key_path(here: &std::path::Path) -> std::path::PathBuf {
@@ -198,7 +220,7 @@ fn restore(
     here: &std::path::Path,
     principal: Option<String>,
     label: Option<&str>,
-    created: &str,
+    created: Option<&str>,
     expect: Option<&str>,
 ) -> Result<(), String> {
     let path = key_path(here);
@@ -251,6 +273,13 @@ fn restore(
         if !PRINCIPALS.contains(&principal.as_str()) {
             return Err(format!("unknown principal: {principal}"));
         }
+        // The key object is rebuilt only from the instant it was made at,
+        // which nothing but its maker knows: never now.
+        let created = created.ok_or(format!(
+            "--created is required: the instant the key was made at, as its key object says \
+             (a key made by pub 0.4.1 or earlier without --created was made at {LEGACY_CREATED}), \
+             or --expect=CID naming a key object committed in objects/"
+        ))?;
         let (cid, bytes) = key_object(&seed, &principal, label, None, created)?;
         if let Some(wanted) = expect
             && wanted != cid.to_string()
