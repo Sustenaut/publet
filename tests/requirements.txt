@@ -1,6 +1,8 @@
 # Direct dependencies of the functional suite: pubrules's shared pins. The
 # resolved set with hashes lives in requirements.lock, which bootstrap
 # installs. Regenerate with: make lock
+# The steps and plugin the suite runs with; the nightly moves the pin.
+pubtestrules==0.4.0
 -r requirements-pubrules.txt
 # Independent Ed25519 for tools/vectors/generate.py: it makes the signature
 # test vectors, and checks RFC 8032's keys, without using publet's code.
